@@ -52,7 +52,7 @@ git add .
 # 格式：feat: 新功能, fix: 修 Bug, docs: 文档修改
 git commit -m "feat: 完成了用户注册后端接口"
 
-# 4. 一键推送到 GitLab
+# 4. 一键推送到 GitLab(注意是推送到自己新建的分支，如feat)
 git push origin feat-login
 ```
 
