@@ -1,6 +1,6 @@
 # 🚀 WhatTheDogDoing 团队 Git 协作手册
 
-本手册用于规范团队开发流程，确保代码能同步到 **GitHub (备份/AI分析)** 和 **Secoder GitLab (评分/部署)**。
+本手册用于规范团队开发流程，确保代码能正确同步
 
 ## 1. 第一次加入项目 (Clone & Token 配置)
 
@@ -8,7 +8,7 @@
 
 ### 第一步：获取 Secoder Access Token
 
-1. 登录 [Secoder GitLab](https://www.google.com/search?q=https://gitlab.spring26b.secoder.net/)。
+1. 登录 [Secoder GitLab](https://gitlab.spring26b.secoder.net/)。
 2. 点击右上角头像 -> **Settings** -> **Access Tokens**。
 3. 创建 Token：名字选 `git-access`，有效期设长一点，**Scopes 务必勾选 `api`, `read_repository`, `write_repository`**。
 4. **复制生成的 Token**（离开页面就看不到了！）。
@@ -25,29 +25,18 @@ git clone https://oauth2:<你的Token>@gitlab.spring26b.secoder.net/WhatTheDogDo
 cd WhatTheDogDoing
 ```
 
-### 第三步：配置双端推送 (一次性配置)
-
-为了让你推送到 GitLab 的同时也能推送到 GitHub，执行：
-
-```
-# 添加 GitHub 远程地址（用于备份）
-git remote set-url --add --push origin https://github.com/Yanis01682/WhatTheDogDoing.git
-
-# 验证配置（应该能看到两个 push 地址）
-git remote -v
-```
-
-------
-
-## 2. 日常开发工作流 (每天必做的指令)
+## 2. 日常开发工作流
 
 **核心原则：先拉取 (Pull)，再写代码，最后提交 (Push)。**
 
 ### 情况 A：开始写代码前 (同步队友进度)
 
 ```
-# 获取队友最新的代码
+# 1. 先同步一下主仓库最新代码
 git pull origin main
+
+# 2. 新建一个属于你自己的分支 (不要在 main 上写！)比如feat-login
+git checkout -b feat-login
 ```
 
 ### 情况 B：写完一个功能后 (提交代码)
@@ -63,8 +52,8 @@ git add .
 # 格式：feat: 新功能, fix: 修 Bug, docs: 文档修改
 git commit -m "feat: 完成了用户注册后端接口"
 
-# 4. 一键推送到 GitLab 和 GitHub
-git push origin main
+# 4. 一键推送到 GitLab
+git push origin feat-login
 ```
 
 ------
