@@ -55,7 +55,7 @@ git commit -m "feat: 完成了用户注册后端接口"
 # 4. 一键推送到 GitLab(注意是推送到自己新建的分支，如feat-login)
 git push origin feat-login
 
-# 5.  push后，去 GitLab 网页端发起 Merge Request (MR) 给组长。
+# 5. push后，去 GitLab 网页端发起 Merge Request (MR) 给组长。
 ```
 
 ------
