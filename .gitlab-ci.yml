@@ -1,0 +1,42 @@
+stages:
+  - test
+  - build
+
+# 后端测试任务
+backend-test:
+  stage: test
+  image: python:3.12
+  script:
+    - cd backend
+    - pip install -r requirements.txt
+    - pip install pytest httpx  # 安装测试必备工具
+    - pytest                    # 执行测试文件夹下的脚本
+  only:
+    - main
+    - merge_requests
+
+# 前端代码规范检查
+frontend-lint:
+  stage: test
+  image: node:20
+  script:
+    - cd frontend
+    - npm install
+    - npm run lint             # 执行 package.json 里的 lint 脚本
+  only:
+    - main
+    - merge_requests
+
+# 构建任务（确保代码能打包成功）
+build-frontend:
+  stage: build
+  image: node:20
+  script:
+    - cd frontend
+    - npm install
+    - npm run build            # 执行打包命令
+  artifacts:
+    paths:
+      - frontend/dist/         # 保存打包后的文件
+  only:
+    - main
