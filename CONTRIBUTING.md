@@ -39,7 +39,14 @@ git pull origin main
 git checkout -b feat-login
 ```
 
-### 情况 B：写完一个功能后 (提交代码)
+### 情况 B：本地部署：
+
+
+```
+部署这个项目需要先处理后端环境。进入 backend 目录并执行 pip install -r requirements.txt 来安装 FastAPI 和 SQLAlchemy 等核心依赖。启动后端服务只需在 backend 目录下运行 uvicorn app.main:app --reload，这会自动加载 app/main.py 中定义的 FastAPI 应用。接着处理前端部分。切换到 frontend 目录后执行 npm install 以安装 package.json 中列出的 React 和 Vite 相关包。安装完成后运行 npm run dev 即可在浏览器启动前端开发服务器（http://localhost:5173/）。
+```
+
+### 情况 C：写完一个功能后 (提交代码)
 
 ```
 # 1. 查看改了哪些文件
@@ -60,8 +67,29 @@ git push origin feat-login
 
 ------
 
-## 3. 注意事项 (避坑指南)
+## 3. 注意事项
 
 - **不要直接在 main 修改已经交付的功能**：根据《过程分细则》，主分支代码必须时刻保持“部署可用”。
 - **后端依赖**：如果你用 `pip install` 安装了新包，必须执行： `cd backend; pip freeze > requirements.txt` 并提交。
 - **前端依赖**：如果你用 `npm install` 安装了新包，记得提交 `package.json` 和 `package-lock.json`。
+
+
+
+## 4.Q&A
+
+**Q**:如果我在我的分支下修改代码的过程中，main分支更新了怎么办？
+
+**A**:
+1.先切回本地主分支并拉取最新内容
+```python
+git checkout main
+git pull origin main
+```
+2.切换回正在开发的功能分支，将最新的 main 合并进来。
+
+```python
+git checkout feat-login
+git merge main
+```
+
+这样就能在包含最新代码的基础上继续开发
