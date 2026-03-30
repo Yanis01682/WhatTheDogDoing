@@ -1,0 +1,227 @@
+﻿/* ========================================
+   5. 鍙充晶鑱婂ぉ闈㈡澘 - 涓昏亰澶╁尯鍩?
+   浣嶇疆锛氬彸渚т富瑕佸唴瀹瑰尯锛屾樉绀哄綋鍓嶄細璇濈殑鑱婂ぉ绐楀彛
+   ======================================== */
+.chat-panel {
+  background: #ffffff !important;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.chat-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e5e5e5;
+  background: #ffffff;
+}
+
+.chat-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.chat-user h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #0a0a0a;
+}
+
+.online-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: #31a24c;
+}
+
+.online-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #31a24c;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.chat-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ========================================
+   6. 娑堟伅鍒楄〃鍖哄煙 - 鑱婂ぉ璁板綍灞曠ず鍖?
+   浣嶇疆锛氳亰澶╃獥鍙ｄ腑闂撮儴鍒嗭紝鏄剧ず鎵€鏈夊巻鍙叉秷鎭?
+   ======================================== */
+.chat-messages {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+  background: #ededed;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.message {
+  display: flex;
+  gap: 8px;
+  max-width: 78%;
+  align-items: flex-start;
+}
+
+.message.incoming {
+  align-self: flex-start; /* 鎺ユ敹鐨勬秷鎭潬宸?*/
+}
+
+.message.outgoing {
+  align-self: flex-end; /* 鍙戦€佺殑娑堟伅闈犲彸 */
+  flex-direction: row-reverse;
+  align-items: flex-start;
+}
+
+/* 带回复引用时，让本人头像与主气泡而非回复框顶部对齐 */
+.message.outgoing.has-reply .message-avatar {
+  margin-top: 28px;
+}
+
+.message.system-message {
+  align-self: center; /* 绯荤粺娑堟伅灞呬腑 */
+  max-width: 100%;
+  justify-content: center;
+}
+
+.message.system-message .bubble {
+  background: #f0f0f0;
+  color: #666;
+  font-size: 0.85rem;
+  padding: 6px 12px;
+  border-radius: 12px;
+}
+
+.message-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+  background: #d8d8d8;
+  color: #333;
+  font-size: 0.92rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.message-content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.message.outgoing .message-content {
+  align-items: flex-end;
+}
+
+.bubble {
+  display: inline-block;
+  width: fit-content;
+  max-width: min(52vw, 420px);
+  padding: 9px 12px;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  word-break: break-word;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.08);
+  position: relative;
+}
+
+.message.incoming .bubble {
+  background: #ffffff;
+  color: #111;
+  border-top-left-radius: 4px;
+}
+
+.message.incoming .bubble::after {
+  content: '';
+  position: absolute;
+  left: -6px;
+  top: 10px;
+  width: 0;
+  height: 0;
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+  border-right: 7px solid #ffffff;
+}
+
+.message.outgoing .bubble {
+  background: linear-gradient(135deg, #2f8cff 0%, #1f73e8 100%);
+  color: #ffffff;
+  border-top-right-radius: 4px;
+}
+
+.message.outgoing .bubble::after {
+  content: '';
+  position: absolute;
+  right: -6px;
+  top: 10px;
+  width: 0;
+  height: 0;
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+  border-left: 7px solid #2f8cff;
+}
+
+.message-time {
+  font-size: 0.75rem;
+  color: #9a9a9a;
+  text-align: right;
+}
+
+.message.incoming .message-time {
+  text-align: left;
+}
+
+.hidden-file-input {
+  display: none;
+}
+
+.message-media-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.message-media-image {
+  max-width: min(280px, 50vw);
+  max-height: 320px;
+  border-radius: 8px;
+  object-fit: cover;
+  display: block;
+}
+
+.message-media-video {
+  width: min(320px, 55vw);
+  max-height: 280px;
+  border-radius: 8px;
+  display: block;
+  background: #000;
+}
+
+.message-media-caption {
+  margin: 0;
+  font-size: 0.76rem;
+  color: rgba(255, 255, 255, 0.9);
+  word-break: break-all;
+}
+
+.message.incoming .message-media-caption {
+  color: #666;
+}
+
