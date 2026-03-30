@@ -1,12 +1,38 @@
 import { useState, useEffect } from 'react'
 import './App.css'
+import {
+  DEFAULT_SESSIONS,
+  INITIAL_CUSTOM_GROUPS,
+  INITIAL_FRIENDS,
+  INITIAL_GROUP_MEMBERS,
+  INITIAL_MESSAGES,
+  INITIAL_PROFILE_DATA,
+  MY_ROLE_MAP
+} from './features/chat/mockData'
+import AuthView from './components/stage2/AuthView'
+import TopBar from './components/stage2/TopBar'
+import SidebarPanel from './components/stage2/SidebarPanel'
+import ChatMainView from './components/stage2/ChatMainView'
+import Overlays from './components/stage2/Overlays'
+
+// 可搜索的用户目录（示例数据）。
+// 用法：添加好友弹窗输入关键词后，从该目录检索候选用户并发起好友申请。
+const FRIEND_DIRECTORY = [
+  { userId: 'alice123', name: 'Alice', avatar: 'A', signature: '今天也要加油' },
+  { userId: 'bob456', name: 'Bob', avatar: 'B', signature: '代码就是生活' },
+  { userId: 'coco789', name: 'Coco', avatar: 'C', signature: '周末一起打游戏' },
+  { userId: 'david001', name: 'David', avatar: 'D', signature: 'Coffee first' }
+]
 
 function App() {
+  // 是否已登录，决定渲染认证视图还是 IM 主界面。
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [currentChat, setCurrentChat] = useState(0)
   const [messageInput, setMessageInput] = useState('')
   const [showMemberModal, setShowMemberModal] = useState(false)
   const [showUserPanel, setShowUserPanel] = useState(false) // 用户面板显示状态
+  const [showPeerProfileModal, setShowPeerProfileModal] = useState(false) // 对方详情弹层
+  const [peerProfile, setPeerProfile] = useState(null) // 当前查看的对方资料
   const [isNightMode, setIsNightMode] = useState(false) // 夜间模式
   const [sessionFilter, setSessionFilter] = useState('all') // 会话筛选：all-全部 | personal-个人 | group-群聊
   const [showSearch, setShowSearch] = useState(false) // 搜索框显示/隐藏状态
@@ -45,58 +71,24 @@ function App() {
   const [groupName, setGroupName] = useState('') // 群聊名称
   const [friendSearchQuery, setFriendSearchQuery] = useState('') // 搜索好友关键词
   const [showFriendSearch, setShowFriendSearch] = useState(false) // 好友搜索框显示/隐藏状态
-  const [friendRequestList, setFriendRequestList] = useState([]) // 好友请求列表
-  const [myFriends, setMyFriends] = useState([ // 我的好友列表
-    { id: 101, name: '张三', avatar: '张', status: 'online', signature: '人生若只如初见', group: '常用', remark: '' },
-    { id: 102, name: '李四', avatar: '李', status: 'offline', signature: '这个家伙很懒', group: '朋友', remark: '' },
-    { id: 103, name: '王五', avatar: '王', status: 'busy', signature: '努力奋斗中...', group: '同事', remark: '' },
-    { id: 104, name: '赵六', avatar: '赵', status: 'away', signature: '世界那么大，我想去看看', group: '朋友', remark: '' },
-    { id: 105, name: '钱七', avatar: '钱', status: 'invisible', signature: '低调做人，高调做事', group: '同事', remark: '' }
-  ])
+  const [archivedGroupIds, setArchivedGroupIds] = useState([]) // 手动收纳的群聊 id 列表
+  const [friendRequestList, setFriendRequestList] = useState([
+    {
+      id: 1,
+      userId: 'coco789',
+      name: 'Coco',
+      avatar: 'C',
+      status: 'pending',
+      type: 'incoming'
+    }
+  ]) // 收到的好友请求（待我审批）
+  const [sentFriendRequests, setSentFriendRequests] = useState([]) // 我发出的好友申请（用于展示审批状态）
+  const [myFriends, setMyFriends] = useState(INITIAL_FRIENDS) // 我的好友列表
   const [collapsedGroups, setCollapsedGroups] = useState([]) // 已折叠的分组
-  const [customGroups, setCustomGroups] = useState(['常用', '同事', '朋友']) // 自定义分组列表
+  const [customGroups, setCustomGroups] = useState(INITIAL_CUSTOM_GROUPS) // 自定义分组列表
   const [dynamicSessions, setDynamicSessions] = useState([]) // 动态创建的会话（好友私聊）
-  const [groupMembers, setGroupMembers] = useState({ // 群成员数据（包含角色信息）
-    0: [
-      { id: 1, name: '张三', avatar: '张', role: 'owner', online: true },
-      { id: 2, name: 'Alice', avatar: 'A', role: 'admin', online: true },
-      { id: 3, name: 'Bob', avatar: 'B', role: 'member', online: true },
-      { id: 4, name: 'Charlie', avatar: 'C', role: 'member', online: false },
-      { id: 5, name: 'David', avatar: 'D', role: 'member', online: true },
-      { id: 6, name: 'Eve', avatar: 'E', role: 'member', online: true },
-      { id: 7, name: 'Frank', avatar: 'F', role: 'member', online: false },
-      { id: 8, name: 'Grace', avatar: 'G', role: 'member', online: true }
-    ],
-    1: [
-      { id: 1, name: '前端 - 李明', avatar: '李', role: 'owner', online: true },
-      { id: 2, name: '前端 - 王芳', avatar: '王', role: 'admin', online: true },
-      { id: 3, name: '前端 - 赵强', avatar: '赵', role: 'member', online: true },
-      { id: 4, name: '前端 - 刘娜', avatar: '刘', role: 'member', online: false },
-      { id: 5, name: '前端 - 陈杰', avatar: '陈', role: 'member', online: true },
-      { id: 6, name: '前端 - 杨帆', avatar: '杨', role: 'member', online: true },
-      { id: 7, name: '前端 - 周敏', avatar: '周', role: 'member', online: true },
-      { id: 8, name: '前端 - 吴涛', avatar: '吴', role: 'member', online: false },
-      { id: 9, name: '前端 - 郑红', avatar: '郑', role: 'member', online: true },
-      { id: 10, name: '前端 - 孙丽', avatar: '孙', role: 'member', online: true },
-      { id: 11, name: '前端 - 马超', avatar: '马', role: 'member', online: true },
-      { id: 12, name: '前端 - 朱琳', avatar: '朱', role: 'member', online: false }
-    ],
-    2: [],
-    3: [
-      { id: 1, name: '爸爸', avatar: '爸', role: 'owner', online: true },
-      { id: 2, name: '妈妈', avatar: '妈', role: 'admin', online: true },
-      { id: 3, name: '我', avatar: '我', role: 'member', online: true },
-      { id: 4, name: '妹妹', avatar: '妹', role: 'member', online: false },
-      { id: 5, name: '爷爷', avatar: '爷', role: 'member', online: true }
-    ]
-  })
-  const [profileData, setProfileData] = useState({
-    nickname: '',
-    email: '',
-    phone: '',
-    bio: '',
-    gender: 'male'
-  }) // 个人信息数据
+  const [groupMembers, setGroupMembers] = useState(INITIAL_GROUP_MEMBERS) // 群成员数据（包含角色信息）
+  const [profileData, setProfileData] = useState(INITIAL_PROFILE_DATA) // 个人信息数据
 
   // 加载保存的头像
   useEffect(() => {
@@ -114,7 +106,24 @@ function App() {
     if (savedStatus) {
       setUserStatus(savedStatus)
     }
+
+    const savedArchivedGroupIds = localStorage.getItem('archivedGroupIds')
+    if (savedArchivedGroupIds) {
+      try {
+        const parsed = JSON.parse(savedArchivedGroupIds)
+        if (Array.isArray(parsed)) {
+          setArchivedGroupIds(parsed)
+        }
+      } catch (err) {
+        console.warn('解析 archivedGroupIds 失败，使用默认值', err)
+      }
+    }
   }, [])
+
+  // 持久化手动收纳状态
+  useEffect(() => {
+    localStorage.setItem('archivedGroupIds', JSON.stringify(archivedGroupIds))
+  }, [archivedGroupIds])
 
   // 切换在线状态
   const handleChangeStatus = (status) => {
@@ -163,6 +172,70 @@ function App() {
     return allSessions.find(s => s.id === currentChat) || sessions[0]
   }
 
+  // 根据被点击的消息，解析对方资料（群聊/私聊）
+  const resolvePeerProfileFromMessage = (msg) => {
+    if (!msg || msg.sender === 'me' || msg.sender === 'system') return null
+
+    const currentSession = getCurrentSession()
+
+    const directoryCandidateByName = FRIEND_DIRECTORY.find((user) => user.name === msg.senderName)
+    if (currentSession.isGroup) {
+      const members = groupMembers[currentChat] || []
+      const candidate =
+        members.find((m) => m.id === msg.senderId) ||
+        members.find((m) => m.name === msg.senderName) ||
+        members.find((m) => m.name !== '我') ||
+        members[0]
+
+      const friendByName = myFriends.find((f) => f.name === candidate?.name)
+      const userId = friendByName?.accountId || directoryCandidateByName?.userId || `group_${candidate?.name || 'member'}`
+
+      return {
+        name: candidate?.name || '群成员',
+        userId,
+        avatar: candidate?.avatar || currentSession.avatar,
+        status: candidate?.online ? 'online' : 'offline',
+        signature: friendByName?.signature || '来自群聊成员',
+        wechatId: userId,
+        source: 'group'
+      }
+    }
+
+    const friend = myFriends.find(
+      (f) =>
+        f.name === currentSession.realName ||
+        f.name === currentSession.title ||
+        f.remark === currentSession.title
+    )
+
+    const directoryCandidate = FRIEND_DIRECTORY.find((u) => u.name === (friend?.name || currentSession.realName || currentSession.title))
+    const userId = friend?.accountId || directoryCandidate?.userId || `private_${currentSession.realName || currentSession.title}`
+
+    return {
+      name: friend?.name || currentSession.realName || currentSession.title,
+      userId,
+      avatar: friend?.avatar || currentSession.avatar,
+      status: friend?.status || (currentSession.online > 0 ? 'online' : 'offline'),
+      signature: friend?.signature || '这个人很懒，什么都没写~',
+      wechatId: userId,
+      source: 'private'
+    }
+  }
+
+  // 点击消息头像，打开对方详情页
+  const handleOpenPeerProfile = (msg) => {
+    const profile = resolvePeerProfileFromMessage(msg)
+    if (!profile) return
+    setPeerProfile(profile)
+    setShowPeerProfileModal(true)
+  }
+
+  // 关闭对方详情页
+  const handleClosePeerProfile = () => {
+    setShowPeerProfileModal(false)
+    setPeerProfile(null)
+  }
+
   // 打开添加好友模态框
   const handleOpenAddFriend = () => {
     setShowAddFriendModal(true)
@@ -179,10 +252,104 @@ function App() {
     setFriendSearchQuery(e.target.value)
   }
 
-  // 发送好友请求
+  // 将“申请用户”标准化为好友结构，保证好友列表字段统一。
+  // 参数：requestUser 包含 userId/name/avatar/signature。
+  // 返回：可直接写入 myFriends 的好友对象。
+  const createFriendRecord = (requestUser) => {
+    const defaultGroup = customGroups[0] || '我的好友'
+    return {
+      id: Date.now() + Math.floor(Math.random() * 1000),
+      accountId: requestUser.userId,
+      name: requestUser.name,
+      avatar: requestUser.avatar || requestUser.name.charAt(0),
+      status: 'offline',
+      group: defaultGroup,
+      remark: '',
+      signature: requestUser.signature || ''
+    }
+  }
+
+  // 判断用户是否已是好友，避免重复添加。
+  // 兼容 accountId 和 name 两种匹配方式，降低旧数据结构兼容成本。
+  const isAlreadyFriend = (userId, name) => {
+    return myFriends.some(
+      (friend) => friend.accountId === userId || friend.name === name
+    )
+  }
+
+  // 查询“我发出的申请”的当前状态，供按钮文案和禁用态判断。
+  const getSentRequestStatus = (userId) => {
+    const request = sentFriendRequests.find((item) => item.userId === userId)
+    return request?.status || null
+  }
+
+  // 添加好友搜索结果：基于目录进行前端模糊匹配。
+  const friendSearchResults = friendSearchQuery.trim()
+    ? FRIEND_DIRECTORY.filter((user) => {
+        const keyword = friendSearchQuery.toLowerCase().trim()
+        return (
+          user.userId.toLowerCase().includes(keyword) ||
+          user.name.toLowerCase().includes(keyword)
+        )
+      })
+    : []
+
+  // 发送好友请求。
+  // 规则：
+  // 1) 目标不存在则拦截。
+  // 2) 已是好友或重复 pending 申请则拦截。
+  // 3) 合法时写入 sentFriendRequests，状态置为 pending。
   const handleSendFriendRequest = (userId) => {
-    alert(`已向用户 ${userId} 发送好友请求`)
-    handleCloseAddFriend()
+    const targetUser = FRIEND_DIRECTORY.find((user) => user.userId === userId)
+    if (!targetUser) {
+      alert('用户不存在')
+      return
+    }
+
+    if (isAlreadyFriend(targetUser.userId, targetUser.name)) {
+      alert('该用户已经是你的好友')
+      return
+    }
+
+    if (getSentRequestStatus(targetUser.userId) === 'pending') {
+      alert('申请已发送，请等待对方审批')
+      return
+    }
+
+    setSentFriendRequests((prev) => [
+      {
+        id: Date.now(),
+        userId: targetUser.userId,
+        name: targetUser.name,
+        avatar: targetUser.avatar,
+        signature: targetUser.signature,
+        status: 'pending',
+        type: 'outgoing',
+        createdAt: new Date().toLocaleString('zh-CN')
+      },
+      ...prev
+    ])
+    alert(`已向 ${targetUser.name} 发送好友申请，等待对方审批`)
+  }
+
+  // 模拟对方审批通过（用于本地演示）。
+  // 通过后将申请状态改为 approved，并将对方写入我的好友列表。
+  const handleMockApproveSentRequest = (requestId) => {
+    const request = sentFriendRequests.find((item) => item.id === requestId)
+    if (!request || request.status !== 'pending') return
+
+    if (!isAlreadyFriend(request.userId, request.name)) {
+      setMyFriends((prev) => [...prev, createFriendRecord(request)])
+    }
+
+    setSentFriendRequests((prev) =>
+      prev.map((item) =>
+        item.id === requestId
+          ? { ...item, status: 'approved', approvedAt: new Date().toLocaleString('zh-CN') }
+          : item
+      )
+    )
+    alert(`${request.name} 已通过你的好友申请`)
   }
 
   // 删除好友
@@ -193,22 +360,19 @@ function App() {
     }
   }
 
-  // 接受好友请求
+  // 接受好友请求：将 incoming 申请转为好友关系并从待审批列表移除。
   const handleAcceptRequest = (requestId) => {
     const request = friendRequestList.find(r => r.id === requestId)
     if (request) {
-      setMyFriends(prev => [...prev, {
-        id: request.userId,
-        name: request.name,
-        avatar: request.name.charAt(0),
-        status: 'offline'
-      }])
+      if (!isAlreadyFriend(request.userId, request.name)) {
+        setMyFriends(prev => [...prev, createFriendRecord(request)])
+      }
       setFriendRequestList(prev => prev.filter(r => r.id !== requestId))
       alert(`已接受 ${request.name} 的好友请求`)
     }
   }
 
-  // 拒绝好友请求
+  // 拒绝好友请求：仅移除申请记录，不改动好友列表。
   const handleRejectRequest = (requestId) => {
     setFriendRequestList(prev => prev.filter(r => r.id !== requestId))
     alert('已拒绝好友请求')
@@ -302,7 +466,7 @@ function App() {
       .map((msg, index) => ({
         ...msg,
         index,
-        highlighted: msg.text.toLowerCase().includes(query.toLowerCase())
+        highlighted: (msg.text || '').toLowerCase().includes(query.toLowerCase())
       }))
       .filter(msg => msg.highlighted)
     
@@ -500,32 +664,10 @@ function App() {
       handleCloseChatDetail()
     }
   }
-  const [messages, setMessages] = useState({
-    0: [
-      { id: 1, text: '你好，欢迎加入产品组讨论群！', sender: 'system', time: '10:00' },
-      { id: 2, text: '大家下午好，今天的产品需求已经更新了，请大家查看。', sender: 'other', time: '10:05' },
-      { id: 3, text: '好的，谢谢提醒。', sender: 'me', time: '10:10' },
-      { id: 4, text: '下午把接口文档同步下。', sender: 'me', time: '14:30' }
-    ],
-    1: [
-      { id: 1, text: '大家好，前端开发群已经建立。', sender: 'system', time: '10:00' },
-      { id: 2, text: 'Alice: 新版登录页我已经提 PR', sender: 'other', time: '13:58' }
-    ],
-    2: [
-      { id: 1, text: '17:30 自动提醒填写日报', sender: 'system', time: '12:20' }
-    ],
-    3: [
-      { id: 1, text: '妈妈：今晚回来吃饭吗？', sender: 'other', time: '09:11' }
-    ]
-  })
+  const [messages, setMessages] = useState(INITIAL_MESSAGES)
 
   // 我的角色（用于权限判断）
-  const myRole = {
-    0: 'admin',
-    1: 'member',
-    2: 'member',
-    3: 'member'
-  }
+  const myRole = MY_ROLE_MAP
 
   // 登录处理
   const handleLogin = (e) => {
@@ -764,6 +906,78 @@ function App() {
     setEditingMessageId(null)
   }
 
+  // 发送图片消息（本地预览模式）
+  const handleSendImage = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (!file.type.startsWith('image/')) {
+      alert('请选择图片文件')
+      e.target.value = ''
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onload = () => {
+      const newMessage = {
+        id: Date.now(),
+        type: 'image',
+        text: `[图片] ${file.name}`,
+        mediaUrl: reader.result,
+        mediaName: file.name,
+        sender: 'me',
+        time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+        replyTo: replyToMessage ? {
+          id: replyToMessage.id,
+          text: replyToMessage.text,
+          sender: replyToMessage.sender
+        } : null
+      }
+
+      setMessages((prev) => ({
+        ...prev,
+        [currentChat]: [...(prev[currentChat] || []), newMessage]
+      }))
+      setReplyToMessage(null)
+      e.target.value = ''
+    }
+    reader.readAsDataURL(file)
+  }
+
+  // 发送视频消息（本地预览模式）
+  const handleSendVideo = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (!file.type.startsWith('video/')) {
+      alert('请选择视频文件')
+      e.target.value = ''
+      return
+    }
+
+    const newMessage = {
+      id: Date.now(),
+      type: 'video',
+      text: `[视频] ${file.name}`,
+      mediaUrl: URL.createObjectURL(file),
+      mediaName: file.name,
+      sender: 'me',
+      time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+      replyTo: replyToMessage ? {
+        id: replyToMessage.id,
+        text: replyToMessage.text,
+        sender: replyToMessage.sender
+      } : null
+    }
+
+    setMessages((prev) => ({
+      ...prev,
+      [currentChat]: [...(prev[currentChat] || []), newMessage]
+    }))
+    setReplyToMessage(null)
+    e.target.value = ''
+  }
+
   // 按 Enter 发送消息
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -803,6 +1017,15 @@ function App() {
   // 清空搜索
   const handleClearSearch = () => {
     setSearchQuery('')
+  }
+
+  // 手动切换群聊收纳状态（右键菜单触发）
+  const handleToggleGroupArchive = (sessionId) => {
+    setArchivedGroupIds((prev) =>
+      prev.includes(sessionId)
+        ? prev.filter((id) => id !== sessionId)
+        : [...prev, sessionId]
+    )
   }
 
   // 开始拖拽左侧会话列表宽度
@@ -919,49 +1142,98 @@ function App() {
     // 实际应用中需要调用 API 更新成员角色
   }
 
-  // 会话数据
-  const sessions = [
-    {
-      id: 0,
-      title: '产品组讨论',
-      avatar: '产',
-      lastMessage: '你：下午把接口文档同步下',
-      time: '14:32',
-      badge: 2,
-      online: 8,
-      isGroup: true
-    },
-    {
-      id: 1,
-      title: '前端开发群',
-      avatar: '前',
-      lastMessage: 'Alice: 新版登录页我已经提 PR',
-      time: '13:58',
-      badge: 0,
-      online: 12,
-      isGroup: true
-    },
-    {
-      id: 2,
-      title: '项目日报机器人',
-      avatar: '机',
-      lastMessage: '17:30 自动提醒填写日报',
-      time: '12:20',
-      badge: 0,
-      online: 0,
-      isGroup: false
-    },
-    {
-      id: 3,
-      title: '家人群',
-      avatar: '家',
-      lastMessage: '妈妈：今晚回来吃饭吗？',
-      time: '09:11',
-      badge: 1,
-      online: 5,
-      isGroup: true
+  // 从好友列表打开（或创建）私聊会话
+  const handleOpenFriendChat = (friend) => {
+    const allSessions = [...sessions, ...dynamicSessions]
+    const existingSession = allSessions.find(s => s.title === friend.name)
+
+    if (!existingSession) {
+      const newSessionId = sessions.length + dynamicSessions.length
+      const newSession = {
+        id: newSessionId,
+        title: friend.remark || friend.name,
+        avatar: friend.avatar,
+        lastMessage: friend.signature || '新联系人',
+        time: '刚刚',
+        badge: 0,
+        online: friend.status === 'online' ? 1 : 0,
+        isGroup: false,
+        realName: friend.name
+      }
+      setDynamicSessions(prev => [newSession, ...prev])
+      setCurrentChat(newSessionId)
+    } else {
+      setCurrentChat(existingSession.id)
     }
-  ]
+  }
+
+  // 在“对方详情页”点击发消息
+  const handleStartChatWithPeer = () => {
+    if (!peerProfile) return
+
+    const allSessions = [...sessions, ...dynamicSessions]
+    const existingSession = allSessions.find(
+      (s) => s.title === peerProfile.name || s.realName === peerProfile.name
+    )
+
+    if (existingSession) {
+      setCurrentChat(existingSession.id)
+    } else {
+      const newSessionId = sessions.length + dynamicSessions.length
+      const newSession = {
+        id: newSessionId,
+        title: peerProfile.name,
+        avatar: peerProfile.avatar,
+        lastMessage: peerProfile.signature || '开始聊天吧',
+        time: '刚刚',
+        badge: 0,
+        online: peerProfile.status === 'online' ? 1 : 0,
+        isGroup: false,
+        realName: peerProfile.name
+      }
+      setDynamicSessions((prev) => [newSession, ...prev])
+      setCurrentChat(newSessionId)
+    }
+
+    setActiveTab('chats')
+    handleClosePeerProfile()
+  }
+
+  // 在“对方详情页”点击添加好友
+  const handleAddPeerAsFriend = () => {
+    if (!peerProfile) return
+
+    if (isAlreadyFriend(peerProfile.userId, peerProfile.name)) {
+      alert('该用户已经是你的好友')
+      return
+    }
+
+    const pending = sentFriendRequests.some(
+      (item) => item.status === 'pending' && (item.userId === peerProfile.userId || item.name === peerProfile.name)
+    )
+    if (pending) {
+      alert('好友申请已发送，请等待对方审批')
+      return
+    }
+
+    setSentFriendRequests((prev) => [
+      {
+        id: Date.now(),
+        userId: peerProfile.userId,
+        name: peerProfile.name,
+        avatar: peerProfile.avatar,
+        signature: peerProfile.signature,
+        status: 'pending',
+        type: 'outgoing',
+        createdAt: new Date().toLocaleString('zh-CN')
+      },
+      ...prev
+    ])
+    alert(`已向 ${peerProfile.name} 发送好友申请`)
+  }
+
+  // 会话数据
+  const sessions = DEFAULT_SESSIONS
 
   // 获取当前群主
   const getCurrentOwner = () => {
@@ -972,549 +1244,61 @@ function App() {
 
   // 未登录时显示登录界面
   if (!isLoggedIn) {
-    // 如果显示注册表单
-    if (showRegisterForm) {
-      return (
-        <div className="im-shell">
-          <div className="login-container">
-            <div className="register-box">
-              <div className="register-header">
-                <div className="brand-logo">
-                  <span className="brand-dot"></span>
-                  <h1>WhatTheDogDoing</h1>
-                </div>
-                <p className="register-subtitle">创建新账号</p>
-              </div>
-              
-              <form className="register-form" onSubmit={handleRegister}>
-                <div className="form-group">
-                  <label htmlFor="username">用户名</label>
-                  <input
-                    type="text"
-                    id="username"
-                    name="username"
-                    placeholder="请输入用户名"
-                    autoComplete="username"
-                    required
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label htmlFor="email">邮箱</label>
-                  <input
-                    type="email"
-                    id="email"
-                    name="email"
-                    placeholder="请输入邮箱地址"
-                    autoComplete="email"
-                    required
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label htmlFor="password">密码</label>
-                  <input
-                    type="password"
-                    id="password"
-                    name="password"
-                    placeholder="请输入密码（至少 6 位）"
-                    autoComplete="new-password"
-                    minLength="6"
-                    required
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label htmlFor="confirmPassword">确认密码</label>
-                  <input
-                    type="password"
-                    id="confirmPassword"
-                    name="confirmPassword"
-                    placeholder="请再次输入密码"
-                    autoComplete="new-password"
-                    required
-                  />
-                </div>
-                
-                <div className="form-options">
-                  <label className="checkbox-label">
-                    <input type="checkbox" required />
-                    <span>我已阅读并同意《用户协议》和《隐私政策》</span>
-                  </label>
-                </div>
-                
-                <button type="submit" className="register-btn">
-                  立即注册
-                </button>
-                
-                <div className="register-divider">
-                  <span>已有账号？</span>
-                </div>
-                
-                <button type="button" className="back-to-login-btn" onClick={backToLogin}>
-                  返回登录
-                </button>
-              </form>
-            </div>
-            
-            <div className="login-background">
-              <div className="bg-circle bg-circle-1"></div>
-              <div className="bg-circle bg-circle-2"></div>
-              <div className="bg-circle bg-circle-3"></div>
-            </div>
-          </div>
-        </div>
-      )
-    }
-    
-    // 否则显示登录表单
     return (
-      <div className="im-shell">
-        <div className="login-container">
-          <div className="login-box">
-            <div className="login-header">
-              <div className="brand-logo">
-                <span className="brand-dot"></span>
-                <h1>WhatTheDogDoing</h1>
-              </div>
-              <p className="login-subtitle">即时通讯工具</p>
-            </div>
-            
-            <form className="login-form" onSubmit={handleLogin}>
-              <div className="form-group">
-                <label htmlFor="account">账号</label>
-                <input
-                  type="text"
-                  id="account"
-                  name="account"
-                  placeholder="邮箱 / 手机号"
-                  autoComplete="username"
-                />
-              </div>
-              
-              <div className="form-group">
-                <label htmlFor="password">密码</label>
-                <input
-                  type="password"
-                  id="password"
-                  name="password"
-                  placeholder="请输入密码"
-                  autoComplete="current-password"
-                />
-              </div>
-              
-              <div className="form-options">
-                <label className="checkbox-label">
-                  <input type="checkbox" />
-                  <span>记住我</span>
-                </label>
-                <a href="#" className="forgot-link">忘记密码？</a>
-              </div>
-              
-              <button type="submit" className="login-btn">
-                登录
-              </button>
-              
-              <div className="login-divider">
-                <span>其他登录方式</span>
-              </div>
-              
-              <div className="social-login">
-                <button type="button" className="social-btn wechat">微信</button>
-                <button type="button" className="social-btn qq">QQ</button>
-              </div>
-              
-              <div className="login-footer">
-                <p>还没有账号？<a href="#" onClick={(e) => { e.preventDefault(); showRegisterPage() }}>立即注册</a></p>
-              </div>
-            </form>
-          </div>
-          
-          <div className="login-background">
-            <div className="bg-circle bg-circle-1"></div>
-            <div className="bg-circle bg-circle-2"></div>
-            <div className="bg-circle bg-circle-3"></div>
-          </div>
-        </div>
-      </div>
+      <AuthView
+        showRegisterForm={showRegisterForm}
+        onRegister={handleRegister}
+        onLogin={handleLogin}
+        onShowRegister={showRegisterPage}
+        onBackToLogin={backToLogin}
+      />
     )
   }
 
   // 已登录时显示聊天界面
   return (
     <div className={`im-shell ${isNightMode ? 'night-mode' : ''}`}>
-      {/* 顶部导航栏 */}
-      <header className="im-topbar">
-        <div className="brand">
-          <span className="brand-dot" aria-hidden="true"></span>
-          <div>
-            <p className="brand-title">WhatTheDogDoing</p>
-            <p className="brand-sub">IM Workspace</p>
-          </div>
-        </div>
-        <div className="topbar-actions">
-          {/* 在线状态选择器 */}
-          <div className="status-selector" onClick={() => setShowStatusMenu(!showStatusMenu)}>
-            <span className="status-icon">{getStatusIcon(userStatus)}</span>
-            <span className="status-text">{getStatusText(userStatus)}</span>
-            <span className={`status-arrow ${showStatusMenu ? 'active' : ''}`}>›</span>
-            
-            {/* 状态选择菜单 */}
-            {showStatusMenu && (
-              <div className="status-menu">
-                <div className="status-menu-item" onClick={() => handleChangeStatus('online')}>
-                  <span className="status-menu-icon">🟢</span>
-                  <span className="status-menu-text">在线</span>
-                  {userStatus === 'online' && <span className="status-menu-check">✓</span>}
-                </div>
-                <div className="status-menu-item" onClick={() => handleChangeStatus('busy')}>
-                  <span className="status-menu-icon">🔴</span>
-                  <span className="status-menu-text">忙碌</span>
-                  {userStatus === 'busy' && <span className="status-menu-check">✓</span>}
-                </div>
-                <div className="status-menu-item" onClick={() => handleChangeStatus('away')}>
-                  <span className="status-menu-icon">🟡</span>
-                  <span className="status-menu-text">离开</span>
-                  {userStatus === 'away' && <span className="status-menu-check">✓</span>}
-                </div>
-                <div className="status-menu-item" onClick={() => handleChangeStatus('invisible')}>
-                  <span className="status-menu-icon">🌙</span>
-                  <span className="status-menu-text">隐身</span>
-                  {userStatus === 'invisible' && <span className="status-menu-check">✓</span>}
-                </div>
-                <div className="status-menu-item" onClick={() => handleChangeStatus('offline')}>
-                  <span className="status-menu-icon">⚫</span>
-                  <span className="status-menu-text">离线</span>
-                  {userStatus === 'offline' && <span className="status-menu-check">✓</span>}
-                </div>
-              </div>
-            )}
-          </div>
-          {/* 用户头像 */}
-          <div className="user-avatar-wrapper" onClick={toggleUserPanel}>
-            {typeof userAvatar === 'string' && userAvatar.startsWith('data:image') ? (
-              <div className="user-avatar" style={{backgroundImage: `url(${userAvatar})`, backgroundSize: 'cover', backgroundPosition: 'center'}}>
-              </div>
-            ) : (
-              <div className="user-avatar">
-                <span>{userAvatar}</span>
-              </div>
-            )}
-            <span className="user-status-dot"></span>
-          </div>
-        </div>
-      </header>
+      <TopBar
+        showStatusMenu={showStatusMenu}
+        setShowStatusMenu={setShowStatusMenu}
+        getStatusIcon={getStatusIcon}
+        getStatusText={getStatusText}
+        userStatus={userStatus}
+        handleChangeStatus={handleChangeStatus}
+        toggleUserPanel={toggleUserPanel}
+        userAvatar={userAvatar}
+      />
 
       <main className="im-layout">
-        {/* 左侧会话列表 */}
-        <aside 
-          className="panel chatlist-panel"
-          style={{ width: `${chatlistWidth}px`, flex: 'none', '--chatlist-width': `${chatlistWidth}px` }}
-        >
-          <div className="panel-header">
-            <h2>{activeTab === 'chats' ? '会话' : '好友'}</h2>
-            <div className="header-actions">
-              {/* 搜索按钮 */}
-              <button 
-                className={`icon-btn ${activeTab === 'friends' && showFriendSearch ? 'active' : showSearch ? 'active' : ''}`} 
-                type="button" 
-                aria-label="搜索"
-                onClick={() => {
-                  if (activeTab === 'friends') {
-                    setShowFriendSearch(!showFriendSearch)
-                    if (showFriendSearch) {
-                      setFriendSearchQuery('') // 关闭时清空搜索词
-                    }
-                  } else {
-                    setShowSearch(!showSearch)
-                  }
-                }}
-              >
-                🔍
-              </button>
-              {activeTab === 'friends' && (
-                <button 
-                  className="icon-btn" 
-                  type="button" 
-                  aria-label="添加好友"
-                  onClick={handleOpenAddFriend}
-                >
-                  ➕
-                </button>
-              )}
-              <button 
-                className="icon-btn" 
-                type="button" 
-                aria-label={activeTab === 'friends' ? '创建群聊' : '新建会话'}
-                onClick={activeTab === 'friends' ? handleOpenCreateGroup : () => alert('新建会话功能待开发')}
-              >
-                ✎
-              </button>
-              <button className="icon-btn" type="button" aria-label="菜单">
-                ⋯
-              </button>
-            </div>
-          </div>
-          
-          {/* 会话列表内容 */}
-          {activeTab === 'chats' && (
-            <>
-              {/* 搜索框（条件渲染） */}
-              {showSearch && (
-                <div className="search-wrap">
-                  <div className="search-input-wrapper">
-                    <input 
-                      type="text" 
-                      placeholder="搜索会话或联系人" 
-                      value={searchQuery}
-                      onChange={handleSearchChange}
-                      autoFocus 
-                    />
-                    {searchQuery && (
-                      <button 
-                        className="search-clear-btn" 
-                        type="button" 
-                        aria-label="清空搜索"
-                        onClick={handleClearSearch}
-                      >
-                        ✕
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )}
-              
-              {/* 会话分类标签 */}
-              <div className="session-tabs">
-            <button 
-              className={`tab-btn ${sessionFilter === 'all' ? 'active' : ''}`}
-              onClick={() => setSessionFilter('all')}
-              type="button"
-            >
-              全部
-            </button>
-            <button 
-              className={`tab-btn ${sessionFilter === 'personal' ? 'active' : ''}`}
-              onClick={() => setSessionFilter('personal')}
-              type="button"
-            >
-              个人
-            </button>
-            <button 
-              className={`tab-btn ${sessionFilter === 'group' ? 'active' : ''}`}
-              onClick={() => setSessionFilter('group')}
-              type="button"
-            >
-              群聊
-            </button>
-          </div>
-          
-          {/* 会话列表 */}
-          <ul className="session-list">
-            {[...dynamicSessions, ...sessions]
-              .filter(session => {
-                // 先根据分类筛选
-                if (sessionFilter === 'all') {
-                  // 全部模式，继续搜索筛选
-                } else if (sessionFilter === 'personal') {
-                  if (session.isGroup) return false;
-                } else if (sessionFilter === 'group') {
-                  if (!session.isGroup) return false;
-                }
-                
-                // 再根据搜索关键词筛选
-                if (searchQuery.trim()) {
-                  const query = searchQuery.toLowerCase();
-                  const title = session.title.toLowerCase();
-                  const lastMessage = session.lastMessage.toLowerCase();
-                  // 搜索标题或最后一条消息
-                  return title.includes(query) || lastMessage.includes(query);
-                }
-                
-                return true;
-              })
-              .map((session) => (
-              <li
-                key={session.id}
-                className={`session-item ${currentChat === session.id ? 'active' : ''}`}
-                onClick={() => setCurrentChat(session.id)}
-              >
-                <div className="avatar">{session.avatar}</div>
-                <div className="session-main">
-                  <div className="session-row">
-                    <p className="session-title">{session.title}</p>
-                    <span className="session-time">{session.time}</span>
-                  </div>
-                  <div className="session-row">
-                    <p className="session-meta">{session.lastMessage}</p>
-                    {session.badge > 0 && (
-                      <span className="session-badge">{session.badge}</span>
-                    )}
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ul>
-            </>
-          )}
-          
-          {/* 好友列表内容 */}
-          {activeTab === 'friends' && (
-            <div className="friends-container">
-              {/* 搜索框（条件渲染） */}
-              {showFriendSearch && (
-                <div className="friend-search-wrap">
-                  <div className="friend-search-input-wrapper">
-                    <input 
-                      type="text" 
-                      placeholder="搜索好友（支持姓名、备注、分组）" 
-                      value={friendSearchQuery}
-                      onChange={(e) => setFriendSearchQuery(e.target.value)}
-                      autoFocus
-                    />
-                    {friendSearchQuery && (
-                      <button 
-                        className="friend-search-clear-btn" 
-                        type="button" 
-                        aria-label="清空搜索"
-                        onClick={() => setFriendSearchQuery('')}
-                      >
-                        ✕
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )}
-              
-              {myFriends.length > 0 ? (
-                <div className="qq-friends-list">
-                  {/* 按分组显示好友 */}
-                  {customGroups.map((groupName) => {
-                    // 根据搜索关键词过滤好友
-                    const groupFriends = myFriends.filter(f => {
-                      // 首先按分组过滤
-                      if (f.group !== groupName) return false
-                      
-                      // 如果有搜索关键词，再进行模糊匹配
-                      if (friendSearchQuery.trim()) {
-                        const query = friendSearchQuery.toLowerCase().trim()
-                        return (
-                          f.name.toLowerCase().includes(query) || // 匹配姓名
-                          (f.remark && f.remark.toLowerCase().includes(query)) || // 匹配备注
-                          f.group.toLowerCase().includes(query) // 匹配分组
-                        )
-                      }
-                      return true
-                    })
-                    
-                    if (groupFriends.length === 0) return null
-                    
-                    const isCollapsed = collapsedGroups.includes(groupName)
-                    
-                    return (
-                      <div key={groupName} className="friends-group">
-                        <div 
-                          className="friends-group-header"
-                          onClick={() => toggleGroupCollapse(groupName)}
-                        >
-                          <span className={`group-arrow ${isCollapsed ? '' : 'expanded'}`}>›</span>
-                          <span className="group-name">{groupName}</span>
-                          <span className="group-count">{groupFriends.length}</span>
-                        </div>
-                        {!isCollapsed && (
-                          <ul className="friends-group-list">
-                            {groupFriends.map((friend) => (
-                              <li
-                                key={friend.id}
-                                className="qq-friend-item"
-                                onClick={() => {
-                                  // 检查是否已存在该好友的会话
-                                  const allSessions = [...sessions, ...dynamicSessions]
-                                  const existingSession = allSessions.find(s => s.title === friend.name)
-                                  
-                                  if (!existingSession) {
-                                    // 创建新会话
-                                    const newSessionId = sessions.length + dynamicSessions.length
-                                    const newSession = {
-                                      id: newSessionId,
-                                      title: friend.remark || friend.name, // 优先使用备注
-                                      avatar: friend.avatar,
-                                      lastMessage: friend.signature || '新联系人',
-                                      time: '刚刚',
-                                      badge: 0,
-                                      online: friend.status === 'online' ? 1 : 0,
-                                      isGroup: false,
-                                      realName: friend.name // 保存真实昵称
-                                    }
-                                    // 添加到动态会话列表（置于顶部）
-                                    setDynamicSessions(prev => [newSession, ...prev])
-                                    // 切换到新创建的会话
-                                    setCurrentChat(newSessionId)
-                                  } else {
-                                    // 如果已存在，切换到该会话
-                                    setCurrentChat(existingSession.id)
-                                  }
-                                }}
-                                onContextMenu={(e) => {
-                                  e.preventDefault()
-                                  // 这里可以添加右键菜单逻辑
-                                  console.log('右键菜单:', friend.name)
-                                }}
-                              >
-                                <div className="qq-friend-avatar">
-                                  {friend.avatar}
-                                  <span className={`qq-status-dot ${friend.status}`}></span>
-                                </div>
-                                <div className="qq-friend-info">
-                                  <div className="qq-friend-main">
-                                    <p className="qq-friend-name">
-                                      {friend.remark || friend.name}
-                                      {friend.remark && <span className="friend-real-name">({friend.name})</span>}
-                                    </p>
-                                    <span className={`qq-status-icon ${friend.status}`}>
-                                      {friend.status === 'online' ? '●' : 
-                                       friend.status === 'busy' ? '●' : 
-                                       friend.status === 'away' ? '●' : 
-                                       friend.status === 'invisible' ? '●' : '○'}
-                                    </span>
-                                  </div>
-                                  <p className="qq-friend-signature">{friend.signature || '这个人很懒，什么都没写~'}</p>
-                                </div>
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              ) : (
-                <div className="empty-friends-hint">
-                  <p>暂无好友</p>
-                  <button onClick={handleOpenAddFriend}>添加好友</button>
-                </div>
-              )}
-            </div>
-          )}
-        
-          {/* 底部导航栏 */}
-          <div className="bottom-tab-bar">
-            <button 
-              className={`tab-item ${activeTab === 'chats' ? 'active' : ''}`}
-              onClick={() => setActiveTab('chats')}
-            >
-              <span className="tab-icon">💬</span>
-              <span className="tab-label">会话</span>
-            </button>
-            <button 
-              className={`tab-item ${activeTab === 'friends' ? 'active' : ''}`}
-              onClick={() => setActiveTab('friends')}
-            >
-              <span className="tab-icon">👥</span>
-              <span className="tab-label">好友</span>
-            </button>
-          </div>
-        </aside>
+        <SidebarPanel
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          showFriendSearch={showFriendSearch}
+          setShowFriendSearch={setShowFriendSearch}
+          friendSearchQuery={friendSearchQuery}
+          setFriendSearchQuery={setFriendSearchQuery}
+          showSearch={showSearch}
+          setShowSearch={setShowSearch}
+          searchQuery={searchQuery}
+          handleSearchChange={handleSearchChange}
+          handleClearSearch={handleClearSearch}
+          handleOpenAddFriend={handleOpenAddFriend}
+          handleOpenCreateGroup={handleOpenCreateGroup}
+          sessionFilter={sessionFilter}
+          setSessionFilter={setSessionFilter}
+          dynamicSessions={dynamicSessions}
+          sessions={sessions}
+          currentChat={currentChat}
+          setCurrentChat={setCurrentChat}
+          myFriends={myFriends}
+          customGroups={customGroups}
+          collapsedGroups={collapsedGroups}
+          toggleGroupCollapse={toggleGroupCollapse}
+          archivedGroupIds={archivedGroupIds}
+          onToggleGroupArchive={handleToggleGroupArchive}
+          onOpenFriendChat={handleOpenFriendChat}
+          chatlistWidth={chatlistWidth}
+        />
 
         {/* 左侧会话列表和聊天窗口之间的拖拽分隔线 */}
         <div 
@@ -1523,1226 +1307,137 @@ function App() {
         >
         </div>
 
-        {/* 右侧聊天窗口 */}
-        <section className="panel chat-panel">
-          {/* 聊天头部 */}
-          <header className="chat-topbar">
-            <div className="chat-user">
-              <div className="avatar large">
-                {getCurrentSession().avatar}
-              </div>
-              <div>
-                <h2>{getCurrentSession().title}</h2>
-                {/* 群聊显示在线人数，个人聊天显示在线状态 */}
-                {getCurrentSession().isGroup ? (
-                  // 计算实际在线人数
-                  (() => {
-                    const members = groupMembers[currentChat] || []
-                    const onlineCount = members.filter(m => m.online).length
-                    return onlineCount > 0 ? (
-                      <span 
-                        className="online-status clickable"
-                        onClick={handleOpenMemberList}
-                        style={{ cursor: 'pointer' }}
-                      >
-                        <span className="online-dot"></span>
-                        {onlineCount}人在线
-                      </span>
-                    ) : (
-                      <span className="online-status">离线</span>
-                    )
-                  })()
-                ) : (
-                  // 个人聊天只显示对方状态，不可点击
-                  <span className="online-status">
-                    <span className={`online-dot ${getCurrentSession().online > 0 ? 'online' : 'offline'}`}></span>
-                    {getCurrentSession().online > 0 ? '在线' : '离线'}
-                  </span>
-                )}
-              </div>
-            </div>
-            <div className="chat-actions">
-              <button className="icon-btn" type="button" aria-label="搜索消息">
-                🔍
-              </button>
-              <button 
-                className="icon-btn" 
-                type="button" 
-                aria-label="更多操作"
-                onClick={handleOpenChatDetail}
-              >
-                ⋯
-              </button>
-            </div>
-          </header>
-
-          {/* 消息列表 */}
-          <div className="chat-messages" onClick={handleMessagesClick}>
-            {messages[currentChat]?.map((msg, index) => (
-              <div
-                key={msg.id}
-                data-message-index={index}
-                className={`message ${msg.sender === 'me' ? 'outgoing' : msg.sender === 'system' ? 'system-message' : 'incoming'}`}
-                onContextMenu={(e) => handleMessageContextMenu(e, msg)}
-              >
-                {msg.sender !== 'me' && msg.sender !== 'system' && (
-                  <div className="message-avatar">
-                    {msg.sender === 'other' ? 'A' : '系'}
-                  </div>
-                )}
-                <div className="message-content">
-                  {/* 回复引用 */}
-                  {msg.replyTo && (
-                    <div className="message-reply">
-                      <span className="reply-label">
-                        {msg.replyTo.sender === 'me' ? '回复自己' : '回复'} {msg.replyTo.sender === 'other' ? '对方' : msg.replyTo.sender}:
-                      </span>
-                      <span className="reply-text">{msg.replyTo.text}</span>
-                    </div>
-                  )}
-                  <div className="bubble">{msg.text}</div>
-                  <span className="message-time">{msg.time}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* 消息输入框 */}
-          <footer className="composer" style={{ height: `${composerHeight}px` }}>
-            {/* 回复提示栏 */}
-            {replyToMessage && (
-              <div className="reply-preview">
-                <div className="reply-preview-content">
-                  <span className="reply-preview-label">
-                    {replyToMessage.sender === 'me' ? '回复自己' : '回复'} {replyToMessage.sender === 'other' ? '对方' : replyToMessage.sender}:
-                  </span>
-                  <span className="reply-preview-text">{replyToMessage.text}</span>
-                </div>
-                <button 
-                  className="cancel-reply-btn" 
-                  type="button" 
-                  aria-label="取消回复"
-                  onClick={cancelReply}
-                >
-                  ✕
-                </button>
-              </div>
-            )}
-            <div className="composer-toolbar">
-              <button className="toolbar-btn" type="button" aria-label="发送图片">
-                📷
-              </button>
-              <button className="toolbar-btn" type="button" aria-label="发送文件">
-                📎
-              </button>
-              <button 
-                className={`toolbar-btn ${showEmojiPicker ? 'active' : ''}`} 
-                type="button" 
-                aria-label="表情"
-                onClick={toggleEmojiPicker}
-              >
-                😊
-              </button>
-            </div>
-            <textarea
-              className="composer-input"
-              placeholder="输入消息... (Shift+Enter 换行)"
-              value={messageInput}
-              onChange={(e) => setMessageInput(e.target.value)}
-              onKeyPress={handleKeyPress}
-              rows="3"
-            />
-            <div className="composer-actions">
-              <button className="send-btn" onClick={handleSendMessage}>
-                发送
-              </button>
-            </div>
-            {/* 输入框上边缘拖拽手柄 */}
-            <div 
-              className={`composer-resize-handle ${isComposingResizing ? 'resizing' : ''}`}
-              onMouseDown={handleComposerResizeStart}
-            >
-            </div>
-          </footer>
-        </section>
+        <ChatMainView
+          getCurrentSession={getCurrentSession}
+          groupMembers={groupMembers}
+          currentChat={currentChat}
+          userAvatar={userAvatar}
+          handleOpenPeerProfile={handleOpenPeerProfile}
+          handleOpenMemberList={handleOpenMemberList}
+          handleOpenChatDetail={handleOpenChatDetail}
+          messages={messages}
+          handleMessagesClick={handleMessagesClick}
+          handleMessageContextMenu={handleMessageContextMenu}
+          composerHeight={composerHeight}
+          replyToMessage={replyToMessage}
+          cancelReply={cancelReply}
+          showEmojiPicker={showEmojiPicker}
+          toggleEmojiPicker={toggleEmojiPicker}
+          messageInput={messageInput}
+          setMessageInput={setMessageInput}
+          handleKeyPress={handleKeyPress}
+          handleSendMessage={handleSendMessage}
+          handleSendImage={handleSendImage}
+          handleSendVideo={handleSendVideo}
+          isComposingResizing={isComposingResizing}
+          handleComposerResizeStart={handleComposerResizeStart}
+        />
       </main>
 
-      {/* 表情选择器 */}
-      {showEmojiPicker && (
-        <div className="emoji-picker-overlay" onClick={closeEmojiPicker}>
-          <div className="emoji-picker" onClick={(e) => e.stopPropagation()}>
-            <div className="emoji-picker-header">
-              <span>常用表情</span>
-              <button className="emoji-close-btn" onClick={closeEmojiPicker}>×</button>
-            </div>
-            <div className="emoji-grid">
-              {[
-                '😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂',
-                '🙂', '🙃', '😉', '😊', '😇', '🥰', '😍', '🤩',
-                '😘', '😗', '☺️', '😚', '😙', '🥲', '😋', '😛',
-                '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🤫', '🤔',
-                '🤐', '🤨', '😐', '😑', '😶', '😏', '😒', '🙄',
-                '😬', '🤥', '😌', '😔', '😪', '🤤', '😴', '😷',
-                '🤒', '🤕', '🤢', '🤮', '🤧', '🥵', '🥶', '🥴',
-                '😵', '🤯', '🤠', '🥳', '🥸', '😎', '🤓', '🧐',
-                '😕', '😟', '🙁', '☹️', '😮', '😯', '😲', '😳',
-                '🥺', '😦', '😧', '😨', '😰', '😥', '😢', '😭',
-                '😱', '😖', '😣', '😞', '😓', '😩', '😫', '🥱',
-                '😤', '😡', '😠', '🤬', '😈', '👿', '💀', '☠️',
-                '💩', '🤡', '👹', '👺', '👻', '👽', '👾', '🤖',
-                '😺', '😸', '😹', '😻', '😼', '😽', '🙀', '😿',
-                '😾', '🙈', '🙉', '🙊', '💋', '💌', '💘', '💝',
-                '❤️', '💛', '💚', '💙', '💜', '🤎', '🖤', '🤍',
-                '💯', '💢', '💥', '💫', '💦', '💨', '🔥', '✨',
-                '👍', '👎', '👏', '🙌', '👐', '🤲', '🤝', '🙏',
-                '✍️', '💪', '🧠', '🫀', '👀', '👂', '👃', '🦷',
-                '🎉', '🎊', '🎁', '🎈', '🎂', '🎄', '🎃', '🎆'
-              ].map((emoji, index) => (
-                <button
-                  key={index}
-                  className="emoji-item"
-                  onClick={() => handleEmojiSelect(emoji)}
-                  type="button"
-                >
-                  {emoji}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 消息右键菜单 */}
-      {contextMenu && (
-        <div 
-          className="context-menu-overlay" 
-          onClick={closeContextMenu}
-        >
-          <div 
-            className="context-menu" 
-            style={{ top: contextMenu.y, left: contextMenu.x }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {contextMenu.canReply && (
-              <button 
-                className="context-menu-item" 
-                onClick={handleReplyMessage}
-                type="button"
-              >
-                <span className="menu-item-icon">↩️</span>
-                <span className="menu-item-text">回复</span>
-              </button>
-            )}
-            {contextMenu.canRevoke && (
-              <>
-                <button 
-                  className="context-menu-item" 
-                  onClick={handleEditMessage}
-                  type="button"
-                >
-                  <span className="menu-item-icon">✏️</span>
-                  <span className="menu-item-text">编辑</span>
-                </button>
-                <button 
-                  className="context-menu-item revoke" 
-                  onClick={handleRevokeMessage}
-                  type="button"
-                >
-                  <span className="menu-item-icon">↩️</span>
-                  <span className="menu-item-text">撤回</span>
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* 群成员管理模态框 */}
-      {showMemberModal && (
-        <div className="modal-overlay" onClick={closeMemberModal}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>{sessions[currentChat].title} - 群成员</h3>
-              <button className="modal-close" onClick={closeMemberModal}>×</button>
-            </div>
-            
-            {/* 群信息卡片 */}
-            <div className="group-info-card">
-              <div className="info-row">
-                <span className="info-label">群主：</span>
-                <span className="info-value">{getCurrentOwner()}</span>
-              </div>
-              <div className="info-row">
-                <span className="info-label">我的角色：</span>
-                <span className="info-value">
-                  <span className={`role-badge role-${myRole[currentChat]}`}>
-                    {myRole[currentChat] === 'owner' ? '群主' : myRole[currentChat] === 'admin' ? '管理员' : '普通成员'}
-                  </span>
-                </span>
-              </div>
-              <div className="info-row">
-                <span className="info-label">总人数：</span>
-                <span className="info-value">{groupMembers[currentChat]?.length || 0}人</span>
-              </div>
-            </div>
-
-            {/* 成员列表 */}
-            <div className="member-list">
-              {(groupMembers[currentChat] || []).map((member) => (
-                <div key={member.id} className="member-item">
-                  <div className="member-avatar">{member.avatar}</div>
-                  <div className="member-info">
-                    <div className="member-name">
-                      {member.name}
-                      <span className={`role-badge role-${member.role}`}>
-                        {member.role === 'owner' ? '群主' : member.role === 'admin' ? '管理员' : '成员'}
-                      </span>
-                    </div>
-                    <div className="member-status">
-                      <span className={`online-indicator ${member.online ? 'online' : 'offline'}`}></span>
-                      {member.online ? '在线' : '离线'}
-                    </div>
-                  </div>
-                  {/* 管理操作按钮（仅群主可见） */}
-                  {myRole[currentChat] === 'owner' && member.role === 'member' && (
-                    <div className="member-actions">
-                      <button 
-                        className="action-btn make-admin"
-                        onClick={() => handleMakeAdmin(member.id)}
-                      >
-                        任命管理员
-                      </button>
-                      <button 
-                        className="action-btn remove-member"
-                        onClick={() => handleRemoveMember(member.id)}
-                      >
-                        移出群聊
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 用户面板（类似 QQ 侧边栏） */}
-      {showUserPanel && (
-        <div className="user-panel-overlay" onClick={closeUserPanel}>
-          <div className="user-panel" onClick={(e) => e.stopPropagation()}>
-            {/* 用户信息卡片 */}
-            <div className="user-panel-header">
-              {typeof userAvatar === 'string' && userAvatar.startsWith('data:image') ? (
-                <div className="user-panel-avatar" style={{backgroundImage: `url(${userAvatar})`, backgroundSize: 'cover', backgroundPosition: 'center'}}>
-                </div>
-              ) : (
-                <div className="user-panel-avatar">
-                  <span>{userAvatar}</span>
-                </div>
-              )}
-              <div className="user-panel-info">
-                <h3>{profileData.nickname || '我的账号'}</h3>
-                <div className="user-status-selector" onClick={() => setShowStatusMenu(!showStatusMenu)}>
-                  <span className="user-status-icon">{getStatusIcon(userStatus)}</span>
-                  <span className="user-status-text">{getStatusText(userStatus)}</span>
-                  <span className={`user-status-arrow ${showStatusMenu ? 'active' : ''}`}>›</span>
-                </div>
-              </div>
-            </div>
-
-            {/* 功能菜单 */}
-            <div className="user-panel-menu">
-              <div className="menu-item" onClick={(e) => { e.stopPropagation(); handleOpenProfile(); }}>
-                <span className="menu-icon">👤</span>
-                <span className="menu-text">个人信息</span>
-                <span className="menu-arrow">›</span>
-              </div>
-              <div className="menu-item">
-                <span className="menu-icon">⚙️</span>
-                <span className="menu-text">设置</span>
-                <span className="menu-arrow">›</span>
-              </div>
-              <div className="menu-item" onClick={toggleNightMode}>
-                <span className="menu-icon">{isNightMode ? '☀️' : '🌙'}</span>
-                <span className="menu-text">{isNightMode ? '日间模式' : '夜间模式'}</span>
-                <span className="menu-toggle">
-                  <span className={`toggle-switch ${isNightMode ? 'active' : ''}`}></span>
-                </span>
-              </div>
-              <div className="menu-item">
-                <span className="menu-icon">🔔</span>
-                <span className="menu-text">消息通知</span>
-                <span className="menu-badge">3</span>
-              </div>
-              <div className="menu-item">
-                <span className="menu-icon">📁</span>
-                <span className="menu-text">文件管理</span>
-                <span className="menu-arrow">›</span>
-              </div>
-              <div className="menu-item">
-                <span className="menu-icon">❓</span>
-                <span className="menu-text">帮助与反馈</span>
-                <span className="menu-arrow">›</span>
-              </div>
-              <div className="menu-item">
-                <span className="menu-icon">ℹ️</span>
-                <span className="menu-text">关于我们</span>
-                <span className="menu-arrow">›</span>
-              </div>
-            </div>
-
-            {/* 底部退出登录 */}
-            <div className="user-panel-footer">
-              <button className="logout-btn" onClick={handleLogout}>
-                <span className="logout-icon">🚪</span>
-                退出登录
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 个人信息模态框 */}
-      {showProfileModal && (
-        <div className="profile-modal-overlay" onClick={() => setShowProfileModal(false)}>
-          <div className="profile-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="profile-modal-header">
-              <h3>个人信息</h3>
-              <button className="profile-modal-close" onClick={() => setShowProfileModal(false)}>×</button>
-            </div>
-            
-            <div className="profile-modal-body">
-              {!isEditingProfile ? (
-                // 查看模式
-                <div className="profile-view">
-                  <div className="profile-avatar-section">
-                    {typeof userAvatar === 'string' && userAvatar.startsWith('data:image') ? (
-                      <div className="profile-avatar" style={{backgroundImage: `url(${userAvatar})`, backgroundSize: 'cover', backgroundPosition: 'center'}}>
-                      </div>
-                    ) : (
-                      <div className="profile-avatar">
-                        <span>{userAvatar}</span>
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="profile-info-list">
-                    <div className="profile-info-item">
-                      <span className="info-label">在线状态：</span>
-                      <span className="info-value">{getStatusIcon(userStatus)} {getStatusText(userStatus)}</span>
-                    </div>
-                    <div className="profile-info-item">
-                      <span className="info-label">昵称：</span>
-                      <span className="info-value">{profileData.nickname || '未设置'}</span>
-                    </div>
-                    <div className="profile-info-item">
-                      <span className="info-label">性别：</span>
-                      <span className="info-value">{profileData.gender === 'male' ? '男' : profileData.gender === 'female' ? '女' : '其他'}</span>
-                    </div>
-                    <div className="profile-info-item">
-                      <span className="info-label">邮箱：</span>
-                      <span className="info-value">{profileData.email || '未设置'}</span>
-                    </div>
-                    <div className="profile-info-item">
-                      <span className="info-label">手机号：</span>
-                      <span className="info-value">{profileData.phone || '未设置'}</span>
-                    </div>
-                    <div className="profile-info-item">
-                      <span className="info-label">个人简介：</span>
-                      <span className="info-value">{profileData.bio || '暂无简介'}</span>
-                    </div>
-                  </div>
-                  
-                  <button className="edit-profile-btn" onClick={handleEditProfile}>
-                    编辑资料
-                  </button>
-                </div>
-              ) : (
-                // 编辑模式
-                <div className="profile-edit-form">
-                  <div className="form-group">
-                    <label htmlFor="nickname">昵称</label>
-                    <input
-                      type="text"
-                      id="nickname"
-                      value={profileData.nickname}
-                      onChange={(e) => handleProfileChange('nickname', e.target.value)}
-                      placeholder="请输入昵称"
-                    />
-                  </div>
-                  
-                  <div className="form-group">
-                    <label htmlFor="gender">性别</label>
-                    <select
-                      id="gender"
-                      value={profileData.gender}
-                      onChange={(e) => handleProfileChange('gender', e.target.value)}
-                    >
-                      <option value="male">男</option>
-                      <option value="female">女</option>
-                      <option value="other">其他</option>
-                    </select>
-                  </div>
-                  
-                  <div className="form-group">
-                    <label htmlFor="email">邮箱</label>
-                    <input
-                      type="email"
-                      id="email"
-                      value={profileData.email}
-                      onChange={(e) => handleProfileChange('email', e.target.value)}
-                      placeholder="请输入邮箱地址"
-                    />
-                  </div>
-                  
-                  <div className="form-group">
-                    <label htmlFor="phone">手机号</label>
-                    <input
-                      type="tel"
-                      id="phone"
-                      value={profileData.phone}
-                      onChange={(e) => handleProfileChange('phone', e.target.value)}
-                      placeholder="请输入手机号"
-                      pattern="[0-9]{11}"
-                    />
-                  </div>
-                  
-                  <div className="form-group">
-                    <label htmlFor="bio">个人简介</label>
-                    <textarea
-                      id="bio"
-                      value={profileData.bio}
-                      onChange={(e) => handleProfileChange('bio', e.target.value)}
-                      placeholder="介绍一下自己吧..."
-                      rows="4"
-                    />
-                  </div>
-                  
-                  <div className="profile-form-buttons">
-                    <button className="cancel-btn" onClick={handleCancelProfile}>
-                      取消
-                    </button>
-                    <button className="save-btn" onClick={handleSaveProfile}>
-                      保存
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 聊天详情模态框 */}
-      {showChatDetail && (
-        <div className="chat-detail-overlay" onClick={handleCloseChatDetail}>
-          <div className="chat-detail-panel" onClick={(e) => e.stopPropagation()}>
-            <div className="chat-detail-header">
-              <h3>聊天详情</h3>
-              <button className="chat-detail-close" onClick={handleCloseChatDetail}>×</button>
-            </div>
-            
-            <div className="chat-detail-content">
-              {/* 群聊详情 */}
-              {getCurrentSession().isGroup ? (
-                <div className="group-chat-detail">
-                  {/* 群头像和名称 */}
-                  <div className="group-info-section">
-                    <div className="group-avatar-large">
-                      {getCurrentSession().avatar}
-                    </div>
-                    <h2 className="group-name">{getCurrentSession().title}</h2>
-                    <p className="group-member-count">{(groupMembers[currentChat] || []).length} 位成员</p>
-                  </div>
-                  
-                  {/* 群公告 */}
-                  <div className="detail-section">
-                    <div className="section-title">群公告</div>
-                    <div className="section-content">
-                      <p>欢迎加入{getCurrentSession().title}！请遵守群规，文明交流。</p>
-                    </div>
-                  </div>
-                  
-                  {/* 群主信息 */}
-                  <div className="detail-section">
-                    <div className="section-title">群主</div>
-                    <div className="section-content owner-info">
-                      <div className="owner-avatar">{getCurrentOwner().charAt(0)}</div>
-                      <div className="owner-info">
-                        <div className="owner-name">{getCurrentOwner()}</div>
-                        <div className="owner-role">群主</div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* 我在本群的昵称 */}
-                  <div className="detail-section">
-                    <div className="section-title">我在本群的昵称</div>
-                    <div className="section-content">
-                      <div className="my-nickname">
-                        {profileData.nickname || '未设置'}
-                        <button className="edit-nickname-btn">编辑</button>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* 消息免打扰 */}
-                  <div className="detail-section">
-                    <div className="section-title">消息免打扰</div>
-                    <div className="section-content">
-                      <label className="toggle-switch-label">
-                        <input type="checkbox" className="toggle-checkbox" />
-                        <span className="toggle-slider"></span>
-                      </label>
-                    </div>
-                  </div>
-                  
-                  {/* 置顶聊天 */}
-                  <div className="detail-section">
-                    <div className="section-title">置顶聊天</div>
-                    <div className="section-content">
-                      <label className="toggle-switch-label">
-                        <input type="checkbox" className="toggle-checkbox" />
-                        <span className="toggle-slider"></span>
-                      </label>
-                    </div>
-                  </div>
-                  
-                  {/* 查找聊天记录 */}
-                  <div className="detail-section clickable" onClick={handleOpenSearchMessage}>
-                    <div className="section-title">查找聊天记录</div>
-                    <div className="section-content">
-                      <span className="arrow-icon">›</span>
-                    </div>
-                  </div>
-                  
-                  {/* 群公告 - 仅群聊显示 */}
-                  <div className="detail-section">
-                    <div className="section-title">群公告</div>
-                    <div className="section-content">
-                      {!isEditingAnnouncement ? (
-                        <div className="announcement-display">
-                          <p className="announcement-text">{groupAnnouncement || '暂无公告'}</p>
-                          {(userRole === 'owner' || userRole === 'admin') && (
-                            <button className="edit-announcement-btn" onClick={handleStartEditAnnouncement}>编辑</button>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="announcement-edit-form">
-                          <textarea
-                            value={tempAnnouncement}
-                            onChange={(e) => setTempAnnouncement(e.target.value)}
-                            placeholder="请输入群公告内容"
-                            rows="3"
-                          />
-                          <div className="announcement-actions">
-                            <button className="save-announcement-btn" onClick={handleSaveAnnouncement}>保存</button>
-                            <button className="cancel-announcement-btn" onClick={handleCancelEditAnnouncement}>取消</button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  
-                  {/* 成员列表 - 仅群聊显示 */}
-                  <div className="detail-section clickable" onClick={handleOpenMemberList}>
-                    <div className="section-title">成员管理</div>
-                    <div className="section-content">
-                      <span className="arrow-icon">›</span>
-                    </div>
-                  </div>
-                  
-                  {/* 邀请好友 - 仅群聊显示 */}
-                  <div className="detail-section clickable" onClick={handleOpenInviteMember}>
-                    <div className="section-title">邀请好友</div>
-                    <div className="section-content">
-                      <span className="arrow-icon">›</span>
-                    </div>
-                  </div>
-                  
-                  {/* 群主操作 - 仅群主显示 */}
-                  {userRole === 'owner' && (
-                    <>
-                      <div className="detail-section">
-                        <div className="section-title">群主操作</div>
-                        <div className="section-content">
-                          <button className="danger-btn" onClick={() => handleTransferGroup(null)}>转让群主</button>
-                        </div>
-                      </div>
-                      <div className="detail-section">
-                        <div className="section-title">危险操作</div>
-                        <div className="section-content">
-                          <button className="danger-btn" onClick={handleDismissGroup}>解散群聊</button>
-                        </div>
-                      </div>
-                    </>
-                  )}
-                  
-                  {/* 成员退出 - 仅普通成员显示 */}
-                  {userRole === 'member' && (
-                    <div className="detail-section">
-                      <div className="section-title">危险操作</div>
-                      <div className="section-content">
-                        <button className="danger-btn" onClick={handleExitGroup}>退出群聊</button>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* 成员列表预览 */}
-                  <div className="detail-section">
-                    <div className="section-title">成员</div>
-                    <div className="section-content members-preview">
-                      {groupMembers[currentChat]?.slice(0, 8).map((member, index) => (
-                        <div key={index} className="member-avatar-small" title={member.name}>
-                          {member.avatar}
-                        </div>
-                      ))}
-                      <div className="view-all-members">+</div>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                // 个人聊天详情
-                <div className="personal-chat-detail">
-                  {/* 用户头像和昵称 */}
-                  <div className="personal-info-section">
-                    <div className="personal-avatar-large">
-                      {getCurrentSession().avatar}
-                    </div>
-                    <h2 className="personal-name">{getCurrentSession().title}</h2>
-                    <p className="personal-status">{'🟢 在线'}</p>
-                  </div>
-                  
-                  {/* 个人备注 */}
-                  <div className="detail-section">
-                    <div className="section-title">备注</div>
-                    <div className="section-content">
-                      {!isEditingRemark ? (
-                        <div className="remark-input">
-                          {(() => {
-                            const currentSession = getCurrentSession()
-                            const friend = myFriends.find(f => f.name === currentSession.realName)
-                            return friend?.remark || '未设置'
-                          })()}
-                          <button className="edit-remark-btn" onClick={handleStartEditRemark}>编辑</button>
-                        </div>
-                      ) : (
-                        <div className="remark-edit-form">
-                          <input
-                            type="text"
-                            value={tempRemark}
-                            onChange={(e) => setTempRemark(e.target.value)}
-                            placeholder="请输入备注"
-                            autoFocus
-                          />
-                          <div className="remark-actions">
-                            <button className="save-remark-btn" onClick={handleSaveRemark}>保存</button>
-                            <button className="cancel-remark-btn" onClick={handleCancelEditRemark}>取消</button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  
-                  {/* 个人标签 */}
-                  <div className="detail-section">
-                    <div className="section-title">标签</div>
-                    <div className="section-content">
-                      <span className="tag-placeholder">未设置标签</span>
-                      <span className="arrow-icon">›</span>
-                    </div>
-                  </div>
-                  
-                  {/* 发消息 */}
-                  <div className="detail-section clickable">
-                    <div className="section-title">发消息</div>
-                    <div className="section-content">
-                      <span className="arrow-icon">›</span>
-                    </div>
-                  </div>
-                  
-                  {/* 音视频通话 */}
-                  <div className="detail-section clickable">
-                    <div className="section-title">音视频通话</div>
-                    <div className="section-content">
-                      <span className="arrow-icon">›</span>
-                    </div>
-                  </div>
-                  
-                  {/* 查找聊天记录 */}
-                  <div className="detail-section clickable">
-                    <div className="section-title">查找聊天记录</div>
-                    <div className="section-content">
-                      <span className="arrow-icon">›</span>
-                    </div>
-                  </div>
-                  
-                  {/* 消息免打扰 */}
-                  <div className="detail-section">
-                    <div className="section-title">消息免打扰</div>
-                    <div className="section-content">
-                      <label className="toggle-switch-label">
-                        <input type="checkbox" className="toggle-checkbox" />
-                        <span className="toggle-slider"></span>
-                      </label>
-                    </div>
-                  </div>
-                  
-                  {/* 置顶聊天 */}
-                  <div className="detail-section">
-                    <div className="section-title">置顶聊天</div>
-                    <div className="section-content">
-                      <label className="toggle-switch-label">
-                        <input type="checkbox" className="toggle-checkbox" />
-                        <span className="toggle-slider"></span>
-                      </label>
-                    </div>
-                  </div>
-                  
-                  {/* 添加到黑名单 */}
-                  <div className="detail-section">
-                    <div className="section-title">添加到黑名单</div>
-                    <div className="section-content">
-                      <label className="toggle-switch-label">
-                        <input type="checkbox" className="toggle-checkbox" />
-                        <span className="toggle-slider"></span>
-                      </label>
-                    </div>
-                  </div>
-                  
-                  {/* 投诉 */}
-                  <div className="detail-section clickable danger">
-                    <div className="section-title">投诉</div>
-                    <div className="section-content">
-                      <span className="arrow-icon">›</span>
-                    </div>
-                  </div>
-                  
-                  {/* 删除好友 */}
-                  <div className="detail-section clickable danger">
-                    <div className="section-title">删除好友</div>
-                    <div className="section-content" onClick={() => handleDeleteFriend(100)}>
-                      <span className="arrow-icon">›</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 添加好友模态框 */}
-      {showAddFriendModal && (
-        <div className="add-friend-modal-overlay" onClick={handleCloseAddFriend}>
-          <div className="add-friend-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="add-friend-modal-header">
-              <h3>添加好友</h3>
-              <button className="add-friend-modal-close" onClick={handleCloseAddFriend}>×</button>
-            </div>
-            
-            <div className="add-friend-modal-body">
-              {/* 搜索输入框 */}
-              <div className="friend-search-section">
-                <input
-                  type="text"
-                  className="friend-search-input"
-                  placeholder="搜索用户名、昵称或微信号"
-                  value={friendSearchQuery}
-                  onChange={handleSearchFriend}
-                  autoFocus
-                />
-              </div>
-              
-              {/* 搜索结果 */}
-              {friendSearchQuery && (
-                <div className="friend-search-results">
-                  <div className="search-result-item">
-                    <div className="result-avatar">A</div>
-                    <div className="result-info">
-                      <p className="result-name">Alice</p>
-                      <p className="result-subtitle">微信号：alice123</p>
-                    </div>
-                    <button 
-                      className="send-request-btn"
-                      onClick={() => handleSendFriendRequest('alice123')}
-                    >
-                      添加
-                    </button>
-                  </div>
-                  
-                  <div className="search-result-item">
-                    <div className="result-avatar">B</div>
-                    <div className="result-info">
-                      <p className="result-name">Bob</p>
-                      <p className="result-subtitle">微信号：bob456</p>
-                    </div>
-                    <button 
-                      className="send-request-btn"
-                      onClick={() => handleSendFriendRequest('bob456')}
-                    >
-                      添加
-                    </button>
-                  </div>
-                </div>
-              )}
-              
-              {/* 好友请求列表 */}
-              {friendRequestList.length > 0 && (
-                <div className="friend-requests-section">
-                  <h4>新的朋友 ({friendRequestList.length})</h4>
-                  {friendRequestList.map((request) => (
-                    <div key={request.id} className="request-item">
-                      <div className="request-avatar">{request.avatar}</div>
-                      <div className="request-info">
-                        <p className="request-name">{request.name}</p>
-                        <p className="request-message">想添加你为好友</p>
-                      </div>
-                      <div className="request-actions">
-                        <button 
-                          className="accept-btn"
-                          onClick={() => handleAcceptRequest(request.id)}
-                        >
-                          接受
-                        </button>
-                        <button 
-                          className="reject-btn"
-                          onClick={() => handleRejectRequest(request.id)}
-                        >
-                          拒绝
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-              
-              {/* 我的好友列表 */}
-              {myFriends.length > 0 && !friendSearchQuery && (
-                <div className="my-friends-list-section">
-                  <h4>我的好友 ({myFriends.length})</h4>
-                  {myFriends.map((friend) => (
-                    <div key={friend.id} className="friend-list-item">
-                      <div className="friend-list-avatar">{friend.avatar}</div>
-                      <div className="friend-list-info">
-                        <p className="friend-list-name">{friend.name}</p>
-                        <p className="friend-list-status">
-                          {friend.status === 'online' ? '🟢 在线' : 
-                           friend.status === 'busy' ? '🔴 忙碌' : 
-                           friend.status === 'away' ? '🟡 离开' : 
-                           friend.status === 'invisible' ? '🌙 隐身' : '⚫ 离线'}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-              
-              {/* 提示文字 */}
-              {!friendSearchQuery && friendRequestList.length === 0 && (
-                <div className="add-friend-hint">
-                  <p>在上方搜索框中输入用户的微信号、昵称或手机号</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 查找消息模态框 */}
-      {showSearchMessageModal && (
-        <div className="search-message-overlay" onClick={handleCloseSearchMessage}>
-          <div 
-            className="search-message-modal"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="search-message-header">
-              <h3>查找聊天记录</h3>
-              <button className="close-btn" onClick={handleCloseSearchMessage}>✕</button>
-            </div>
-            
-            <div className="search-message-body">
-              {/* 搜索输入框 */}
-              <div className="message-search-section">
-                <input
-                  type="text"
-                  className="message-search-input"
-                  placeholder="搜索聊天内容"
-                  value={searchMessageQuery}
-                  onChange={handleSearchMessages}
-                  autoFocus
-                />
-              </div>
-              
-              {/* 搜索结果统计 */}
-              {searchResults.length > 0 && (
-                <div className="search-results-info">
-                  <span>找到 {searchResults.length} 条相关消息</span>
-                  <div className="result-navigation">
-                    <button 
-                      className="nav-btn" 
-                      onClick={handlePreviousResult}
-                      disabled={currentResultIndex === 0}
-                    >
-                      ↑ 上一条
-                    </button>
-                    <span className="result-index">
-                      {currentResultIndex + 1} / {searchResults.length}
-                    </span>
-                    <button 
-                      className="nav-btn" 
-                      onClick={handleNextResult}
-                      disabled={currentResultIndex === searchResults.length - 1}
-                    >
-                      下一条 ↓
-                    </button>
-                  </div>
-                </div>
-              )}
-              
-              {/* 搜索结果列表 */}
-              {searchResults.length > 0 ? (
-                <div className="search-results-list">
-                  {searchResults.map((result, index) => (
-                    <div 
-                      key={result.index}
-                      className={`search-result-item ${index === currentResultIndex ? 'active' : ''}`}
-                      onClick={() => {
-                        setCurrentResultIndex(index)
-                        handleJumpToMessage(result.index)
-                      }}
-                    >
-                      <div className="result-sender">{result.sender === 'me' ? '我' : getCurrentSession().title}</div>
-                      <div className="result-text">
-                        {highlightText(result.text, searchMessageQuery)}
-                      </div>
-                      <div className="result-time">{result.time}</div>
-                    </div>
-                  ))}
-                </div>
-              ) : searchMessageQuery.trim() ? (
-                <div className="no-results">
-                  <p>未找到相关消息</p>
-                </div>
-              ) : (
-                <div className="search-placeholder">
-                  <p>请输入关键词搜索聊天内容</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 成员列表模态框 */}
-      {showMemberListModal && (
-        <div className="member-list-overlay" onClick={handleCloseMemberList}>
-          <div 
-            className="member-list-modal"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="member-list-header">
-              <h3>成员管理</h3>
-              <button className="close-btn" onClick={handleCloseMemberList}>✕</button>
-            </div>
-            
-            <div className="member-list-body">
-              <div className="member-list-section">
-                <h4>群主</h4>
-                <div className="member-item">
-                  <div className="member-avatar">张</div>
-                  <div className="member-info">
-                    <p className="member-name">张三</p>
-                    <p className="member-role">
-                      <span className={`status-dot ${groupMembers[currentChat]?.[0]?.online ? 'online' : 'offline'}`}></span>
-                      群主 {groupMembers[currentChat]?.[0]?.online ? '(在线)' : '(离线)'}
-                    </p>
-                  </div>
-                  {userRole === 'owner' && (
-                    <button className="transfer-btn" onClick={() => handleTransferGroup(null)}>
-                      转让
-                    </button>
-                  )}
-                </div>
-              </div>
-              
-              <div className="member-list-section">
-                <h4>管理员 ({groupMembers[currentChat]?.filter(m => m.role === 'admin').length || 0})</h4>
-                {groupMembers[currentChat]?.filter(m => m.role === 'admin').map((member, index) => (
-                  <div key={index} className="member-item">
-                    <div className="member-avatar">{member.avatar}</div>
-                    <div className="member-info">
-                      <p className="member-name">{member.name}</p>
-                      <p className="member-role">
-                        <span className={`status-dot ${member.online ? 'online' : 'offline'}`}></span>
-                        管理员 {member.online ? '(在线)' : '(离线)'}
-                      </p>
-                    </div>
-                    {userRole === 'owner' && (
-                      <button className="remove-btn" onClick={() => handleRemoveMember(member.id)}>
-                        移除
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-              
-              <div className="member-list-section">
-                <h4>普通成员 ({groupMembers[currentChat]?.filter(m => m.role === 'member').length || 0})</h4>
-                {groupMembers[currentChat]?.filter(m => m.role === 'member').map((member, index) => (
-                  <div key={index} className="member-item">
-                    <div className="member-avatar">{member.avatar}</div>
-                    <div className="member-info">
-                      <p className="member-name">{member.name}</p>
-                      <p className="member-role">
-                        <span className={`status-dot ${member.online ? 'online' : 'offline'}`}></span>
-                        普通成员 {member.online ? '(在线)' : '(离线)'}
-                      </p>
-                    </div>
-                    {(userRole === 'owner' || userRole === 'admin') && (
-                      <button className="remove-btn" onClick={() => handleRemoveMember(member.id)}>
-                        移除
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 邀请成员模态框 */}
-      {showInviteMemberModal && (
-        <div className="invite-member-overlay" onClick={handleCloseInviteMember}>
-          <div 
-            className="invite-member-modal"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="invite-member-header">
-              <h3>邀请好友</h3>
-              <button className="close-btn" onClick={handleCloseInviteMember}>✕</button>
-            </div>
-            
-            <div className="invite-member-body">
-              <p className="invite-hint">选择要邀请的好友（需群主或管理员审核）</p>
-              <div className="friend-select-list">
-                {myFriends.map((friend) => (
-                  <label key={friend.id} className="friend-checkbox">
-                    <input type="checkbox" />
-                    <div className="friend-avatar-small">{friend.avatar}</div>
-                    <span className="friend-name">{friend.remark || friend.name}</span>
-                  </label>
-                ))}
-              </div>
-              <button className="send-invite-btn" onClick={() => {
-                alert('邀请已发送，等待群主或管理员审核')
-                handleCloseInviteMember()
-              }}>
-                发送邀请
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 创建群聊模态框 */}
-      {showCreateGroupModal && (
-        <div className="create-group-overlay" onClick={handleCloseCreateGroup}>
-          <div 
-            className="create-group-modal"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="create-group-header">
-              <h3>创建群聊</h3>
-              <button className="close-btn" onClick={handleCloseCreateGroup}>✕</button>
-            </div>
-            
-            <div className="create-group-body">
-              {/* 群聊名称输入 */}
-              <div className="group-name-section">
-                <label className="group-name-label">群聊名称</label>
-                <input
-                  type="text"
-                  className="group-name-input"
-                  placeholder="请输入群聊名称"
-                  value={groupName}
-                  onChange={(e) => setGroupName(e.target.value)}
-                  autoFocus
-                />
-              </div>
-              
-              {/* 选择好友 */}
-              <div className="select-friends-section">
-                <div className="section-header">
-                  <label>选择成员</label>
-                  <span className="selected-count">已选 {selectedFriends.length} 人</span>
-                </div>
-                <div className="friends-checkbox-list">
-                  {myFriends.map((friend) => (
-                    <label 
-                      key={friend.id} 
-                      className={`friend-checkbox ${selectedFriends.includes(friend.id) ? 'selected' : ''}`}
-                    >
-                      <input 
-                        type="checkbox" 
-                        checked={selectedFriends.includes(friend.id)}
-                        onChange={() => handleToggleSelectFriend(friend.id)}
-                      />
-                      <div className="friend-checkbox-avatar">
-                        {friend.avatar}
-                      </div>
-                      <span className="friend-checkbox-name">
-                        {friend.remark || friend.name}
-                        {friend.remark && <span className="real-name">({friend.name})</span>}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-              
-              {/* 已选好友预览 */}
-              {selectedFriends.length > 0 && (
-                <div className="selected-preview">
-                  <label>已选择的好友</label>
-                  <div className="selected-avatars">
-                    {selectedFriends.map(id => {
-                      const friend = myFriends.find(f => f.id === id)
-                      return (
-                        <div key={id} className="selected-avatar" title={friend?.remark || friend?.name}>
-                          {friend?.avatar}
-                        </div>
-                      )
-                    })}
-                    <div className="selected-avatar self">
-                      我
-                    </div>
-                  </div>
-                  <p className="preview-text">共 {selectedFriends.length + 1} 人</p>
-                </div>
-              )}
-              
-              {/* 操作按钮 */}
-              <div className="create-group-actions">
-                <button 
-                  className="cancel-create-btn" 
-                  onClick={handleCloseCreateGroup}
-                >
-                  取消
-                </button>
-                <button 
-                  className="create-group-submit-btn" 
-                  onClick={handleCreateGroup}
-                  disabled={selectedFriends.length === 0 || !groupName.trim()}
-                >
-                  创建群聊 ({selectedFriends.length + 1}人)
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <Overlays
+        showEmojiPicker={showEmojiPicker}
+        closeEmojiPicker={closeEmojiPicker}
+        handleEmojiSelect={handleEmojiSelect}
+        contextMenu={contextMenu}
+        closeContextMenu={closeContextMenu}
+        handleReplyMessage={handleReplyMessage}
+        handleEditMessage={handleEditMessage}
+        handleRevokeMessage={handleRevokeMessage}
+        showMemberModal={showMemberModal}
+        closeMemberModal={closeMemberModal}
+        sessions={sessions}
+        currentChat={currentChat}
+        getCurrentOwner={getCurrentOwner}
+        myRole={myRole}
+        groupMembers={groupMembers}
+        handleMakeAdmin={handleMakeAdmin}
+        handleRemoveMember={handleRemoveMember}
+        showUserPanel={showUserPanel}
+        closeUserPanel={closeUserPanel}
+        userAvatar={userAvatar}
+        profileData={profileData}
+        showStatusMenu={showStatusMenu}
+        setShowStatusMenu={setShowStatusMenu}
+        getStatusIcon={getStatusIcon}
+        getStatusText={getStatusText}
+        userStatus={userStatus}
+        handleOpenProfile={handleOpenProfile}
+        toggleNightMode={toggleNightMode}
+        isNightMode={isNightMode}
+        handleLogout={handleLogout}
+        showProfileModal={showProfileModal}
+        setShowProfileModal={setShowProfileModal}
+        showPeerProfileModal={showPeerProfileModal}
+        peerProfile={peerProfile}
+        handleClosePeerProfile={handleClosePeerProfile}
+        handleStartChatWithPeer={handleStartChatWithPeer}
+        handleAddPeerAsFriend={handleAddPeerAsFriend}
+        isEditingProfile={isEditingProfile}
+        handleEditProfile={handleEditProfile}
+        handleProfileChange={handleProfileChange}
+        handleCancelProfile={handleCancelProfile}
+        handleSaveProfile={handleSaveProfile}
+        showChatDetail={showChatDetail}
+        handleCloseChatDetail={handleCloseChatDetail}
+        getCurrentSession={getCurrentSession}
+        handleOpenSearchMessage={handleOpenSearchMessage}
+        isEditingAnnouncement={isEditingAnnouncement}
+        groupAnnouncement={groupAnnouncement}
+        userRole={userRole}
+        handleStartEditAnnouncement={handleStartEditAnnouncement}
+        tempAnnouncement={tempAnnouncement}
+        setTempAnnouncement={setTempAnnouncement}
+        handleSaveAnnouncement={handleSaveAnnouncement}
+        handleCancelEditAnnouncement={handleCancelEditAnnouncement}
+        handleOpenMemberList={handleOpenMemberList}
+        handleOpenInviteMember={handleOpenInviteMember}
+        handleTransferGroup={handleTransferGroup}
+        handleDismissGroup={handleDismissGroup}
+        handleExitGroup={handleExitGroup}
+        isEditingRemark={isEditingRemark}
+        tempRemark={tempRemark}
+        setTempRemark={setTempRemark}
+        myFriends={myFriends}
+        handleStartEditRemark={handleStartEditRemark}
+        handleSaveRemark={handleSaveRemark}
+        handleCancelEditRemark={handleCancelEditRemark}
+        handleDeleteFriend={handleDeleteFriend}
+        showAddFriendModal={showAddFriendModal}
+        handleCloseAddFriend={handleCloseAddFriend}
+        friendSearchQuery={friendSearchQuery}
+        handleSearchFriend={handleSearchFriend}
+        friendSearchResults={friendSearchResults}
+        isAlreadyFriend={isAlreadyFriend}
+        getSentRequestStatus={getSentRequestStatus}
+        handleSendFriendRequest={handleSendFriendRequest}
+        friendRequestList={friendRequestList}
+        sentFriendRequests={sentFriendRequests}
+        handleMockApproveSentRequest={handleMockApproveSentRequest}
+        handleAcceptRequest={handleAcceptRequest}
+        handleRejectRequest={handleRejectRequest}
+        showSearchMessageModal={showSearchMessageModal}
+        handleCloseSearchMessage={handleCloseSearchMessage}
+        searchMessageQuery={searchMessageQuery}
+        handleSearchMessages={handleSearchMessages}
+        searchResults={searchResults}
+        handlePreviousResult={handlePreviousResult}
+        currentResultIndex={currentResultIndex}
+        handleNextResult={handleNextResult}
+        setCurrentResultIndex={setCurrentResultIndex}
+        handleJumpToMessage={handleJumpToMessage}
+        highlightText={highlightText}
+        showMemberListModal={showMemberListModal}
+        handleCloseMemberList={handleCloseMemberList}
+        showInviteMemberModal={showInviteMemberModal}
+        handleCloseInviteMember={handleCloseInviteMember}
+        showCreateGroupModal={showCreateGroupModal}
+        handleCloseCreateGroup={handleCloseCreateGroup}
+        groupName={groupName}
+        setGroupName={setGroupName}
+        selectedFriends={selectedFriends}
+        handleToggleSelectFriend={handleToggleSelectFriend}
+        handleCreateGroup={handleCreateGroup}
+      />
     </div>
   )
 }
