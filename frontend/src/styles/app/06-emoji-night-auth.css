@@ -1,0 +1,392 @@
+﻿/* ========================================
+   11. 琛ㄦ儏閫夋嫨鍣?- 琛ㄦ儏闈㈡澘
+   浣嶇疆锛氱偣鍑昏緭鍏ユ涓婃柟宸ュ叿鏍忕殑琛ㄦ儏鎸夐挳鍚庡脊鍑?
+   鍔熻兘锛氭樉绀哄父鐢ㄨ〃鎯呭垪琛紝鐐瑰嚮鍙彃鍏ュ埌杈撳叆妗?
+   ======================================== */
+
+/* 琛ㄦ儏閫夋嫨鍣ㄩ伄缃╁眰 */
+.emoji-picker-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 998; /* 鍦ㄧ敤鎴烽潰鏉夸箣涓嬶紝鑱婂ぉ鍐呭涔嬩笂 */
+  background: transparent;
+  animation: fadeIn 0.2s ease;
+}
+
+/* 琛ㄦ儏閫夋嫨鍣ㄤ富浣?*/
+.emoji-picker {
+  position: absolute;
+  bottom: 140px; /* 杈撳叆妗嗛珮搴?+ 搴曢儴闂磋窛 */
+  left: 20px;
+  width: 420px;
+  max-height: 500px;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px) scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+/* 琛ㄦ儏閫夋嫨鍣ㄥご閮?*/
+.emoji-picker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e5e5e5;
+  background: linear-gradient(90deg, #f8f9fa, #ffffff);
+}
+
+.emoji-picker-header span {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #0a0a0a;
+}
+
+.emoji-close-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  font-size: 1.2rem;
+  color: #999;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.emoji-close-btn:hover {
+  background: #f0f0f0;
+  color: #333;
+  transform: rotate(90deg);
+}
+
+/* 琛ㄦ儏缃戞牸甯冨眬 */
+.emoji-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(8, 1fr); /* 8 鍒?*/
+  gap: 4px;
+  padding: 12px;
+  overflow-y: auto;
+  background: #ffffff;
+  max-height: 420px;
+}
+
+.emoji-grid::-webkit-scrollbar {
+  width: 6px;
+}
+
+.emoji-grid::-webkit-scrollbar-track {
+  background: #f0f0f0;
+  border-radius: 3px;
+}
+
+.emoji-grid::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 3px;
+}
+
+.emoji-grid::-webkit-scrollbar-thumb:hover {
+  background: #aaa;
+}
+
+/* 琛ㄦ儏椤?*/
+.emoji-item {
+  width: 44px;
+  height: 44px;
+  border: none;
+  background: transparent;
+  font-size: 1.4rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.emoji-item:hover {
+  background: #f0f0f0;
+  transform: scale(1.15);
+}
+
+.emoji-item:active {
+  transform: scale(0.95);
+}
+
+/* 澶滈棿妯″紡涓嬬殑琛ㄦ儏閫夋嫨鍣?*/
+.night-mode .emoji-picker {
+  background: #1e1e1e;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.night-mode .emoji-picker-header {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.05));
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.night-mode .emoji-picker-header span {
+  color: #ffffff;
+}
+
+.night-mode .emoji-close-btn {
+  color: #999;
+}
+
+.night-mode .emoji-close-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.night-mode .emoji-grid {
+  background: #1e1e1e;
+}
+
+.night-mode .emoji-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* ========================================
+   12. 澶滈棿妯″紡 - 妯℃€佹鍜岀敤鎴烽潰鏉?
+   ======================================== */
+
+/* 缇ゆ垚鍛樼鐞嗘ā鎬佹 */
+.night-mode .modal-overlay {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.night-mode .modal-content {
+  background: #1a1a1a;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.night-mode .modal-header {
+  background: linear-gradient(90deg, #141414, #1a1a1a);
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.night-mode .modal-header h3 {
+  color: #ffffff;
+}
+
+.night-mode .modal-close {
+  color: #b0b0b0;
+}
+
+.night-mode .modal-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.night-mode .group-info-card {
+  background: linear-gradient(135deg, #141414, #1a1a1a);
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.night-mode .info-label {
+  color: #b0b0b0;
+}
+
+.night-mode .info-value {
+  color: #ffffff;
+}
+
+.night-mode .member-item {
+  background: #252525;
+}
+
+.night-mode .member-item:hover {
+  background: #2a2a2a;
+}
+
+.night-mode .member-name {
+  color: #ffffff;
+}
+
+.night-mode .member-status {
+  color: #a0a0a0;
+}
+
+/* 鐢ㄦ埛闈㈡澘 */
+.night-mode .user-panel {
+  background: #141414;
+  box-shadow: -4px 0 16px rgba(0, 0, 0, 0.5);
+}
+
+.night-mode .user-panel-header {
+  background: linear-gradient(135deg, #1a1a1a, #252525);
+  color: #ffffff;
+}
+
+.night-mode .user-panel-info h3 {
+  color: #ffffff;
+}
+
+.night-mode .user-panel-menu {
+  background: #141414;
+}
+
+.night-mode .menu-item {
+  color: #e0e0e0;
+}
+
+.night-mode .menu-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.night-mode .menu-text {
+  color: #e0e0e0;
+}
+
+.night-mode .menu-arrow {
+  color: #888;
+}
+
+.night-mode .logout-btn {
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #c0c0c0;
+}
+
+.night-mode .logout-btn:hover {
+  border-color: rgba(255, 107, 107, 0.5);
+  color: #ff6b6b;
+  background: rgba(255, 107, 107, 0.1);
+}
+
+/* ========================================
+   13. 澶滈棿妯″紡 - 鐧诲綍鍜屾敞鍐岄〉闈?
+   ======================================== */
+
+.night-mode .login-container {
+  background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+}
+
+.night-mode .login-box {
+  background: #1e1e1e;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+}
+
+.night-mode .brand-logo h1 {
+  color: #ffffff;
+}
+
+.night-mode .login-subtitle {
+  color: #b0b0b0;
+}
+
+.night-mode .form-group label {
+  color: #d0d0d0;
+}
+
+.night-mode .form-group input {
+  background: #2a2a2a;
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+}
+
+.night-mode .form-group input::placeholder {
+  color: #666;
+}
+
+.night-mode .form-group input:focus {
+  background: #303030;
+  border-color: rgba(102, 126, 234, 0.5);
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+}
+
+.night-mode .checkbox-label {
+  color: #b0b0b0;
+}
+
+.night-mode .forgot-link {
+  color: #90a4ff;
+}
+
+.night-mode .forgot-link:hover {
+  color: #a8b8ff;
+}
+
+.night-mode .login-btn {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+}
+
+.night-mode .login-divider span {
+  background: #1e1e1e;
+  color: #888;
+}
+
+.night-mode .social-login .social-btn {
+  background: #2a2a2a;
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #d0d0d0;
+}
+
+.night-mode .social-login .social-btn:hover {
+  border-color: rgba(102, 126, 234, 0.5);
+  color: #ffffff;
+  background: rgba(102, 126, 234, 0.15);
+}
+
+.night-mode .login-footer p {
+  color: #b0b0b0;
+}
+
+.night-mode .login-footer a {
+  color: #90a4ff;
+}
+
+.night-mode .login-footer a:hover {
+  color: #a8b8ff;
+}
+
+/* 娉ㄥ唽椤甸潰 */
+.night-mode .register-box {
+  background: #1e1e1e;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+}
+
+.night-mode .register-subtitle {
+  color: #b0b0b0;
+}
+
+.night-mode .register-btn {
+  background: linear-gradient(135deg, #10b981, #059669);
+}
+
+.night-mode .register-divider span {
+  background: #1e1e1e;
+  color: #888;
+}
+
+.night-mode .back-to-login-btn {
+  border-color: rgba(102, 126, 234, 0.5);
+  color: #90a4ff;
+}
+
+.night-mode .back-to-login-btn:hover {
+  background: rgba(102, 126, 234, 0.15);
+  color: #ffffff;
+}
+
