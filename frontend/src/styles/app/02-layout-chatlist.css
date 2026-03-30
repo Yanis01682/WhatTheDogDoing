@@ -1,0 +1,450 @@
+﻿/* ========================================
+   3. 涓诲竷灞€鍖哄煙 - 瀵艰埅鏍忎笅鏂瑰唴瀹瑰尯
+   浣嶇疆锛氬垎涓哄乏鍙充袱鏍忥紙浼氳瘽鍒楄〃 + 鑱婂ぉ绐楀彛锛?
+   ======================================== */
+.im-layout {
+  display: flex;
+  overflow: hidden;
+}
+
+/* ========================================
+   鍙嫋鎷藉垎闅旂嚎 - 浼氳瘽鍒楄〃鍜岃亰澶╃獥鍙ｄ箣闂?
+   浣嶇疆锛氬乏渚т細璇濆垪琛ㄥ拰鍙充晶鑱婂ぉ绐楀彛涔嬮棿
+   鍔熻兘锛氱敤鎴峰彲浠ユ嫋鎷借皟鏁村乏渚ч潰鏉垮搴?
+   ======================================== */
+.resize-handle {
+  width: 1px;
+  background: transparent;
+  cursor: col-resize;
+  transition: background 0.2s ease;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 10;
+}
+
+.resize-handle:hover,
+.resize-handle.resizing {
+  background: rgba(0, 132, 255, 0.3);
+}
+
+.resize-handle::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  border-radius: 2px;
+  background: rgba(0, 132, 255, 0);
+  transition: background 0.2s ease;
+}
+
+.resize-handle:hover::after,
+.resize-handle.resizing::after {
+  background: rgba(0, 132, 255, 0.5);
+}
+
+/* 鍙充晶鑱婂ぉ闈㈡澘鐨勫垎闅旂嚎 */
+.chat-resize-handle {
+  width: 1px;
+  background: transparent;
+  cursor: col-resize;
+  transition: background 0.2s ease;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 10;
+}
+
+.chat-resize-handle:hover,
+.chat-resize-handle.resizing {
+  background: rgba(0, 132, 255, 0.3);
+}
+
+.chat-resize-handle::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  border-radius: 2px;
+  background: rgba(0, 132, 255, 0);
+  transition: background 0.2s ease;
+}
+
+.chat-resize-handle:hover::after,
+.chat-resize-handle.resizing::after {
+  background: rgba(0, 132, 255, 0.5);
+}
+
+/* ========================================
+   宸︿晶浼氳瘽鍒楄〃闈㈡澘
+   浣嶇疆锛氬乏渚ц竟鏍忥紝鏄剧ず鎵€鏈夎亰澶╀細璇濆垪琛?
+   ======================================== */
+.chatlist-panel {
+  border-right: 1px solid #e5e5e5;
+  background: #fafafa !important;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border-bottom: 1px solid #f0f0f0;
+  background: #ffffff;
+}
+
+.panel-header h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #0a0a0a;
+}
+
+.header-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.icon-btn {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: #555;
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.icon-btn:hover {
+  background-color: #f0f0f0;
+  transform: scale(1.05);
+}
+
+.icon-btn.active {
+  background-color: rgba(0, 132, 255, 0.15);
+  color: #0084ff;
+  transform: scale(1.05);
+}
+
+.search-wrap {
+  padding: 8px 16px 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  background: #ffffff;
+  animation: slideDown 0.2s ease;
+}
+
+.search-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-input-wrapper input {
+  width: 100%;
+  border: 1px solid #e0e0e0;
+  border-radius: 20px;
+  padding: 10px 40px 10px 16px; /* 鍙充晶鐣欑┖缁欐竻绌烘寜閽?*/
+  font-size: 0.9rem;
+  outline: none;
+  background: #f5f5f5;
+  transition: all 0.2s ease;
+}
+
+.search-input-wrapper input:focus {
+  border-color: #0084ff;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(0, 132, 255, 0.1);
+}
+
+.search-clear-btn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 50%;
+  background: #d0d0d0;
+  color: #ffffff;
+  font-size: 0.8rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.search-clear-btn:hover {
+  background: #999;
+  transform: translateY(-50%) scale(1.1);
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ========================================
+   浼氳瘽鍒嗙被鏍囩 - 鎼滅储妗嗕笅鏂?
+   浣嶇疆锛氬乏渚т細璇濆垪琛紝鎼滅储妗嗗拰浼氳瘽鍒楄〃涔嬮棿
+   鍔熻兘锛氬尯鍒嗕釜浜鸿亰澶╁拰缇よ亰
+   ======================================== */
+.session-tabs {
+  display: flex;
+  padding: 8px 16px;
+  gap: 8px;
+  background: #fafafa;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #d0d0d0;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #666;
+  font-size: 0.85rem;
+  font-family: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tab-btn:hover {
+  border-color: #0084ff;
+  color: #0084ff;
+  background: rgba(0, 132, 255, 0.05);
+}
+
+.tab-btn.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #ffffff;
+  border-color: transparent;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.tab-btn.active:hover {
+  background: linear-gradient(135deg, #5568d3 0%, #6a4190 100%);
+}
+
+.session-list {
+  flex: 1;
+  margin: 0;
+  padding: 8px;
+  list-style: none;
+  overflow-y: auto;
+  background: #fafafa;
+}
+
+.group-folder {
+  list-style: none;
+  margin-top: 8px;
+  padding: 8px;
+  border-radius: 12px;
+  background: #f3f6fb;
+  border: 1px solid #dde6f5;
+}
+
+.group-folder-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 4px 2px;
+  color: #2f4f7f;
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.group-folder-arrow {
+  transform: rotate(0deg);
+  transition: transform 0.2s ease;
+}
+
+.group-folder-arrow.open {
+  transform: rotate(90deg);
+}
+
+.group-folder-title {
+  flex: 1;
+  text-align: left;
+}
+
+.group-folder-count {
+  min-width: 20px;
+  height: 20px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #d7e4f8;
+  color: #2f4f7f;
+  font-size: 0.75rem;
+}
+
+.group-folder-list {
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.session-context-menu {
+  position: fixed;
+  z-index: 1200;
+  min-width: 132px;
+  padding: 6px;
+  border-radius: 10px;
+  border: 1px solid #d8e2f2;
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgba(25, 45, 80, 0.16);
+}
+
+.session-context-item {
+  width: 100%;
+  border: none;
+  background: transparent;
+  text-align: left;
+  border-radius: 6px;
+  padding: 8px 10px;
+  color: #2f4f7f;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.session-context-item:hover {
+  background: #edf3fc;
+}
+
+/* 濂藉弸鍖哄煙鍘嬬缉鍒颁笅鏂?*/
+.friends-section {
+  border-top: 1px solid #e5e5e5;
+  margin-top: auto; /* 鎺ㄥ埌搴曢儴 */
+  max-height: 180px; /* 闄愬埗鏈€澶ч珮搴?*/
+  overflow-y: auto; /* 鍙粴鍔?*/
+  background: linear-gradient(180deg, rgba(250,250,250,0) 0%, rgba(240,240,240,0.8) 100%);
+  flex-shrink: 0; /* 涓嶈鍘嬬缉 */
+}
+
+.session-item {
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  gap: 12px;
+  padding: 12px;
+  margin-bottom: 4px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.session-item:hover {
+  background-color: #f0f0f0;
+}
+
+.session-item.active {
+  background-color: #e5f1ff;
+  border: none;
+}
+
+.avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #ffffff;
+  font-size: 1.3rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.avatar.large {
+  width: 48px;
+  height: 48px;
+  font-size: 1.2rem;
+}
+
+.session-main {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.session-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.session-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #0a0a0a;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.session-time {
+  font-size: 0.75rem;
+  color: #999;
+  flex-shrink: 0;
+}
+
+.session-meta {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #777;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+.session-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #ff6b6b, #ee5a6f);
+  color: #ffffff;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0 6px;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(255, 107, 107, 0.4);
+}
+

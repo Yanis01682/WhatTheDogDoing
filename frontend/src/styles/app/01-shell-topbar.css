@@ -1,0 +1,122 @@
+﻿/* ========================================
+   WhatTheDogDoing 鍗虫椂閫氳杞欢 - 鏍峰紡鏂囦欢
+   ========================================
+   
+   鐩綍缁撴瀯锛?
+   1. 鍏ㄥ眬甯冨眬锛?im-shell锛?
+   2. 椤堕儴瀵艰埅鏍忥紙.im-topbar锛?
+   3. 涓诲竷灞€鍖哄煙锛?im-layout锛?
+   4. 宸︿晶浼氳瘽鍒楄〃闈㈡澘锛?chatlist-panel锛?
+   5. 鍙充晶鑱婂ぉ闈㈡澘锛?chat-panel锛?
+   6. 娑堟伅鍒楄〃鍖哄煙锛?chat-messages锛?
+   7. 娑堟伅杈撳叆妗嗗尯鍩燂紙.composer锛?
+   8. 鐧诲綍鐣岄潰锛?login-container锛?
+   9. 缇ゆ垚鍛樼鐞嗘ā鎬佹锛?modal-overlay锛?
+   10. 婊氬姩鏉＄編鍖?
+   
+   璇存槑锛氱函 Web 绔簲鐢紝鏃犻渶绉诲姩绔€傞厤
+======================================== */
+
+/* ========================================
+   1. 鍏ㄥ眬甯冨眬 - 鏈€澶栧眰瀹瑰櫒
+   浣嶇疆锛氭暣涓簲鐢ㄧ殑鏈€澶栧眰鍖呰鍣?
+   ======================================== */
+.im-shell {
+  width: 100%;
+  height: 100vh; /* 鍗犳弧鏁翠釜瑙嗗彛楂樺害 */
+  display: grid;
+  grid-template-rows: 60px 1fr; /* 椤堕儴瀵艰埅鏍?60px + 鍐呭鍖哄煙鑷€傚簲 */
+  background: linear-gradient(135deg, #8fa3fa 0%, #fbfbfc 100%); /* 绱壊娓愬彉鑳屾櫙 */
+  overflow: hidden;
+}
+
+/* ========================================
+   2. 椤堕儴瀵艰埅鏍?- 椤甸潰椤堕儴
+   浣嶇疆锛氶〉闈㈡渶涓婃柟锛屾樉绀哄搧鐗?Logo 鍜岀敤鎴风姸鎬?
+   ======================================== */
+.im-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  background: transparent; /* 鏀逛负閫忔槑锛岃鐖跺鍣ㄧ殑娓愬彉閫忓嚭鏉?*/
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  z-index: 100;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0084ff, #0073e6);
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0, 132, 255, 0.4);
+}
+
+.brand-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #0a0a0a;
+  letter-spacing: -0.3px;
+}
+
+.brand-sub {
+  margin: 0;
+  font-size: 0.7rem;
+  color: #888;
+  letter-spacing: 0.3px;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: #555;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #31a24c;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.ghost-btn {
+  border: 1px solid #181818;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 0.85rem;
+  font-family: inherit;
+  color: #555;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ghost-btn:hover {
+  border-color: #0084ff;
+  color: #0084ff;
+  background: rgba(0, 132, 255, 0.05);
+}
+
