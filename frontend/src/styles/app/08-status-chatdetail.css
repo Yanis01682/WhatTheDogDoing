@@ -1,0 +1,662 @@
+﻿/* ========================================
+   17. 鍦ㄧ嚎鐘舵€侀€夋嫨鍣ㄦ牱寮?
+   ======================================== */
+
+/* 椤堕儴瀵艰埅鏍忕姸鎬侀€夋嫨鍣?*/
+.status-selector {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-right: 12px;
+}
+
+.status-selector:hover {
+  background: rgba(255, 255, 255, 1);
+}
+
+.status-icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.status-text {
+  font-size: 0.85rem;
+  color: #333;
+  font-weight: 500;
+}
+
+.status-arrow {
+  font-size: 1rem;
+  color: #999;
+  transition: transform 0.2s ease;
+}
+
+.status-arrow.active {
+  transform: rotate(90deg);
+}
+
+/* 鐘舵€侀€夋嫨鑿滃崟 */
+.status-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  min-width: 160px;
+  overflow: hidden;
+  z-index: 1002;
+  animation: slideDown 0.2s ease;
+  border: 1px solid #e5e5e5;
+}
+
+.status-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.status-menu-item:hover {
+  background: #f5f5f5;
+}
+
+.status-menu-icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.status-menu-text {
+  flex: 1;
+  font-size: 0.9rem;
+  color: #333;
+}
+
+.status-menu-check {
+  color: #667eea;
+  font-weight: bold;
+  font-size: 1rem;
+}
+
+/* 鐢ㄦ埛闈㈡澘涓殑鐘舵€侀€夋嫨鍣?*/
+.user-status-selector {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  max-width: fit-content;
+}
+
+.user-status-selector:hover {
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.user-status-icon {
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.user-status-text {
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.user-status-arrow {
+  font-size: 0.9rem;
+  color: #999;
+  transition: transform 0.2s ease;
+}
+
+.user-status-arrow.active {
+  transform: rotate(90deg);
+}
+
+/* 涓汉淇℃伅涓殑鐘舵€佷笅鎷夋 */
+.status-select {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #d0d0d0;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  background: #ffffff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.status-select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+/* 澶滈棿妯″紡涓嬬殑鐘舵€侀€夋嫨鍣?*/
+.night-mode .status-selector {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.night-mode .status-selector:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.night-mode .status-text {
+  color: #e0e0e0;
+}
+
+.night-mode .status-arrow {
+  color: #888;
+}
+
+.night-mode .status-menu {
+  background: #2a2a2a;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.night-mode .status-menu-item {
+  color: #e0e0e0;
+}
+
+.night-mode .status-menu-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.night-mode .status-menu-text {
+  color: #e0e0e0;
+}
+
+.night-mode .user-status-selector {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.night-mode .user-status-selector:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.night-mode .user-status-text {
+  color: #b0b0b0;
+}
+
+.night-mode .user-status-arrow {
+  color: #888;
+}
+
+.night-mode .status-select {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: #2a2a2a;
+  color: #e0e0e0;
+}
+
+.night-mode .status-select:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+}
+
+
+/* ========================================
+   17. 鑱婂ぉ璇︽儏妯℃€佹鏍峰紡
+   ======================================== */
+
+/* 鑱婂ぉ璇︽儏閬僵灞?*/
+.chat-detail-overlay {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  animation: fadeIn 0.2s ease;
+}
+
+/* 鑱婂ぉ璇︽儏闈㈡澘 - 浠庡彸渚ф粦鍑?*/
+.chat-detail-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  max-width: 360px;
+  background: #ffffff;
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.15);
+  animation: slideInRight 0.3s ease;
+  overflow-y: auto;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+/* 鑱婂ぉ璇︽儏澶撮儴 */
+.chat-detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e5e5e5;
+  background: linear-gradient(90deg, #f8f9fa, #ffffff);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.chat-detail-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #0a0a0a;
+}
+
+.chat-detail-close {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  font-size: 1.5rem;
+  color: #666;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.chat-detail-close:hover {
+  background: #f0f0f0;
+  color: #333;
+}
+
+/* 鑱婂ぉ璇︽儏鍐呭鍖?*/
+.chat-detail-content {
+  padding: 0;
+}
+
+/* 缇よ亰璇︽儏鍖哄煙 */
+.group-info-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px 24px;
+  border-bottom: 1px solid #e5e5e5;
+  background: linear-gradient(180deg, #f8f9fa, #ffffff);
+}
+
+.group-avatar-large {
+  width: 80px;
+  height: 80px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+  font-weight: 600;
+  color: #ffffff;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+}
+
+.group-name {
+  margin: 0 0 8px 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #0a0a0a;
+}
+
+.group-member-count {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+/* 涓汉淇℃伅鍖哄煙 */
+.personal-info-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px 24px;
+  border-bottom: 1px solid #e5e5e5;
+  background: linear-gradient(180deg, #f8f9fa, #ffffff);
+}
+
+.personal-avatar-large {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+  font-weight: 600;
+  color: #ffffff;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+}
+
+.personal-name {
+  margin: 0 0 8px 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #0a0a0a;
+}
+
+.personal-status {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+/* 璇︽儏鍖哄潡閫氱敤鏍峰紡 */
+.detail-section {
+  padding: 16px 24px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.detail-section.clickable {
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.detail-section.clickable:hover {
+  background: #fafafa;
+}
+
+.detail-section.danger .section-title {
+  color: #ff4d4f;
+}
+
+.section-title {
+  font-size: 0.9rem;
+  color: #666;
+  margin-bottom: 12px;
+  font-weight: 500;
+}
+
+.section-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.arrow-icon {
+  font-size: 1.2rem;
+  color: #ccc;
+}
+
+/* 缇や富淇℃伅 */
+.owner-info {
+  gap: 12px;
+}
+
+.owner-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.owner-info {
+  flex: 1;
+}
+
+.owner-name {
+  font-size: 0.95rem;
+  color: #333;
+  font-weight: 500;
+}
+
+.owner-role {
+  font-size: 0.8rem;
+  color: #999;
+  margin-top: 2px;
+}
+
+/* 鎴戠殑鏄电О鍜屽娉?*/
+.my-nickname,
+.remark-input {
+  flex: 1;
+  font-size: 0.95rem;
+  color: #333;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.edit-nickname-btn,
+.edit-remark-btn {
+  padding: 6px 16px;
+  border: 1px solid #d0d0d0;
+  border-radius: 8px;
+  background: #ffffff;
+  font-size: 0.85rem;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.edit-nickname-btn:hover,
+.edit-remark-btn:hover {
+  border-color: #667eea;
+  color: #667eea;
+  background: rgba(102, 126, 234, 0.05);
+}
+
+/* 鎴愬憳棰勮 */
+.members-preview {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.member-avatar-small {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #ffffff;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.member-avatar-small:hover {
+  transform: scale(1.1);
+}
+
+.view-all-members {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: #f5f5f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  color: #999;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.view-all-members:hover {
+  background: #e5e5e5;
+  color: #666;
+}
+
+/* 寮€鍏冲垏鎹㈡牱寮?*/
+.toggle-switch-label {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+}
+
+.toggle-checkbox {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #d0d0d0;
+  transition: 0.3s;
+  border-radius: 24px;
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 20px;
+  width: 20px;
+  left: 2px;
+  bottom: 2px;
+  background-color: white;
+  transition: 0.3s;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.toggle-checkbox:checked + .toggle-slider {
+  background-color: #667eea;
+}
+
+.toggle-checkbox:checked + .toggle-slider:before {
+  transform: translateX(20px);
+}
+
+/* 鏍囩鍗犱綅绗?*/
+.tag-placeholder {
+  font-size: 0.9rem;
+  color: #999;
+}
+
+/* 澶滈棿妯″紡 */
+.night-mode .chat-detail-panel {
+  background: #1e1e1e;
+}
+
+.night-mode .chat-detail-header {
+  background: linear-gradient(90deg, #141414, #1a1a1a);
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.night-mode .chat-detail-header h3 {
+  color: #ffffff;
+}
+
+.night-mode .chat-detail-close {
+  color: #b0b0b0;
+}
+
+.night-mode .chat-detail-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.night-mode .group-info-section,
+.night-mode .personal-info-section {
+  background: linear-gradient(180deg, #141414, #1a1a1a);
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.night-mode .detail-section {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.night-mode .detail-section.clickable:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.night-mode .section-title {
+  color: #b0b0b0;
+}
+
+.night-mode .owner-name {
+  color: #e0e0e0;
+}
+
+.night-mode .owner-role {
+  color: #888;
+}
+
+.night-mode .my-nickname,
+.night-mode .remark-input {
+  color: #e0e0e0;
+}
+
+.night-mode .edit-nickname-btn,
+.night-mode .edit-remark-btn {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: #2a2a2a;
+  color: #b0b0b0;
+}
+
+.night-mode .edit-nickname-btn:hover,
+.night-mode .edit-remark-btn:hover {
+  border-color: #667eea;
+  color: #667eea;
+  background: rgba(102, 126, 234, 0.1);
+}
+
+.night-mode .member-avatar-small {
+  background: #2a2a2a;
+  color: #e0e0e0;
+}
+
+.night-mode .view-all-members {
+  background: #2a2a2a;
+  color: #888;
+}
+
+.night-mode .view-all-members:hover {
+  background: #303030;
+  color: #b0b0b0;
+}
+
+.night-mode .toggle-slider {
+  background-color: #444;
+}
+
+.night-mode .toggle-checkbox:checked + .toggle-slider {
+  background-color: #667eea;
+}
+
+.night-mode .tag-placeholder {
+  color: #888;
+}
+
+
