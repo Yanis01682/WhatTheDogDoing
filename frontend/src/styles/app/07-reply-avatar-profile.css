@@ -1,0 +1,857 @@
+﻿/* ========================================
+   14. 娑堟伅鍥炲鍜屾挙鍥炲姛鑳芥牱寮?
+   ======================================== */
+
+/* 娑堟伅鍥炲寮曠敤 - 鍙傝€冨井淇″紩鐢ㄦ牱寮?*/
+.message-reply {
+  background: rgba(0, 0, 0, 0.06);
+  border-radius: 6px;
+  padding: 4px 8px;
+  margin-bottom: 4px;
+  font-size: 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-width: min(38vw, 260px);
+}
+
+.message.incoming .message-reply {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.message.outgoing .message-reply {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.reply-label {
+  color: #576b95;
+  font-weight: 500;
+  font-size: 0.76rem;
+  line-height: 1.4;
+}
+
+.message.outgoing .reply-label {
+  color: #4f617f;
+}
+
+.reply-text {
+  color: #999;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: min(34vw, 220px);
+  font-weight: 400;
+  line-height: 1.3;
+}
+
+.message.outgoing .reply-text {
+  color: #777;
+  font-weight: 400;
+}
+
+/* 鍥炲棰勮鏍?- 鍙傝€冨井淇℃牱寮?*/
+.reply-preview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 8px;
+  margin-bottom: 12px;
+  animation: slideDown 0.2s ease;
+}
+
+.night-mode .reply-preview {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.reply-preview-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.reply-preview-label {
+  font-size: 0.8rem;
+  color: #0084ff;
+  font-weight: 600;
+}
+
+.reply-preview-text {
+  font-size: 0.9rem;
+  color: #666;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cancel-reply-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: #999;
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-left: 12px;
+  transition: all 0.2s ease;
+}
+
+.cancel-reply-btn:hover {
+  background: rgba(0, 0, 0, 0.08);
+  color: #333;
+  transform: rotate(90deg);
+}
+
+/* 鍙抽敭鑿滃崟閬僵灞?*/
+.context-menu-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9999;
+  background: transparent;
+}
+
+/* 鍙抽敭鑿滃崟 */
+.context-menu {
+  position: fixed;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  padding: 8px;
+  min-width: 160px;
+  z-index: 10000;
+  animation: scaleIn 0.15s ease;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+  font-family: inherit;
+  font-size: 0.9rem;
+  color: #333;
+}
+
+.context-menu-item:hover {
+  background: #f5f5f5;
+}
+
+.context-menu-item.revoke {
+  color: #ff6b6b;
+}
+
+.context-menu-item.revoke:hover {
+  background: rgba(255, 107, 107, 0.1);
+}
+
+.menu-item-icon {
+  font-size: 1.1rem;
+  width: 20px;
+  text-align: center;
+}
+
+.menu-item-text {
+  flex: 1;
+}
+
+/* 澶滈棿妯″紡涓嬬殑娑堟伅鍥炲 - 鍙傝€冨井淇″紩鐢ㄦ牱寮?*/
+.night-mode .message-reply {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.night-mode .reply-label {
+  color: #6a84b3;
+}
+
+.night-mode .reply-text {
+  color: #888;
+}
+
+.night-mode .reply-preview {
+  background: linear-gradient(90deg, rgba(102, 126, 234, 0.15), rgba(102, 126, 234, 0.1));
+  border-left-color: #667eea;
+}
+
+.night-mode .reply-preview-label {
+  color: #90a4ff;
+}
+
+.night-mode .reply-preview-text {
+  color: #c0c0c0;
+}
+
+.night-mode .cancel-reply-btn {
+  color: #999;
+}
+
+.night-mode .cancel-reply-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+/* 澶滈棿妯″紡涓嬬殑鍙抽敭鑿滃崟 */
+.night-mode .context-menu {
+  background: #1e1e1e;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.night-mode .context-menu-item {
+  color: #e0e0e0;
+}
+
+.night-mode .context-menu-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.night-mode .context-menu-item.revoke {
+  color: #ff6b6b;
+}
+
+.night-mode .context-menu-item.revoke:hover {
+  background: rgba(255, 107, 107, 0.15);
+}
+
+
+/* ========================================
+   15. 鏇存崲澶村儚妯℃€佹鏍峰紡
+   ======================================== */
+
+/* 澶村儚妯℃€佹閬僵灞?*/
+.avatar-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1001;
+  animation: fadeIn 0.2s ease;
+}
+
+/* 澶村儚妯℃€佹涓讳綋 */
+.avatar-modal {
+  background: #ffffff;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 450px;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease;
+}
+
+/* 澶村儚妯℃€佹澶撮儴 */
+.avatar-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e5e5e5;
+  background: linear-gradient(90deg, #f8f9fa, #ffffff);
+}
+
+.avatar-modal-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #0a0a0a;
+}
+
+.avatar-modal-close {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  font-size: 1.5rem;
+  color: #666;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.avatar-modal-close:hover {
+  background: #f0f0f0;
+  color: #333;
+}
+
+/* 澶村儚妯℃€佹涓讳綋鍐呭 */
+.avatar-modal-body {
+  padding: 32px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+/* 澶村儚棰勮瀹瑰櫒 */
+.avatar-preview-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+/* 澶村儚棰勮 */
+.avatar-preview {
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  border: 4px solid #e5e5e5;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fafafa;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+.avatar-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar-preview-text {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+/* 澶村儚涓婁紶鎻愮ず */
+.avatar-upload-hint {
+  text-align: center;
+}
+
+.avatar-upload-hint p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #888;
+}
+
+/* 澶村儚妯℃€佹搴曢儴鎸夐挳 */
+.avatar-modal-footer {
+  display: flex;
+  gap: 12px;
+  padding: 20px 24px;
+  border-top: 1px solid #e5e5e5;
+  background: #fafafa;
+}
+
+.avatar-cancel-btn {
+  flex: 1;
+  border: 1px solid #d0d0d0;
+  border-radius: 10px;
+  padding: 12px 24px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  font-family: inherit;
+  color: #555;
+  background: #ffffff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.avatar-cancel-btn:hover {
+  border-color: #999;
+  color: #333;
+  background: #f5f5f5;
+}
+
+.avatar-confirm-btn {
+  flex: 1;
+  border: none;
+  border-radius: 10px;
+  padding: 12px 24px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  font-family: inherit;
+  color: #ffffff;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.avatar-confirm-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+}
+
+.avatar-confirm-btn:active {
+  transform: translateY(0);
+}
+
+/* 澶滈棿妯″紡涓嬬殑澶村儚妯℃€佹 */
+.night-mode .avatar-modal {
+  background: #1e1e1e;
+}
+
+.night-mode .avatar-modal-header {
+  background: linear-gradient(90deg, #141414, #1a1a1a);
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.night-mode .avatar-modal-header h3 {
+  color: #ffffff;
+}
+
+.night-mode .avatar-modal-close {
+  color: #b0b0b0;
+}
+
+.night-mode .avatar-modal-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.night-mode .avatar-modal-body {
+  background: #1e1e1e;
+}
+
+.night-mode .avatar-preview {
+  background: #2a2a2a;
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.night-mode .avatar-preview-text {
+  color: #b0b0b0;
+}
+
+.night-mode .avatar-upload-hint p {
+  color: #888;
+}
+
+.night-mode .avatar-modal-footer {
+  background: #141414;
+  border-top-color: rgba(255, 255, 255, 0.08);
+}
+
+.night-mode .avatar-cancel-btn {
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #e0e0e0;
+  background: #2a2a2a;
+}
+
+.night-mode .avatar-cancel-btn:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+  background: #303030;
+}
+
+
+/* ========================================
+   16. 涓汉淇℃伅妯℃€佹鏍峰紡
+   ======================================== */
+
+/* 涓汉淇℃伅妯℃€佹閬僵灞?*/
+.profile-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1001;
+  animation: fadeIn 0.2s ease;
+}
+
+/* 涓汉淇℃伅妯℃€佹涓讳綋 */
+.profile-modal {
+  background: #ffffff;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease;
+}
+
+/* 涓汉淇℃伅妯℃€佹澶撮儴 */
+.profile-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e5e5e5;
+  background: linear-gradient(90deg, #f8f9fa, #ffffff);
+}
+
+.profile-modal-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #0a0a0a;
+}
+
+.profile-modal-close {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  font-size: 1.5rem;
+  color: #666;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.profile-modal-close:hover {
+  background: #f0f0f0;
+  color: #333;
+}
+
+/* 涓汉淇℃伅妯℃€佹涓讳綋鍐呭 */
+.profile-modal-body {
+  padding: 24px;
+}
+
+/* 鏌ョ湅妯″紡 */
+.profile-view {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* 澶村儚鍖哄煙 */
+.profile-avatar-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.profile-avatar {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3rem;
+  font-weight: 600;
+  color: #ffffff;
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+}
+
+.profile-avatar-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.change-avatar-btn {
+  border: 1px solid #d0d0d0;
+  border-radius: 10px;
+  padding: 8px 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-family: inherit;
+  color: #555;
+  background: #ffffff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.change-avatar-btn:hover {
+  border-color: #999;
+  color: #333;
+  background: #f5f5f5;
+}
+
+/* 淇℃伅鍒楄〃 */
+.profile-info-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.profile-info-item {
+  display: flex;
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.profile-info-item:last-child {
+  border-bottom: none;
+}
+
+.info-label {
+  width: 100px;
+  font-weight: 600;
+  color: #666;
+  font-size: 0.95rem;
+  flex-shrink: 0;
+}
+
+.info-value {
+  flex: 1;
+  color: #333;
+  font-size: 0.95rem;
+}
+
+/* 缂栬緫璧勬枡鎸夐挳 */
+.edit-profile-btn {
+  width: 100%;
+  border: none;
+  border-radius: 10px;
+  padding: 12px 24px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  font-family: inherit;
+  color: #ffffff;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.edit-profile-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+}
+
+.edit-profile-btn:active {
+  transform: translateY(0);
+}
+
+/* 缂栬緫琛ㄥ崟 */
+.profile-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.profile-edit-form .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.profile-edit-form label {
+  font-weight: 600;
+  color: #555;
+  font-size: 0.9rem;
+}
+
+.profile-edit-form input,
+.profile-edit-form select,
+.profile-edit-form textarea {
+  padding: 10px 14px;
+  border: 1px solid #d0d0d0;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  transition: all 0.2s ease;
+  background: #ffffff;
+}
+
+.profile-edit-form input:focus,
+.profile-edit-form select:focus,
+.profile-edit-form textarea:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.profile-edit-form textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+/* 琛ㄥ崟鎸夐挳缁?*/
+.profile-form-buttons {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.profile-form-buttons .cancel-btn,
+.profile-form-buttons .save-btn {
+  flex: 1;
+  border-radius: 10px;
+  padding: 12px 24px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.profile-form-buttons .cancel-btn {
+  border: 1px solid #d0d0d0;
+  color: #555;
+  background: #ffffff;
+}
+
+.profile-form-buttons .cancel-btn:hover {
+  border-color: #999;
+  color: #333;
+  background: #f5f5f5;
+}
+
+.profile-form-buttons .save-btn {
+  border: none;
+  color: #ffffff;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.profile-form-buttons .save-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+}
+
+.profile-form-buttons .save-btn:active {
+  transform: translateY(0);
+}
+
+/* 澶滈棿妯″紡涓嬬殑涓汉淇℃伅妯℃€佹 */
+.night-mode .profile-modal {
+  background: #1e1e1e;
+}
+
+.night-mode .profile-modal-header {
+  background: linear-gradient(90deg, #141414, #1a1a1a);
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.night-mode .profile-modal-header h3 {
+  color: #ffffff;
+}
+
+.night-mode .profile-modal-close {
+  color: #b0b0b0;
+}
+
+.night-mode .profile-modal-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.night-mode .profile-view {
+  background: #1e1e1e;
+}
+
+.night-mode .profile-avatar-section {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.night-mode .info-label {
+  color: #b0b0b0;
+}
+
+.night-mode .info-value {
+  color: #e0e0e0;
+}
+
+.night-mode .profile-info-item {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.night-mode .change-avatar-btn {
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #e0e0e0;
+  background: #2a2a2a;
+}
+
+.night-mode .change-avatar-btn:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+  background: #303030;
+}
+
+.night-mode .edit-profile-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.night-mode .profile-edit-form label {
+  color: #b0b0b0;
+}
+
+.night-mode .profile-edit-form input,
+.night-mode .profile-edit-form select,
+.night-mode .profile-edit-form textarea {
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #e0e0e0;
+  background: #2a2a2a;
+}
+
+.night-mode .profile-edit-form input:focus,
+.night-mode .profile-edit-form select:focus,
+.night-mode .profile-edit-form textarea:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+}
+
+.night-mode .profile-form-buttons .cancel-btn {
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #e0e0e0;
+  background: #2a2a2a;
+}
+
+.night-mode .profile-form-buttons .cancel-btn:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+  background: #303030;
+}
+
+.night-mode .profile-form-buttons .save-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+
