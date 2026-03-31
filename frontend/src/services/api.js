@@ -1,44 +1,80 @@
-// src/services/api.js
-import axios from 'axios';
+import axios from 'axios'
 
-// 创建 axios 实例
 const apiClient = axios.create({
-  baseURL: 'http://localhost:5173', // 根据后端实际地址修改
-  timeout: 5000,
-});
+  baseURL: 'http://localhost:8000',
+  timeout: 10000,
+  headers: { 'Content-Type': 'application/json' },
+})
 
-// 请求拦截器：在每次请求前附加 token
-apiClient.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token'); // 或者从全局状态获取
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+export function setAuthToken(token) {
+  if (token) {
+    apiClient.defaults.headers.common['Authorization'] = 'Bearer ' + token
+    try {
+      localStorage.setItem('auth_token', token)
+    } catch (e) {
+      // ignore
     }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
-
-// 响应拦截器：统一处理错误
-apiClient.interceptors.response.use(
-  (response) => response.data,
-  (error) => {
-    console.error('API Error:', error);
-    return Promise.reject(error);
+  } else {
+    delete apiClient.defaults.headers.common['Authorization']
+    try {
+      localStorage.removeItem('auth_token')
+    } catch (e) {
+      // ignore
+    }
   }
-);
+}
 
-// 封装接口函数
-export const login = async (username, password) => {
-  return apiClient.post('/login', { username, password });
-};
+// 自动从 localStorage 恢复 token
+try {
+  const _t = localStorage.getItem('auth_token')
+  if (_t) setAuthToken(_t)
+} catch (e) {
+  // ignore
+}
 
-export const register = async (userData) => {
-  return apiClient.post('/register', userData);
-};
+apiClient.interceptors.response.use(
+  (res) => res,
+  (err) => Promise.reject(err)
+)
 
-export const getUserInfo = async () => {
-  return apiClient.get('/user');
-};
+export async function login({ username, password }) {
+  const params = new URLSearchParams()
+  params.append('username', username)
+  params.append('password', password)
+  const res = await apiClient.post('/auth/login', params, {
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+  })
+  const data = res.data
+  const token = data.access_token || data.token
+  if (token) setAuthToken(token)
+  return data
+}
 
-// 其他接口可以继续在这里扩展
+export async function register(payload) {
+  const res = await apiClient.post('/auth/register', payload)
+  return res.data
+}
+
+export async function getCurrentUser() {
+  try {
+    const res = await apiClient.get('/auth/me')
+    return res.data
+  } catch (err) {
+    if (err.response && err.response.status === 401) return null
+    throw err
+  }
+}
+
+export function logout() {
+  setAuthToken(null)
+}
+
+export function getAuthToken() {
+  try {
+    return localStorage.getItem('auth_token')
+  } catch (e) {
+    return null
+  }
+}
+
+export default apiClient

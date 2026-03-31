@@ -9,6 +9,7 @@ import {
   INITIAL_PROFILE_DATA,
   MY_ROLE_MAP
 } from './features/chat/mockData'
+import { login, register, getCurrentUser } from './services/api'
 import AuthView from './components/stage2/AuthView'
 import TopBar from './components/stage2/TopBar'
 import SidebarPanel from './components/stage2/SidebarPanel'
@@ -89,6 +90,22 @@ function App() {
   const [dynamicSessions, setDynamicSessions] = useState([]) // 动态创建的会话（好友私聊）
   const [groupMembers, setGroupMembers] = useState(INITIAL_GROUP_MEMBERS) // 群成员数据（包含角色信息）
   const [profileData, setProfileData] = useState(INITIAL_PROFILE_DATA) // 个人信息数据
+
+  // 初始加载时尝试获取用户信息
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const user = await getCurrentUser()
+        if (user) {
+          setProfileData(prev => ({ ...prev, name: user.username, email: user.email }))
+          setIsLoggedIn(true)
+        }
+      } catch (e) {
+        // 未登录或错误，保持未登录状态
+      }
+    }
+    checkAuth()
+  }, [])
 
   // 加载保存的头像
   useEffect(() => {
@@ -670,13 +687,22 @@ function App() {
   const myRole = MY_ROLE_MAP
 
   // 登录处理
-  const handleLogin = (e) => {
+      const handleLogin = async (e) => {
     e.preventDefault()
     const account = e.target.account.value
     const password = e.target.password.value
     
     if (account && password) {
-      setIsLoggedIn(true)
+      try {
+        await login({ username: account, password })
+        const user = await getCurrentUser()
+        if (user) {
+          setProfileData(prev => ({ ...prev, name: user.username, email: user.email }))
+          setIsLoggedIn(true)
+        }
+      } catch (err) {
+        alert(err.message || '登录失败')
+      }
     } else {
       alert('请输入账号和密码')
     }
@@ -728,30 +754,32 @@ function App() {
   }
 
   // 注册处理
-  const handleRegister = (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault()
     const formData = new FormData(e.target)
     const data = Object.fromEntries(formData)
     
-    // 前端基础验证
     if (!data.username || !data.email || !data.password || !data.confirmPassword) {
       alert('请填写所有必填项')
       return
     }
-    
     if (data.password !== data.confirmPassword) {
       alert('两次输入的密码不一致')
       return
     }
     
-    if (data.password.length < 6) {
-      alert('密码长度至少为 6 位')
-      return
+    try {
+      await register({ username: data.username, email: data.email, password: data.password })
+      await login({ username: data.username, password: data.password })
+      const user = await getCurrentUser()
+      if (user) {
+        setProfileData(prev => ({ ...prev, name: user.username, email: user.email }))
+        setIsLoggedIn(true)
+        setShowRegisterForm(false)
+      }
+    } catch (err) {
+      alert(err.message || '注册失败')
     }
-    
-    // TODO: 调用后端 API 进行注册
-    alert('注册成功！请登录')
-    setShowRegisterForm(false)
   }
 
   // 右键点击消息
