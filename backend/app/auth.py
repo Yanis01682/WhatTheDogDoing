@@ -4,7 +4,7 @@ from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
-import models # 引用你提到的 models.py
+from . import models # 引用你提到的 models.py
 
 # ====================
 # 1. 基础配置

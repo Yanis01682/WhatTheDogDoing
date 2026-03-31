@@ -1,6 +1,7 @@
 # backend/app/main.py
 from fastapi import FastAPI
 from .auth import router as auth_router
+from .chat import router as chat_router
 
 # 引入数据库配置和模型，用于启动时自动建表
 # 注意：前提是你按照上面的建议创建了 database.py
@@ -20,6 +21,7 @@ def read_root():
 
 # 挂载你的用户认证路由
 app.include_router(auth_router)
+app.include_router(chat_router, prefix="/api/chat", tags=["chat"])
 
 # 以后 wjq 写好消息模块后，也可以继续在这里挂载他的路由，例如：
 # from .messages import router as msg_router
