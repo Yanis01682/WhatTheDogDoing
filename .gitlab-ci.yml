@@ -9,8 +9,8 @@ backend-test:
   script:
     - cd backend
     - pip install -r requirements.txt
-    - pip install pytest httpx  # 安装测试必备工具
-    - pytest                    # 执行测试文件夹下的脚本
+    - pip install pytest httpx pytest-cov  # 重点：加了 pytest-cov 用来算覆盖率
+    - pytest --cov=app --cov-report=term-missing  # 重点：指定测 app 文件夹并输出覆盖率报告
   only:
     - main
     - merge_requests
