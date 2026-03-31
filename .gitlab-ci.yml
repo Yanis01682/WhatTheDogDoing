@@ -23,11 +23,11 @@ backend-test:
 sonarqube-check:
   stage: scan
   needs: ["backend-test"]
-  # 【修改这里】：把 latest 改成 4.6，完美兼容学校的老旧 SonarQube 服务器
   image: sonarsource/sonar-scanner-cli:4.6
   script:
     - cd backend
-    - sonar-scanner -Dsonar.projectKey=$CI_PROJECT_NAME -Dsonar.sources=app -Dsonar.python.coverage.reportPaths=coverage.xml
+    # 下面这行是缝合了学校秘钥和覆盖率报告的终极版
+    - sonar-scanner -Dsonar.projectKey=WhatTheDogDoing:WhatTheDogDoing -Dsonar.sources=app -Dsonar.host.url=https://sonarqube.spring26b.secoder.net -Dsonar.login=00bfcdd4ec718487c16a7959940c0976b1f57d8a -Dsonar.python.coverage.reportPaths=coverage.xml
   allow_failure: true
   only:
     - main
