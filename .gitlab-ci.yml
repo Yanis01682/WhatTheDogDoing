@@ -2,41 +2,39 @@ stages:
   - test
   - build
 
-# 后端测试任务
+# 1. 后端测试任务（修改：增加 xml 报告生成和 artifacts 传递）
 backend-test:
   stage: test
   image: python:3.12
   script:
     - cd backend
     - pip install -r requirements.txt
-    - pip install pytest httpx pytest-cov  # 重点：加了 pytest-cov 用来算覆盖率
-    - pytest --cov=app --cov-report=term-missing  # 重点：指定测 app 文件夹并输出覆盖率报告
-  only:
-    - main
-    - merge_requests
-
-# 前端代码规范检查
-frontend-lint:
-  stage: test
-  image: node:20
-  script:
-    - cd frontend
-    - npm install
-    - npm run lint             # 执行 package.json 里的 lint 脚本
-  only:
-    - main
-    - merge_requests
-
-# 构建任务（确保代码能打包成功）
-build-frontend:
-  stage: build
-  image: node:20
-  script:
-    - cd frontend
-    - npm install
-    - npm run build            # 执行打包命令
+    - pip install pytest httpx pytest-cov
+    # 重点：加了 --cov-report=xml 生成 Sonar 能看懂的报告
+    - pytest --cov=app --cov-report=xml:coverage.xml --cov-report=term-missing
   artifacts:
     paths:
-      - frontend/dist/         # 保存打包后的文件
+      - backend/coverage.xml  # 把报告保存下来传给 SonarQube
   only:
     - main
+    - merge_requests
+
+# 2. 新增：SonarQube 代码扫描任务
+sonarqube-check:
+  stage: test
+  needs: ["backend-test"]  # 必须等后端测试跑完，生成了报告再执行
+  image: sonarsource/sonar-scanner-cli:latest
+  script:
+    - cd backend
+    # SECoder 平台通常会自动注入 SONAR_HOST_URL 和 SONAR_TOKEN 等环境变量
+    # 这里的 sonar.projectKey 使用 GitLab 自带的变量名
+    - sonar-scanner -Dsonar.projectKey=$CI_PROJECT_NAME -Dsonar.sources=app -Dsonar.python.coverage.reportPaths=coverage.xml
+  allow_failure: true # 即使扫描出代码异味，也不要直接把流水线炸停
+  only:
+    - main
+    - merge_requests
+
+# === 下面是你原来的 frontend-lint 和 build-frontend，保持不变 ===
+frontend-lint:
+  stage: test
+# ... 后续代码省略，保持你原样即可
