@@ -21,9 +21,10 @@ backend-test:
 
 # 2. SonarQube 代码扫描任务
 sonarqube-check:
-  stage: scan   # 修改：挪到了 scan 阶段，这样它就在 test 之后执行了
+  stage: scan
   needs: ["backend-test"]
-  image: sonarsource/sonar-scanner-cli:latest
+  # 【修改这里】：把 latest 改成 4.6，完美兼容学校的老旧 SonarQube 服务器
+  image: sonarsource/sonar-scanner-cli:4.6
   script:
     - cd backend
     - sonar-scanner -Dsonar.projectKey=$CI_PROJECT_NAME -Dsonar.sources=app -Dsonar.python.coverage.reportPaths=coverage.xml
