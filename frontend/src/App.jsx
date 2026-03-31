@@ -687,22 +687,23 @@ function App() {
   const myRole = MY_ROLE_MAP
 
   // 登录处理
-    const handleLogin = async (e) => {
+      const handleLogin = async (e) => {
     e.preventDefault()
     const account = e.target.account.value
     const password = e.target.password.value
     
-    try {
-      await login({ username: account, password })
-      const user = await getCurrentUser()
-      if (user) {
-        setProfileData(prev => ({ ...prev, name: user.username, email: user.email }))
-        setIsLoggedIn(true)
+    if (account && password) {
+      try {
+        await login({ username: account, password })
+        const user = await getCurrentUser()
+        if (user) {
+          setProfileData(prev => ({ ...prev, name: user.username, email: user.email }))
+          setIsLoggedIn(true)
+        }
+      } catch (err) {
+        alert(err.message || '登录失败')
       }
-    } catch (err) {
-      alert(err.message || '登录失败')
-    }
-  } else {
+    } else {
       alert('请输入账号和密码')
     }
   }
