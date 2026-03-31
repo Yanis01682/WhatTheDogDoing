@@ -1,8 +1,9 @@
 stages:
   - test
+  - scan      # 新增：专门用来放代码扫描的阶段，排在 test 后面
   - build
 
-# 1. 后端测试任务（已配置生成 SonarQube 需要的 XML 报告）
+# 1. 后端测试任务
 backend-test:
   stage: test
   image: python:3.12
@@ -20,7 +21,7 @@ backend-test:
 
 # 2. SonarQube 代码扫描任务
 sonarqube-check:
-  stage: test
+  stage: scan   # 修改：挪到了 scan 阶段，这样它就在 test 之后执行了
   needs: ["backend-test"]
   image: sonarsource/sonar-scanner-cli:latest
   script:
@@ -31,7 +32,7 @@ sonarqube-check:
     - main
     - merge_requests
 
-# 3. 前端代码规范检查 (原封不动)
+# 3. 前端代码规范检查
 frontend-lint:
   stage: test
   image: node:20
@@ -43,7 +44,7 @@ frontend-lint:
     - main
     - merge_requests
 
-# 4. 前端构建任务 (原封不动)
+# 4. 前端构建任务
 build-frontend:
   stage: build
   image: node:20
