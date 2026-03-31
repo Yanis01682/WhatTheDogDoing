@@ -4,7 +4,6 @@ from .database import get_db
 
 router = APIRouter()
 
-
 @router.get("/sessions")
 def read_sessions(db: Session = Depends(get_db)):
     # ChatSession not yet implemented, return empty list
