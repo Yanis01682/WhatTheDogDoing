@@ -754,30 +754,32 @@ function App() {
   }
 
   // 注册处理
-  const handleRegister = (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault()
     const formData = new FormData(e.target)
     const data = Object.fromEntries(formData)
     
-    // 前端基础验证
     if (!data.username || !data.email || !data.password || !data.confirmPassword) {
       alert('请填写所有必填项')
       return
     }
-    
     if (data.password !== data.confirmPassword) {
       alert('两次输入的密码不一致')
       return
     }
     
-    if (data.password.length < 6) {
-      alert('密码长度至少为 6 位')
-      return
+    try {
+      await register({ username: data.username, email: data.email, password: data.password })
+      await login({ username: data.username, password: data.password })
+      const user = await getCurrentUser()
+      if (user) {
+        setProfileData(prev => ({ ...prev, name: user.username, email: user.email }))
+        setIsLoggedIn(true)
+        setShowRegisterForm(false)
+      }
+    } catch (err) {
+      alert(err.message || '注册失败')
     }
-    
-    // TODO: 调用后端 API 进行注册
-    alert('注册成功！请登录')
-    setShowRegisterForm(false)
   }
 
   // 右键点击消息
