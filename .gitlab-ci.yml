@@ -2,7 +2,7 @@ stages:
   - test
   - build
 
-# 1. 后端测试任务（修改：增加 xml 报告生成和 artifacts 传递）
+# 1. 后端测试任务（已配置生成 SonarQube 需要的 XML 报告）
 backend-test:
   stage: test
   image: python:3.12
@@ -10,31 +10,49 @@ backend-test:
     - cd backend
     - pip install -r requirements.txt
     - pip install pytest httpx pytest-cov
-    # 重点：加了 --cov-report=xml 生成 Sonar 能看懂的报告
     - pytest --cov=app --cov-report=xml:coverage.xml --cov-report=term-missing
   artifacts:
     paths:
-      - backend/coverage.xml  # 把报告保存下来传给 SonarQube
+      - backend/coverage.xml
   only:
     - main
     - merge_requests
 
-# 2. 新增：SonarQube 代码扫描任务
+# 2. SonarQube 代码扫描任务
 sonarqube-check:
   stage: test
-  needs: ["backend-test"]  # 必须等后端测试跑完，生成了报告再执行
+  needs: ["backend-test"]
   image: sonarsource/sonar-scanner-cli:latest
   script:
     - cd backend
-    # SECoder 平台通常会自动注入 SONAR_HOST_URL 和 SONAR_TOKEN 等环境变量
-    # 这里的 sonar.projectKey 使用 GitLab 自带的变量名
     - sonar-scanner -Dsonar.projectKey=$CI_PROJECT_NAME -Dsonar.sources=app -Dsonar.python.coverage.reportPaths=coverage.xml
-  allow_failure: true # 即使扫描出代码异味，也不要直接把流水线炸停
+  allow_failure: true
   only:
     - main
     - merge_requests
 
-# === 下面是你原来的 frontend-lint 和 build-frontend，保持不变 ===
+# 3. 前端代码规范检查 (原封不动)
 frontend-lint:
   stage: test
-# ... 后续代码省略，保持你原样即可
+  image: node:20
+  script:
+    - cd frontend
+    - npm install
+    - npm run lint
+  only:
+    - main
+    - merge_requests
+
+# 4. 前端构建任务 (原封不动)
+build-frontend:
+  stage: build
+  image: node:20
+  script:
+    - cd frontend
+    - npm install
+    - npm run build
+  artifacts:
+    paths:
+      - frontend/dist/
+  only:
+    - main
