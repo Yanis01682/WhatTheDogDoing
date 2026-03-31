@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.security import OAuth2PasswordBearer
 from jose import jwt
 import bcrypt
 from pydantic import BaseModel
@@ -18,9 +18,12 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
+from typing import Optional
+
 class UserAuth(BaseModel):
     username: str
     password: str
+    email: Optional[str] = None
 
 
 class UserResponse(BaseModel):
@@ -53,7 +56,11 @@ def create_access_token(data: dict):
 
 
 def get_user_by_username(db: Session, username: str):
-    return db.query(models.User).filter(models.User.username == username).first()
+    """支持 username 或 email 登录"""
+    user = db.query(models.User).filter(models.User.username == username).first()
+    if not user:
+        user = db.query(models.User).filter(models.User.email == username).first()
+    return user
 
 
 def authenticate_user(db: Session, username: str, password: str):
@@ -70,6 +77,7 @@ def register(user_data: UserAuth, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Username already taken")
     new_user = models.User(
         username=user_data.username,
+        email=user_data.email if user_data.email else None,
         hashed_password=get_password_hash(user_data.password),
     )
     db.add(new_user)
@@ -79,13 +87,12 @@ def register(user_data: UserAuth, db: Session = Depends(get_db)):
 
 
 @router.post("/login", response_model=TokenResponse)
-def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    user = authenticate_user(db, form_data.username, form_data.password)
+def login(user_data: UserAuth, db: Session = Depends(get_db)):
+    user = authenticate_user(db, user_data.username, user_data.password)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
+            detail="用户名或密码错误",
         )
     access_token = create_access_token(data={"sub": user.username})
     return TokenResponse(access_token=access_token, user=user)
