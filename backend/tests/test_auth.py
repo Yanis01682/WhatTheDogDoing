@@ -12,6 +12,7 @@ engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # 建表
+models.Base.metadata.drop_all(bind=engine)
 models.Base.metadata.create_all(bind=engine)
 
 # 2. 替换掉真实的数据库连接
@@ -43,24 +44,22 @@ def test_register_success():
 
 def test_register_duplicate():
     """测试重复注册报错"""
-    # 第一次注册（依赖上面的状态或重新发一次）
     client.post("/auth/register", json={"username": "duplicate_user", "password": "pw"})
-    # 第二次注册同名
     response = client.post(
         "/auth/register",
         json={"username": "duplicate_user", "password": "pw"}
     )
     assert response.status_code == 400
-    assert response.json()["detail"] == "用户名已被注册"
+    # 修复了断言 Bug，对齐了 auth.py 里的英文报错
+    assert response.json()["detail"] == "Username already taken" 
 
 def test_login_success():
     """测试正常登录"""
-    # 先注册一个
     client.post("/auth/register", json={"username": "loginuser", "password": "loginpw"})
-    # 再登录
+    # 因为 login 改为了表单接收，这里必须用 data 而不是 json
     response = client.post(
         "/auth/login",
-        json={"username": "loginuser", "password": "loginpw"}
+        data={"username": "loginuser", "password": "loginpw"}
     )
     assert response.status_code == 200
     data = response.json()
@@ -73,6 +72,40 @@ def test_login_wrong_password():
     client.post("/auth/register", json={"username": "wrongpwuser", "password": "pw"})
     response = client.post(
         "/auth/login",
-        json={"username": "wrongpwuser", "password": "wrongpw"}
+        data={"username": "wrongpwuser", "password": "wrongpw"}
     )
     assert response.status_code == 401
+
+def test_auth_me():
+    """测试通过 token 获取当前用户信息 (补全覆盖率)"""
+    client.post("/auth/register", json={"username": "me_user", "password": "pw"})
+    login_res = client.post("/auth/login", data={"username": "me_user", "password": "pw"})
+    token = login_res.json()["access_token"]
+    
+    response = client.get(
+        "/auth/me", 
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert response.status_code == 200
+    assert response.json()["username"] == "me_user"
+
+def test_auth_me_invalid_token():
+    """测试无效的 token (补全覆盖率)"""
+    response = client.get(
+        "/auth/me", 
+        headers={"Authorization": "Bearer fake_token_here"}
+    )
+    assert response.status_code == 401
+
+def test_health_check():
+    """测试健康检查接口 (补全覆盖率)"""
+    response = client.get("/health")
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+
+def test_chat_sessions_placeholder():
+    """测试会话占位接口 (补全覆盖率)"""
+    response = client.get("/api/chat/sessions")
+    # 因为 wjq 的 chat.py 里目前返回的是空列表 []
+    assert response.status_code == 200
+    assert response.json() == []

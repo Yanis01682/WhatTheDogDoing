@@ -1,7 +1,7 @@
 # backend/app/database.py
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 # 假设大作业初期你们使用 SQLite 方便本地开发和演示
 SQLALCHEMY_DATABASE_URL = "sqlite:///./whatthedogdoing.db" 
 

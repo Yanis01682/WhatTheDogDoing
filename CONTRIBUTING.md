@@ -43,7 +43,10 @@ git checkout -b feat-login
 
 
 ```
-部署这个项目需要先处理后端环境。进入 backend 目录并执行 pip install -r requirements.txt 来安装 FastAPI 和 SQLAlchemy 等核心依赖。启动后端服务只需在 backend 目录下运行 uvicorn app.main:app --reload，这会自动加载 app/main.py 中定义的 FastAPI 应用。接着处理前端部分。切换到 frontend 目录后执行 npm install 以安装 package.json 中列出的 React 和 Vite 相关包。安装完成后运行 npm run dev 即可在浏览器启动前端开发服务器（http://localhost:5173/）。
+部署这个项目需要先处理后端环境。进入 backend 目录并执行 pip install -r requirements.txt 来安装 FastAPI 和 SQLAlchemy 等核心依赖。在 VSCode 里重新选择一下当前这个 Python 解释器（按 Ctrl+Shift+P -> Python: Select Interpreter），如果命令行是带有（base）的，刚刚运行的 pip 命令，是把你电脑上的 Miniconda (base 环境) 里的工具，把包全都装到了 D:\mininconda\ 这个“大房间”里。这个时候就不要选择.\venv\Scripts\python.exe的解释器了，要选择D:\mininconda\python.exe！启动后端服务只需在 backend 目录下运行 uvicorn app.main:app --reload，这会自动加载 app/main.py 中定义的 FastAPI 应用。接着处理前端部分。切换到 frontend 目录后执行 npm install 以安装 package.json 中列出的 React 和 Vite 相关包。安装完成后运行 npm run dev 即可在浏览器启动前端开发服务器（http://localhost:5173/）。
+
+终端就可以跑后端单测
+在 backend 目录下运行 pytest --cov=app --cov-report=term-missing
 ```
 
 ### 情况 C：写完一个功能后 (提交代码)
