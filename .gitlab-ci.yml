@@ -71,7 +71,7 @@ deploy-database:
     - export BUILD_IMAGE_USERNAME=$CI_REGISTRY_USER
     - export BUILD_IMAGE_PASSWORD=$CI_REGISTRY_PASSWORD
     # 构建包含密码的自定义 MySQL 镜像
-    - deployer build .
+    - deployer build
     # 替换线上容器，自动将容器命名为 mysql-db
     - deployer dyno replace mysql-db "$BUILD_IMAGE_NAME:$BUILD_IMAGE_TAG" "$REGISTRY_USER" "$REGISTRY_PWD"
   only:
@@ -88,7 +88,7 @@ deploy-frontend:
     - export BUILD_IMAGE_USERNAME=$CI_REGISTRY_USER
     - export BUILD_IMAGE_PASSWORD=$CI_REGISTRY_PASSWORD
     # 2. 根据 frontend 里的 Dockerfile 真正开始构建镜像
-    - deployer build .
+    - deployer build
     # 3. 将打好的镜像替换到线上容器中运行，容器命名为 frontend-dyno
     - deployer dyno replace frontend-dyno "$BUILD_IMAGE_NAME:$BUILD_IMAGE_TAG" "$REGISTRY_USER" "$REGISTRY_PWD"
   only:
@@ -106,7 +106,7 @@ deploy-backend:
     - export BUILD_IMAGE_USERNAME=$CI_REGISTRY_USER
     - export BUILD_IMAGE_PASSWORD=$CI_REGISTRY_PASSWORD
     # 2. 根据 backend 里的 Dockerfile 真正开始构建镜像
-    - deployer build .
+    - deployer build
     # 3. 将打好的镜像替换到线上容器中运行，容器命名为 backend-dyno
     - deployer dyno replace backend-dyno "$BUILD_IMAGE_NAME:$BUILD_IMAGE_TAG" "$REGISTRY_USER" "$REGISTRY_PWD"
   only:
