@@ -20,7 +20,6 @@ app.add_middleware(
         # 增加下面这些，确保包含全小写版本，且没有末尾斜杠
         "https://frontend-dyno-whatthedogdoing.app.spring26b.secoder.net",
         "https://frontend-dyno-WhatTheDogDoing.app.spring26b.secoder.net",
-        "http://frontend-dyno-whatthedogdoing.app.spring26b.secoder.net",
     ],
     allow_methods=["*"],
     allow_headers=["*"],
