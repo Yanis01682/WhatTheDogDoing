@@ -2,8 +2,8 @@ import axios from 'axios'
 
 // frontend/src/services/api.js
 const apiClient = axios.create({
-  // 把原来的 http://localhost:8000 改成你的后端域名
-  baseURL: 'http://backend-dyno-WhatTheDogDoing.app.spring26b.secoder.net',
+  // 修改这里：从 http 改为 https
+  baseURL: 'https://backend-dyno-WhatTheDogDoing.app.spring26b.secoder.net',
   timeout: 10000,
   headers: { 'Content-Type': 'application/json' },
 })
