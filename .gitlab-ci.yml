@@ -62,7 +62,7 @@ build-frontend:
 # === 数据库自动部署 ===
 deploy-database:
   stage: deploy
-  image: registry.secoder.net/tool/deployer
+  image: registry.spring26b.secoder.net/tool/deployer
   script:
     - cd database
     # 告诉 Deployer 将数据库打包
@@ -79,7 +79,7 @@ deploy-database:
 # === 前端自动部署 ===
 deploy-frontend:
   stage: deploy
-  image: registry.secoder.net/tool/deployer
+  image: registry.spring26b.secoder.net/tool/deployer
   script:
     - cd frontend
     # 1. 告诉 Deployer 将前端打包成叫什么名字的镜像
@@ -97,7 +97,7 @@ deploy-frontend:
 # === 后端自动部署 ===
 deploy-backend:
   stage: deploy
-  image: registry.secoder.net/tool/deployer
+  image: registry.spring26b.secoder.net/tool/deployer
   script:
     - cd backend
     # 1. 告诉 Deployer 将后端打包成叫什么名字的镜像
