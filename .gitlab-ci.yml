@@ -2,6 +2,7 @@ stages:
   - test
   - scan      # 新增：专门用来放代码扫描的阶段，排在 test 后面
   - build
+  - deploy
 
 # 1. 后端测试任务
 backend-test:
