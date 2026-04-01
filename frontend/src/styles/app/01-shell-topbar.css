@@ -120,3 +120,33 @@
   background: rgba(0, 132, 255, 0.05);
 }
 
+/* ========================================
+   夜间模式样式
+   ======================================== */
+.night-mode .im-shell {
+  background: linear-gradient(135deg, #1e1e1e 0%, #2d2d2d 100%) !important;
+}
+
+.night-mode .brand-title {
+  color: #ffffff !important;
+}
+
+.night-mode .brand-sub {
+  color: #a0a0a0 !important;
+}
+
+.night-mode .status {
+  color: #a0a0a0 !important;
+}
+
+.night-mode .ghost-btn {
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  color: #a0a0a0 !important;
+}
+
+.night-mode .ghost-btn:hover {
+  border-color: #667eea !important;
+  color: #667eea !important;
+  background: rgba(102, 126, 234, 0.1) !important;
+}
+

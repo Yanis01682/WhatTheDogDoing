@@ -225,3 +225,55 @@
   color: #666;
 }
 
+/* ========================================
+   夜间模式样式
+   ======================================== */
+.night-mode .chat-panel {
+  background: #1e1e1e !important;
+}
+
+.night-mode .chat-topbar {
+  background: #2d2d2d;
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.night-mode .chat-user h2 {
+  color: #ffffff;
+}
+
+.night-mode .chat-messages {
+  background: #181818;
+}
+
+.night-mode .message.incoming .bubble {
+  background: #2d2d2d;
+  color: #ffffff;
+}
+
+.night-mode .message.outgoing .bubble {
+  background: #667eea;
+  color: #ffffff;
+}
+
+.night-mode .message-avatar {
+  background: #4a4a4a;
+  color: #ffffff;
+}
+
+.night-mode .system-message .bubble {
+  background: #2d2d2d;
+  color: #ffffff;
+}
+
+.night-mode .message-time {
+  color: #888;
+}
+
+.night-mode .message-sender-name {
+  color: #a0a0a0;
+}
+
+.night-mode .message-media-caption {
+  color: #888;
+}
+

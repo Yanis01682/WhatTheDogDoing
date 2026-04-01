@@ -448,3 +448,87 @@
   box-shadow: 0 2px 6px rgba(255, 107, 107, 0.4);
 }
 
+/* ========================================
+   夜间模式样式
+   ======================================== */
+.night-mode .chatlist-panel {
+  background: #1e1e1e !important;
+  border-right-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.night-mode .panel-header {
+  background: #2d2d2d !important;
+  border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.night-mode .panel-header h2 {
+  color: #ffffff !important;
+}
+
+.night-mode .icon-btn {
+  color: #a0a0a0 !important;
+}
+
+.night-mode .icon-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.night-mode .icon-btn.active {
+  background-color: rgba(102, 126, 234, 0.2) !important;
+  color: #667eea !important;
+}
+
+.night-mode .search-wrap {
+  background: #2d2d2d !important;
+  border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.night-mode .search-input-wrapper input {
+  background: #3d3d3d !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: #ffffff !important;
+}
+
+.night-mode .search-input-wrapper input:focus {
+  background: #454545 !important;
+  border-color: #667eea !important;
+}
+
+.night-mode .search-clear-btn {
+  background: #555 !important;
+}
+
+.night-mode .search-clear-btn:hover {
+  background: #666 !important;
+}
+
+.night-mode .session-item {
+  background: #2d2d2d !important;
+  border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.night-mode .session-item:hover {
+  background: #3d3d3d !important;
+}
+
+.night-mode .session-item.active {
+  background: #3d3d3d !important;
+}
+
+.night-mode .session-title {
+  color: #ffffff;
+}
+
+.night-mode .session-time {
+  color: #a0a0a0;
+}
+
+.night-mode .session-meta {
+  color: #ffffff;
+}
+
+.night-mode .avatar {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #ffffff;
+}
+
