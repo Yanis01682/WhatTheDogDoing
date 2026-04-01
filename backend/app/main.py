@@ -15,6 +15,8 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:5173",
         "http://127.0.0.1:5173",
+        # 新增下面这行：允许来自你部署后的前端域名的请求
+        "http://frontend-dyno-WhatTheDogDoing.app.spring26b.secoder.net",
     ],
     allow_methods=["*"],
     allow_headers=["*"],
