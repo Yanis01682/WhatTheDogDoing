@@ -10,13 +10,17 @@ models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="WhatTheDogDoing API")
 
+# backend/app/main.py
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5173",
         "http://127.0.0.1:5173",
-        # 新增下面这行：允许来自你部署后的前端域名的请求
+        # 增加下面这些，确保包含全小写版本，且没有末尾斜杠
+        "https://frontend-dyno-whatthedogdoing.app.spring26b.secoder.net",
         "https://frontend-dyno-WhatTheDogDoing.app.spring26b.secoder.net",
+        "http://frontend-dyno-whatthedogdoing.app.spring26b.secoder.net",
     ],
     allow_methods=["*"],
     allow_headers=["*"],
