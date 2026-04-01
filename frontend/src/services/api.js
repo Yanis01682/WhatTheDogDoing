@@ -2,8 +2,7 @@ import axios from 'axios'
 
 // frontend/src/services/api.js
 const apiClient = axios.create({
-  // 修改这里：从 http 改为 https
-  baseURL: 'https://backend-dyno-WhatTheDogDoing.app.spring26b.secoder.net',
+  baseURL: 'https://backend-dyno-whatthedogdoing.app.spring26b.secoder.net',
   timeout: 10000,
   headers: { 'Content-Type': 'application/json' },
 })
