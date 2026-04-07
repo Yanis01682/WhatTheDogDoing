@@ -56,10 +56,9 @@ def test_register_duplicate():
 def test_login_success():
     """测试正常登录"""
     client.post("/auth/register", json={"username": "loginuser", "password": "loginpw"})
-    # 因为 login 改为了表单接收，这里必须用 data 而不是 json
     response = client.post(
         "/auth/login",
-        data={"username": "loginuser", "password": "loginpw"}
+        json={"username": "loginuser", "password": "loginpw"}
     )
     assert response.status_code == 200
     data = response.json()
@@ -72,14 +71,14 @@ def test_login_wrong_password():
     client.post("/auth/register", json={"username": "wrongpwuser", "password": "pw"})
     response = client.post(
         "/auth/login",
-        data={"username": "wrongpwuser", "password": "wrongpw"}
+        json={"username": "wrongpwuser", "password": "wrongpw"}
     )
     assert response.status_code == 401
 
 def test_auth_me():
     """测试通过 token 获取当前用户信息 (补全覆盖率)"""
     client.post("/auth/register", json={"username": "me_user", "password": "pw"})
-    login_res = client.post("/auth/login", data={"username": "me_user", "password": "pw"})
+    login_res = client.post("/auth/login", json={"username": "me_user", "password": "pw"})
     token = login_res.json()["access_token"]
     
     response = client.get(

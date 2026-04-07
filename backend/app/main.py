@@ -1,5 +1,6 @@
 # backend/app/main.py
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, HTTPException
+from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from .auth import router as auth_router, get_current_user
 from .chat import router as chat_router
@@ -36,8 +37,14 @@ def read_root():
 def health():
     return {"status": "ok"}
 
+class DeleteAccountRequest(BaseModel):
+    password: str
+
 @app.delete("/api/users/me")
-def delete_account(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+def delete_account(payload: DeleteAccountRequest, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    from .auth import verify_password
+    if not verify_password(payload.password, current_user.hashed_password):
+        raise HTTPException(status_code=400, detail="密码错误")
     db.delete(current_user)
     db.commit()
     return {"message": "Account deleted successfully"}

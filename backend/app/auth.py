@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm # [修改点1] 引入 RequestForm
+from fastapi.security import OAuth2PasswordBearer
 from jose import jwt
 import bcrypt
 from pydantic import BaseModel, ConfigDict # [修改点2] 引入 ConfigDict 修复警告
@@ -76,15 +76,13 @@ def register(user_data: UserAuth, db: Session = Depends(get_db)):
     db.refresh(new_user)
     return new_user
 
-# [修改点1] 登录接口的参数改为依赖 OAuth2PasswordRequestForm
 @router.post("/login", response_model=TokenResponse)
-def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    user = authenticate_user(db, form_data.username, form_data.password)
+def login(user_data: UserAuth, db: Session = Depends(get_db)):
+    user = authenticate_user(db, user_data.username, user_data.password)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="用户名或密码错误",
-            headers={"WWW-Authenticate": "Bearer"}, # 加上标准鉴权头
         )
     access_token = create_access_token(data={"sub": user.username})
     return TokenResponse(access_token=access_token, user=user)
@@ -115,4 +113,59 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     user = get_user_by_username(db, username)
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
+    return user
+
+class UserProfileUpdate(BaseModel):
+    nickname: Optional[str] = None
+    gender: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    bio: Optional[str] = None
+
+
+class UserProfileResponse(BaseModel):
+    id: int
+    username: str
+    nickname: Optional[str] = None
+    gender: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    bio: Optional[str] = None
+    model_config = ConfigDict(from_attributes=True)
+
+
+@router.get("/profile", response_model=UserProfileResponse)
+def get_profile(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    user = get_user_by_username(db, username)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
+
+
+@router.patch("/profile", response_model=UserProfileResponse)
+def update_profile(data: UserProfileUpdate, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    user = get_user_by_username(db, username)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    for field, value in data.model_dump(exclude_unset=True).items():
+        if field == 'email' and value:
+            existing = db.query(models.User).filter(
+                models.User.email == value,
+                models.User.id != user.id
+            ).first()
+            if existing:
+                raise HTTPException(status_code=400, detail="邮箱已被使用")
+        setattr(user, field, value)
+    db.commit()
+    db.refresh(user)
     return user

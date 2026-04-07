@@ -2,7 +2,7 @@
 
 // frontend/src/services/api.js
 const apiClient = axios.create({
-  baseURL: 'https://backend-dyno-whatthedogdoing.app.spring26b.secoder.net',
+  baseURL: import.meta.env.VITE_API_URL || '',
   timeout: 10000,
   headers: { 'Content-Type': 'application/json' },
 })
@@ -39,12 +39,7 @@ apiClient.interceptors.response.use(
 )
 
 export async function login({ username, password }) {
-  const params = new URLSearchParams()
-  params.append('username', username)
-  params.append('password', password)
-  const res = await apiClient.post('/auth/login', params, {
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-  })
+  const res = await apiClient.post('/auth/login', { username, password })
   const data = res.data
   const token = data.access_token || data.token
   if (token) setAuthToken(token)
@@ -69,6 +64,10 @@ export async function getCurrentUser() {
 export function logout() {
   setAuthToken(null)
 }
+export async function deleteAccount(password) {
+  await apiClient.delete('/api/users/me', { data: { password } })
+  setAuthToken(null)
+}
 
 export function getAuthToken() {
   try {
@@ -79,3 +78,13 @@ export function getAuthToken() {
 }
 
 export default apiClient
+
+export async function getProfile() {
+  const res = await apiClient.get('/auth/profile')
+  return res.data
+}
+
+export async function updateProfile(data) {
+  const res = await apiClient.patch('/auth/profile', data)
+  return res.data
+}
