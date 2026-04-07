@@ -9,7 +9,7 @@ import {
   INITIAL_PROFILE_DATA,
   MY_ROLE_MAP
 } from './features/chat/mockData'
-import { login, register, getCurrentUser } from './services/api'
+import { login, register, getCurrentUser, deleteAccount } from './services/api'
 import AuthView from './components/stage2/AuthView'
 import TopBar from './components/stage2/TopBar'
 import SidebarPanel from './components/stage2/SidebarPanel'
@@ -36,6 +36,7 @@ function App() {
   const [peerProfile, setPeerProfile] = useState(null) // 当前查看的对方资料
   const [isNightMode, setIsNightMode] = useState(false) // 夜间模式
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false) // 注销账户二次确认
+  const [deletePassword, setDeletePassword] = useState('')
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false) // 退出登录二次确认
   const [sessionFilter, setSessionFilter] = useState('all') // 会话筛选：all-全部 | personal-个人 | group-群聊
   const [showSearch, setShowSearch] = useState(false) // 搜索框显示/隐藏状态
@@ -1040,26 +1041,29 @@ function App() {
   }
 
   // 确认注销账户
-  const confirmDeleteAccount = () => {
-    // 仅前端实现：清除登录状态和本地数据
-    setIsLoggedIn(false)
-    setCurrentChat(0)
-    setShowUserPanel(false)
-    setShowDeleteConfirm(false)
-    
-    // 清除 localStorage 中的 token
-    try {
-      localStorage.removeItem('auth_token')
-    } catch (e) {
-      // ignore
+  const confirmDeleteAccount = async () => {
+    if (!deletePassword) {
+      alert('请输入密码')
+      return
     }
-    
-    alert('账户已成功注销')
+    try {
+      await deleteAccount(deletePassword)
+      setIsLoggedIn(false)
+      setCurrentChat(0)
+      setShowUserPanel(false)
+      setShowDeleteConfirm(false)
+      setDeletePassword('')
+      alert('账户已成功注销')
+    } catch (err) {
+      const msg = err.response?.data?.detail || err.message || '注销失败'
+      alert(msg)
+    }
   }
 
   // 取消注销账户
   const cancelDeleteAccount = () => {
     setShowDeleteConfirm(false)
+    setDeletePassword('')
   }
 
   // 切换用户面板显示/隐藏
@@ -1468,6 +1472,8 @@ function App() {
         handleDismissGroup={handleDismissGroup}
         handleExitGroup={handleExitGroup}
         showDeleteConfirm={showDeleteConfirm}
+        deletePassword={deletePassword}
+        setDeletePassword={setDeletePassword}
         cancelDeleteAccount={cancelDeleteAccount}
         confirmDeleteAccount={confirmDeleteAccount}
         isEditingRemark={isEditingRemark}

@@ -64,6 +64,10 @@ export async function getCurrentUser() {
 export function logout() {
   setAuthToken(null)
 }
+export async function deleteAccount(password) {
+  await apiClient.delete('/api/users/me', { data: { password } })
+  setAuthToken(null)
+}
 
 export function getAuthToken() {
   try {
