@@ -133,3 +133,31 @@ def send_message(conversation_id: int, content: str, db: Session = Depends(get_d
         
     db.commit()
     return {"status": "sent", "message_id": new_msg.id}
+
+@router.get("/messages")
+def get_messages(conversation_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_user)):
+    """获取指定会话的历史消息记录"""
+    # 1. 校验权限：当前用户必须是该会话的成员
+    is_member = db.query(models.ConversationMember).filter(
+        models.ConversationMember.conversation_id == conversation_id,
+        models.ConversationMember.user_id == current_user.id
+    ).first()
+    
+    if not is_member:
+        raise HTTPException(status_code=403, detail="Not a member of this conversation")
+
+    # 2. 获取消息记录（按创建时间升序排列，即旧消息在前，新消息在底）
+    messages = db.query(models.Message).filter(
+        models.Message.conversation_id == conversation_id
+    ).order_by(models.Message.created_at.asc()).all()
+
+    # 3. 格式化返回数据
+    return [
+        {
+            "id": msg.id,
+            "conversation_id": msg.conversation_id,
+            "sender_id": msg.sender_id,
+            "content": msg.content,
+            "created_at": msg.created_at.isoformat() if msg.created_at else None
+        } for msg in messages
+    ]
