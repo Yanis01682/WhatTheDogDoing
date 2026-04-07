@@ -2123,5 +2123,132 @@
   color: #888;
 }
 
+/* ========================================
+   20. 黑名单相关样式
+   ======================================== */
+
+.blacklist-container {
+  flex: 1;
+  overflow-y: auto;
+  background: #f5f5f5;
+}
+
+.blacklist-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.blacklist-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  background: #ffffff;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.blacklist-item:hover {
+  background: linear-gradient(90deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.05) 100%);
+}
+
+.avatar-wrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.blacklist-item .avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+}
+
+.blacklist-item .remove-btn {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid #ffffff;
+  background: #ff4d4f;
+  color: #ffffff;
+  font-size: 0.7rem;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(255, 77, 79, 0.3);
+}
+
+.blacklist-item .remove-btn:hover {
+  background: #ff7875;
+  transform: scale(1.1);
+}
+
+.blacklist-item .user-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.blacklist-item .name {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.empty-list {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.empty-list p {
+  margin: 0;
+  font-size: 1rem;
+  color: #999;
+}
+
+/* 夜间模式 */
+.night-mode .blacklist-container {
+  background: #141414;
+}
+
+.night-mode .blacklist-item {
+  background: #1e1e1e;
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.night-mode .blacklist-item:hover {
+  background: rgba(102, 126, 234, 0.1);
+}
+
+.night-mode .blacklist-item .name {
+  color: #e0e0e0;
+}
+
+.night-mode .empty-list p {
+  color: #888;
+}
+
+.night-mode .blacklist-item .remove-btn {
+  border-color: #1e1e1e;
+}
+
 
 

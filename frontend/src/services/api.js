@@ -47,7 +47,9 @@ export async function login({ username, password }) {
 }
 
 export async function register(payload) {
-  const res = await apiClient.post('/auth/register', payload)
+  // 移除前端特有字段（如 confirmPassword），避免后端 Pydantic 校验 422 报错
+  const { confirmPassword, ...rest } = payload
+  const res = await apiClient.post('/auth/register', rest)
   return res.data
 }
 

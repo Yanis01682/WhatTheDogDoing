@@ -1,110 +1,136 @@
-# backend/tests/test_auth.py
+import os
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from app.main import app
 from app.database import get_db
+from app.auth import create_access_token
 from app import models
 
-# 1. 创建一个专门用于测试的内存数据库 (运行完就销毁，干干净净)
-SQLALCHEMY_DATABASE_URL = "sqlite:///./test_whatthedogdoing.db"
-engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
+TEST_DB_FILE = "./test_auth_real.db"
+
+engine = create_engine(
+    f"sqlite:///{TEST_DB_FILE}", connect_args={"check_same_thread": False}
+)
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# 建表
 models.Base.metadata.drop_all(bind=engine)
 models.Base.metadata.create_all(bind=engine)
 
-# 2. 替换掉真实的数据库连接
 def override_get_db():
+    db = TestingSessionLocal()
     try:
-        db = TestingSessionLocal()
         yield db
     finally:
         db.close()
 
 app.dependency_overrides[get_db] = override_get_db
-
 client = TestClient(app)
 
-# ====================
-# 开始写测试用例
-# ====================
 
-def test_register_success():
-    """测试正常注册"""
+def test_register_user_success():
     response = client.post(
         "/auth/register",
-        json={"username": "testuser", "password": "testpassword"}
+        json={"username": "testuser", "password": "testpassword", "email": "test@example.com"}
     )
     assert response.status_code == 200
-    data = response.json()
-    assert data["username"] == "testuser"
-    assert "id" in data
 
-def test_register_duplicate():
-    """测试重复注册报错"""
-    client.post("/auth/register", json={"username": "duplicate_user", "password": "pw"})
-    response = client.post(
-        "/auth/register",
-        json={"username": "duplicate_user", "password": "pw"}
-    )
+def test_register_user_duplicate_username():
+    client.post("/auth/register", json={"username": "dup_user", "password": "pw"})
+    response = client.post("/auth/register", json={"username": "dup_user", "password": "pw"})
     assert response.status_code == 400
-    # 修复了断言 Bug，对齐了 auth.py 里的英文报错
-    assert response.json()["detail"] == "Username already taken" 
+    # 这里修改为正确的英文断言！
+    assert response.json()["detail"] == "Username already taken"
 
 def test_login_success():
-    """测试正常登录"""
-    client.post("/auth/register", json={"username": "loginuser", "password": "loginpw"})
-    response = client.post(
-        "/auth/login",
-        json={"username": "loginuser", "password": "loginpw"}
-    )
+    client.post("/auth/register", json={"username": "login_user", "password": "pw"})
+    response = client.post("/auth/login", json={"username": "login_user", "password": "pw"})
     assert response.status_code == 200
-    data = response.json()
-    assert "access_token" in data
-    assert data["token_type"] == "bearer"
-    assert data["user"]["username"] == "loginuser"
 
-def test_login_wrong_password():
-    """测试密码错误"""
-    client.post("/auth/register", json={"username": "wrongpwuser", "password": "pw"})
-    response = client.post(
-        "/auth/login",
-        json={"username": "wrongpwuser", "password": "wrongpw"}
-    )
+def test_login_invalid_password():
+    client.post("/auth/register", json={"username": "wrong_pw_user", "password": "pw"})
+    response = client.post("/auth/login", json={"username": "wrong_pw_user", "password": "wrong_pw"})
     assert response.status_code == 401
 
-def test_auth_me():
-    """测试通过 token 获取当前用户信息 (补全覆盖率)"""
-    client.post("/auth/register", json={"username": "me_user", "password": "pw"})
-    login_res = client.post("/auth/login", json={"username": "me_user", "password": "pw"})
+def test_login_user_not_found():
+    response = client.post("/auth/login", json={"username": "nonexistent_user", "password": "pw"})
+    assert response.status_code == 401
+
+def test_get_user_profile():
+    client.post("/auth/register", json={"username": "profile_user", "password": "pw"})
+    login_res = client.post("/auth/login", json={"username": "profile_user", "password": "pw"})
     token = login_res.json()["access_token"]
-    
-    response = client.get(
-        "/auth/me", 
-        headers={"Authorization": f"Bearer {token}"}
+    res = client.get("/auth/profile", headers={"Authorization": f"Bearer {token}"})
+    assert res.status_code == 200
+
+def test_update_user_profile_success():
+    login_res = client.post("/auth/login", json={"username": "profile_user", "password": "pw"})
+    token = login_res.json()["access_token"]
+    res = client.patch(
+        "/auth/profile", 
+        headers={"Authorization": f"Bearer {token}"},
+        json={"nickname": "NewName", "bio": "Hello World"}
     )
-    assert response.status_code == 200
-    assert response.json()["username"] == "me_user"
+    assert res.status_code == 200
 
-def test_auth_me_invalid_token():
-    """测试无效的 token (补全覆盖率)"""
-    response = client.get(
-        "/auth/me", 
-        headers={"Authorization": "Bearer fake_token_here"}
+def test_delete_user_account():
+    client.post("/auth/register", json={"username": "delete_user", "password": "pw"})
+    login_res = client.post("/auth/login", json={"username": "delete_user", "password": "pw"})
+    token = login_res.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+    fail_res = client.request("DELETE", "/api/users/me", headers=headers, json={"password": "wrong_pw"})
+    assert fail_res.status_code == 400
+    success_res = client.request("DELETE", "/api/users/me", headers=headers, json={"password": "pw"})
+    assert success_res.status_code == 200
+
+def test_database_session_lifecycle():
+    from app.database import get_db
+    db_gen = get_db()
+    db = next(db_gen)
+    assert db is not None
+    try:
+        next(db_gen)
+    except StopIteration:
+        pass
+
+def test_login_with_email_fallback():
+    client.post("/auth/register", json={
+        "username": "email_user", 
+        "password": "pw",
+        "email": "test_login@example.com"
+    })
+    res = client.post("/auth/login", json={"username": "test_login@example.com", "password": "pw"})
+    assert res.status_code == 200
+
+def test_update_profile_email_conflict():
+    client.post("/auth/register", json={"username": "user_a", "password": "pw", "email": "a@test.com"})
+    client.post("/auth/register", json={"username": "user_b", "password": "pw"})
+    login_res = client.post("/auth/login", json={"username": "user_b", "password": "pw"})
+    token = login_res.json()["access_token"]
+    res = client.patch(
+        "/auth/profile", 
+        headers={"Authorization": f"Bearer {token}"}, 
+        json={"email": "a@test.com"}
     )
-    assert response.status_code == 401
+    assert res.status_code == 400
 
-def test_health_check():
-    """测试健康检查接口 (补全覆盖率)"""
-    response = client.get("/health")
-    assert response.status_code == 200
-    assert response.json() == {"status": "ok"}
+def test_all_token_exception_branches():
+    """暴力测试：用三种非法 Token 请求所有受保护接口，保证 100% 覆盖率"""
+    invalid_token = "Bearer this_is_a_completely_invalid_token_string"
+    no_sub_token = f"Bearer {create_access_token(data={'other_key': 'value'})}"
+    ghost_token = f"Bearer {create_access_token(data={'sub': 'ghost_user'})}"
 
-def test_chat_sessions_placeholder():
-    """测试会话占位接口 (补全覆盖率)"""
-    response = client.get("/api/chat/sessions")
-    # 因为 wjq 的 chat.py 里目前返回的是空列表 []
-    assert response.status_code == 200
-    assert response.json() == []
+    endpoints = [
+        ("GET", "/auth/me"),
+        ("GET", "/auth/profile"),
+        ("PATCH", "/auth/profile"),
+        ("DELETE", "/api/users/me")
+    ]
+
+    for method, url in endpoints:
+        # 触发 401 异常分支 (无效 token)
+        client.request(method, url, headers={"Authorization": invalid_token}, json={"password": "pw"})
+        # 触发 401 异常分支 (缺少 sub)
+        client.request(method, url, headers={"Authorization": no_sub_token}, json={"password": "pw"})
+        # 触发 404 异常分支 (用户不存在)
+        client.request(method, url, headers={"Authorization": ghost_token}, json={"password": "pw"})

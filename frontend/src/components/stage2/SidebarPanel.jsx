@@ -58,7 +58,15 @@ function SidebarPanel({
   // 从好友列表打开私聊的回调。
   onOpenFriendChat,
   // 左侧栏宽度（像素）。
-  chatlistWidth
+  chatlistWidth,
+  // 置顶聊天 ID 列表
+  pinnedChatIds,
+  // 黑名单列表
+  blacklist,
+  // 移出黑名单回调
+  onRemoveFromBlacklist,
+  // 从黑名单打开聊天回调
+  onOpenBlacklistChat
 }) {
   const [isGroupFolderOpen, setIsGroupFolderOpen] = useState(false)
   const [sessionContextMenu, setSessionContextMenu] = useState(null)
@@ -69,7 +77,16 @@ function SidebarPanel({
     return () => document.removeEventListener('click', closeMenu)
   }, [])
 
+  // 从会话列表中过滤掉黑名单用户
+  const isBlacklisted = (session) => {
+    if (session.isGroup) return false // 群聊不受黑名单影响
+    const userId = session.realName || session.title
+    return blacklist.some(u => (u.name === userId) || (u.id && session.id === u.id))
+  }
+
   const filteredSessions = [...dynamicSessions, ...sessions].filter((session) => {
+    // 过滤黑名单用户
+    if (isBlacklisted(session)) return false
     if (sessionFilter === 'personal' && session.isGroup) return false
     if (sessionFilter === 'group' && !session.isGroup) return false
     if (searchQuery.trim()) {
@@ -79,6 +96,15 @@ function SidebarPanel({
       return title.includes(query) || lastMessage.includes(query)
     }
     return true
+  })
+
+  // 置顶聊天排序：置顶的排在前面
+  filteredSessions.sort((a, b) => {
+    const aPinned = pinnedChatIds.includes(a.id)
+    const bPinned = pinnedChatIds.includes(b.id)
+    if (aPinned && !bPinned) return -1
+    if (!aPinned && bPinned) return 1
+    return 0
   })
 
   const shouldArchiveGroup = (session) => session.isGroup && archivedGroupIds.includes(session.id)
@@ -131,7 +157,9 @@ function SidebarPanel({
       style={{ width: `${chatlistWidth}px`, flex: 'none', '--chatlist-width': `${chatlistWidth}px` }}
     >
       <div className="panel-header">
-        <h2>{activeTab === 'chats' ? '会话' : '好友'}</h2>
+        <h2>
+          {activeTab === 'chats' ? '会话' : activeTab === 'friends' ? '好友' : '黑名单'}
+        </h2>
         <div className="header-actions">
           <button
             className={`icon-btn ${activeTab === 'friends' && showFriendSearch ? 'active' : showSearch ? 'active' : ''}`}
@@ -153,6 +181,11 @@ function SidebarPanel({
           {activeTab === 'friends' && (
             <button className="icon-btn" type="button" aria-label="添加好友" onClick={handleOpenAddFriend}>
               ➕
+            </button>
+          )}
+          {activeTab === 'blacklist' && (
+            <button className="icon-btn" type="button" aria-label="管理黑名单">
+              ⚙️
             </button>
           )}
           <button
@@ -312,6 +345,39 @@ function SidebarPanel({
         </div>
       )}
 
+      {activeTab === 'blacklist' && (
+        <div className="blacklist-container">
+          {blacklist.length === 0 ? (
+            <div className="empty-list">
+              <p>暂无黑名单用户</p>
+            </div>
+          ) : (
+            <ul className="blacklist-list">
+              {blacklist.map(user => (
+                <li key={user.id} className="blacklist-item" onClick={() => onOpenBlacklistChat(user)}>
+                  <div className="avatar-wrapper">
+                    <div className="avatar">{user.avatar}</div>
+                    <button 
+                      className="remove-btn" 
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onRemoveFromBlacklist(user.id)
+                      }}
+                      title="移出黑名单"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <div className="user-info">
+                    <p className="name">{user.name}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
       <div className="bottom-tab-bar">
         <button className={`tab-item ${activeTab === 'chats' ? 'active' : ''}`} onClick={() => setActiveTab('chats')}>
           <span className="tab-icon">💬</span>
@@ -320,6 +386,10 @@ function SidebarPanel({
         <button className={`tab-item ${activeTab === 'friends' ? 'active' : ''}`} onClick={() => setActiveTab('friends')}>
           <span className="tab-icon">👥</span>
           <span className="tab-label">好友</span>
+        </button>
+        <button className={`tab-item ${activeTab === 'blacklist' ? 'active' : ''}`} onClick={() => setActiveTab('blacklist')}>
+          <span className="tab-icon">🚫</span>
+          <span className="tab-label">黑名单</span>
         </button>
       </div>
 

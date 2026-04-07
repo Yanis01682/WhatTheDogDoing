@@ -57,6 +57,7 @@ function App() {
   const [showStatusMenu, setShowStatusMenu] = useState(false) // 状态选择菜单
   const [showChatDetail, setShowChatDetail] = useState(false) // 聊天详情模态框
   const [activeTab, setActiveTab] = useState('chats') // 当前激活的标签页：chats-会话，friends-好友
+  const [blacklist, setBlacklist] = useState([]) // 黑名单列表
   const [showAddFriendModal, setShowAddFriendModal] = useState(false) // 添加好友模态框
   const [isEditingRemark, setIsEditingRemark] = useState(false) // 是否正在编辑备注
   const [tempRemark, setTempRemark] = useState('') // 临时备注
@@ -93,6 +94,7 @@ function App() {
   const [dynamicSessions, setDynamicSessions] = useState([]) // 动态创建的会话（好友私聊）
   const [groupMembers, setGroupMembers] = useState(INITIAL_GROUP_MEMBERS) // 群成员数据（包含角色信息）
   const [profileData, setProfileData] = useState(INITIAL_PROFILE_DATA) // 个人信息数据
+  const [pinnedChatIds, setPinnedChatIds] = useState([]) // 置顶聊天 ID 列表
 
   // 初始加载时尝试获取用户信息
   useEffect(() => {
@@ -138,12 +140,114 @@ function App() {
         console.warn('解析 archivedGroupIds 失败，使用默认值', err)
       }
     }
+
+    // 加载保存的置顶聊天
+    const savedPinnedChats = localStorage.getItem('pinnedChatIds')
+    if (savedPinnedChats) {
+      try {
+        const parsed = JSON.parse(savedPinnedChats)
+        if (Array.isArray(parsed)) {
+          setPinnedChatIds(parsed)
+        }
+      } catch (err) {
+        console.warn('解析 pinnedChatIds 失败，使用默认值', err)
+      }
+    }
+
+    // 加载保存的黑名单
+    const savedBlacklist = localStorage.getItem('blacklist')
+    if (savedBlacklist) {
+      try {
+        const parsed = JSON.parse(savedBlacklist)
+        if (Array.isArray(parsed)) {
+          setBlacklist(parsed)
+        }
+      } catch (err) {
+        console.warn('解析 blacklist 失败，使用默认值', err)
+      }
+    }
   }, [])
 
   // 持久化手动收纳状态
   useEffect(() => {
     localStorage.setItem('archivedGroupIds', JSON.stringify(archivedGroupIds))
   }, [archivedGroupIds])
+
+  // 持久化置顶聊天状态
+  useEffect(() => {
+    localStorage.setItem('pinnedChatIds', JSON.stringify(pinnedChatIds))
+  }, [pinnedChatIds])
+
+  // 切换聊天置顶状态
+  const handleTogglePinChat = (chatId) => {
+    setPinnedChatIds(prev => {
+      if (prev.includes(chatId)) {
+        // 取消置顶
+        return prev.filter(id => id !== chatId)
+      } else {
+        // 添加置顶
+        return [chatId, ...prev]
+      }
+    })
+  }
+
+  // 检查聊天是否置顶
+  const isChatPinned = (chatId) => {
+    return pinnedChatIds.includes(chatId)
+  }
+
+  // 持久化黑名单状态
+  useEffect(() => {
+    localStorage.setItem('blacklist', JSON.stringify(blacklist))
+  }, [blacklist])
+
+  // 切换黑名单状态
+  const handleToggleBlacklist = (user) => {
+    const userId = user.id || user.userId
+    setBlacklist(prev => {
+      if (prev.find(u => (u.id || u.userId) === userId)) {
+        return prev.filter(u => (u.id || u.userId) !== userId)
+      } else {
+        return [...prev, { ...user, id: userId }]
+      }
+    })
+  }
+
+  // 检查用户是否在黑名单中
+  const isUserInBlacklist = (userId) => {
+    return blacklist.some(u => (u.id || u.userId) === userId)
+  }
+
+  // 移出黑名单
+  const handleRemoveFromBlacklist = (userId) => {
+    setBlacklist(prev => prev.filter(u => (u.id || u.userId) !== userId))
+  }
+
+  // 从黑名单打开私聊会话
+  const handleOpenBlacklistChat = (blacklistUser) => {
+    const allSessions = [...sessions, ...dynamicSessions]
+    const existingSession = allSessions.find(s => s.title === blacklistUser.name)
+
+    if (!existingSession) {
+      const newSessionId = sessions.length + dynamicSessions.length
+      const newSession = {
+        id: newSessionId,
+        title: blacklistUser.name,
+        avatar: blacklistUser.avatar,
+        lastMessage: '黑名单用户',
+        time: '刚刚',
+        badge: 0,
+        online: 0,
+        isGroup: false,
+        realName: blacklistUser.name,
+        isBlacklisted: true // 标记为黑名单用户
+      }
+      setDynamicSessions(prev => [newSession, ...prev])
+      setCurrentChat(newSessionId)
+    } else {
+      setCurrentChat(existingSession.id)
+    }
+  }
 
   // 切换在线状态
   const handleChangeStatus = (status) => {
@@ -913,6 +1017,37 @@ function App() {
     }))
   }
 
+  // 更换头像
+  const handleChangeAvatar = (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+
+    // 验证文件类型
+    if (!file.type.startsWith('image/')) {
+      alert('请选择图片文件！')
+      return
+    }
+
+    // 验证文件大小（限制 2MB）
+    if (file.size > 2 * 1024 * 1024) {
+      alert('图片大小不能超过 2MB！')
+      return
+    }
+
+    // 读取文件并转换为 base64
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      const base64String = event.target.result
+      setUserAvatar(base64String)
+      localStorage.setItem('userAvatar', base64String)
+      alert('头像更换成功！')
+    }
+    reader.onerror = () => {
+      alert('头像上传失败，请重试！')
+    }
+    reader.readAsDataURL(file)
+  }
+
   // 编辑消息（用于撤回后的重新编辑）
   const handleEditMessage = () => {
     if (!contextMenu) return
@@ -1367,6 +1502,7 @@ function App() {
         <SidebarPanel
           activeTab={activeTab}
           setActiveTab={setActiveTab}
+          blacklist={blacklist}
           showFriendSearch={showFriendSearch}
           setShowFriendSearch={setShowFriendSearch}
           friendSearchQuery={friendSearchQuery}
@@ -1392,6 +1528,13 @@ function App() {
           onToggleGroupArchive={handleToggleGroupArchive}
           onOpenFriendChat={handleOpenFriendChat}
           chatlistWidth={chatlistWidth}
+          pinnedChatIds={pinnedChatIds}
+          blacklist={blacklist}
+          onRemoveFromBlacklist={handleRemoveFromBlacklist}
+          onOpenBlacklistChat={handleOpenBlacklistChat}
+          currentChat={currentChat}
+          setCurrentChat={setCurrentChat}
+          handleOpenFriendChat={handleOpenFriendChat}
         />
 
         {/* 左侧会话列表和聊天窗口之间的拖拽分隔线 */}
@@ -1475,6 +1618,7 @@ function App() {
         handleProfileChange={handleProfileChange}
         handleCancelProfile={handleCancelProfile}
         handleSaveProfile={handleSaveProfile}
+        handleChangeAvatar={handleChangeAvatar}
         showChatDetail={showChatDetail}
         handleCloseChatDetail={handleCloseChatDetail}
         getCurrentSession={getCurrentSession}
@@ -1489,6 +1633,10 @@ function App() {
         handleCancelEditAnnouncement={handleCancelEditAnnouncement}
         handleOpenMemberList={handleOpenMemberList}
         handleOpenInviteMember={handleOpenInviteMember}
+        handleTogglePinChat={handleTogglePinChat}
+        isChatPinned={isChatPinned}
+        handleToggleBlacklist={handleToggleBlacklist}
+        isUserInBlacklist={isUserInBlacklist}
         handleTransferGroup={handleTransferGroup}
         handleDismissGroup={handleDismissGroup}
         handleExitGroup={handleExitGroup}

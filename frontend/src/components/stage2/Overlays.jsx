@@ -54,6 +54,7 @@ function Overlays({
   handleProfileChange,
   handleCancelProfile,
   handleSaveProfile,
+  handleChangeAvatar,
   // 聊天详情及群操作。
   showChatDetail,
   handleCloseChatDetail,
@@ -69,6 +70,10 @@ function Overlays({
   handleCancelEditAnnouncement,
   handleOpenMemberList,
   handleOpenInviteMember,
+  handleTogglePinChat,
+  isChatPinned,
+  handleToggleBlacklist,
+  isUserInBlacklist,
   handleTransferGroup,
   handleDismissGroup,
   handleExitGroup,
@@ -292,10 +297,26 @@ function Overlays({
                 <div className="profile-view">
                   <div className="profile-avatar-section">
                     {typeof userAvatar === 'string' && userAvatar.startsWith('data:image') ? (
-                      <div className="profile-avatar" style={{ backgroundImage: `url(${userAvatar})`, backgroundSize: 'cover', backgroundPosition: 'center' }}></div>
+                      <div className="profile-avatar" style={{ backgroundImage: `url(${userAvatar})`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
+                        <label htmlFor="avatar-upload" className="avatar-overlay">
+                          <span className="avatar-change-text">更换头像</span>
+                        </label>
+                      </div>
                     ) : (
-                      <div className="profile-avatar"><span>{userAvatar}</span></div>
+                      <div className="profile-avatar">
+                        <span>{userAvatar}</span>
+                        <label htmlFor="avatar-upload" className="avatar-overlay">
+                          <span className="avatar-change-text">更换头像</span>
+                        </label>
+                      </div>
                     )}
+                    <input 
+                      type="file" 
+                      id="avatar-upload" 
+                      accept="image/*" 
+                      onChange={handleChangeAvatar} 
+                      style={{ display: 'none' }} 
+                    />
                   </div>
 
                   <div className="profile-info-list">
@@ -410,7 +431,7 @@ function Overlays({
                   <div className="detail-section"><div className="section-title">群主</div><div className="section-content owner-info"><div className="owner-avatar">{getCurrentOwner().charAt(0)}</div><div className="owner-info"><div className="owner-name">{getCurrentOwner()}</div><div className="owner-role">群主</div></div></div></div>
                   <div className="detail-section"><div className="section-title">我在本群的昵称</div><div className="section-content"><div className="my-nickname">{profileData.nickname || '未设置'}<button className="edit-nickname-btn">编辑</button></div></div></div>
                   <div className="detail-section"><div className="section-title">消息免打扰</div><div className="section-content"><label className="toggle-switch-label"><input type="checkbox" className="toggle-checkbox" /><span className="toggle-slider"></span></label></div></div>
-                  <div className="detail-section"><div className="section-title">置顶聊天</div><div className="section-content"><label className="toggle-switch-label"><input type="checkbox" className="toggle-checkbox" /><span className="toggle-slider"></span></label></div></div>
+                  <div className="detail-section"><div className="section-title">置顶聊天</div><div className="section-content"><label className="toggle-switch-label"><input type="checkbox" className="toggle-checkbox" checked={isChatPinned(currentChat)} onChange={() => handleTogglePinChat(currentChat)} /><span className="toggle-slider"></span></label></div></div>
                   <div className="detail-section clickable" onClick={handleOpenSearchMessage}><div className="section-title">查找聊天记录</div><div className="section-content"><span className="arrow-icon">›</span></div></div>
 
                   <div className="detail-section">
@@ -434,7 +455,6 @@ function Overlays({
                   </div>
 
                   <div className="detail-section clickable" onClick={handleOpenMemberList}><div className="section-title">成员管理</div><div className="section-content"><span className="arrow-icon">›</span></div></div>
-                  <div className="detail-section clickable" onClick={handleOpenInviteMember}><div className="section-title">邀请好友</div><div className="section-content"><span className="arrow-icon">›</span></div></div>
 
                   {userRole === 'owner' && (
                     <>
@@ -451,7 +471,7 @@ function Overlays({
                     <div className="section-title">成员</div>
                     <div className="section-content members-preview">
                       {groupMembers[currentChat]?.slice(0, 8).map((member, index) => <div key={index} className="member-avatar-small" title={member.name}>{member.avatar}</div>)}
-                      <div className="view-all-members">+</div>
+                      <div className="view-all-members invite-action" onClick={handleOpenInviteMember} title="邀请好友">+</div>
                     </div>
                   </div>
                 </div>
@@ -492,8 +512,8 @@ function Overlays({
                   <div className="detail-section clickable"><div className="section-title">音视频通话</div><div className="section-content"><span className="arrow-icon">›</span></div></div>
                   <div className="detail-section clickable"><div className="section-title">查找聊天记录</div><div className="section-content"><span className="arrow-icon">›</span></div></div>
                   <div className="detail-section"><div className="section-title">消息免打扰</div><div className="section-content"><label className="toggle-switch-label"><input type="checkbox" className="toggle-checkbox" /><span className="toggle-slider"></span></label></div></div>
-                  <div className="detail-section"><div className="section-title">置顶聊天</div><div className="section-content"><label className="toggle-switch-label"><input type="checkbox" className="toggle-checkbox" /><span className="toggle-slider"></span></label></div></div>
-                  <div className="detail-section"><div className="section-title">添加到黑名单</div><div className="section-content"><label className="toggle-switch-label"><input type="checkbox" className="toggle-checkbox" /><span className="toggle-slider"></span></label></div></div>
+                  <div className="detail-section"><div className="section-title">置顶聊天</div><div className="section-content"><label className="toggle-switch-label"><input type="checkbox" className="toggle-checkbox" checked={isChatPinned(currentChat)} onChange={() => handleTogglePinChat(currentChat)} /><span className="toggle-slider"></span></label></div></div>
+                  <div className="detail-section"><div className="section-title">添加到黑名单</div><div className="section-content"><label className="toggle-switch-label"><input type="checkbox" className="toggle-checkbox" checked={getCurrentSession().isGroup ? false : isUserInBlacklist(getCurrentSession().id)} onChange={() => !getCurrentSession().isGroup && handleToggleBlacklist({ id: getCurrentSession().id, name: getCurrentSession().title, avatar: getCurrentSession().avatar })} /><span className="toggle-slider"></span></label></div></div>
                   <div className="detail-section clickable danger"><div className="section-title">投诉</div><div className="section-content"><span className="arrow-icon">›</span></div></div>
                   <div className="detail-section clickable danger"><div className="section-title">删除好友</div><div className="section-content" onClick={() => handleDeleteFriend(100)}><span className="arrow-icon">›</span></div></div>
                 </div>
