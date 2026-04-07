@@ -2,7 +2,7 @@
 
 // frontend/src/services/api.js
 const apiClient = axios.create({
-  baseURL: 'https://backend-dyno-whatthedogdoing.app.spring26b.secoder.net',
+  baseURL: import.meta.env.VITE_API_URL || '',
   timeout: 10000,
   headers: { 'Content-Type': 'application/json' },
 })
@@ -39,12 +39,7 @@ apiClient.interceptors.response.use(
 )
 
 export async function login({ username, password }) {
-  const params = new URLSearchParams()
-  params.append('username', username)
-  params.append('password', password)
-  const res = await apiClient.post('/auth/login', params, {
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-  })
+  const res = await apiClient.post('/auth/login', { username, password })
   const data = res.data
   const token = data.access_token || data.token
   if (token) setAuthToken(token)

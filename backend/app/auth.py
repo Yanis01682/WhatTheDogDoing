@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm # [修改点1] 引入 RequestForm
+from fastapi.security import OAuth2PasswordBearer
 from jose import jwt
 import bcrypt
 from pydantic import BaseModel, ConfigDict # [修改点2] 引入 ConfigDict 修复警告
@@ -76,15 +76,13 @@ def register(user_data: UserAuth, db: Session = Depends(get_db)):
     db.refresh(new_user)
     return new_user
 
-# [修改点1] 登录接口的参数改为依赖 OAuth2PasswordRequestForm
 @router.post("/login", response_model=TokenResponse)
-def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    user = authenticate_user(db, form_data.username, form_data.password)
+def login(user_data: UserAuth, db: Session = Depends(get_db)):
+    user = authenticate_user(db, user_data.username, user_data.password)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="用户名或密码错误",
-            headers={"WWW-Authenticate": "Bearer"}, # 加上标准鉴权头
         )
     access_token = create_access_token(data={"sub": user.username})
     return TokenResponse(access_token=access_token, user=user)
