@@ -1,11 +1,11 @@
-FROM mysql:8.0
+# 换用 5.7 版本，在资源受限平台更稳定不易 Crash
+FROM mysql:5.7
 
-# 既然 UI 不让填，咱们直接写在 Dockerfile 里！
-# 这里的 123456 就是你给数据库设置的 root 密码，你可以随便改
+# 这里的 123456 是 root 密码
 ENV MYSQL_ROOT_PASSWORD=123456
-
-# 顺手把数据库也自动建好，省得连进去敲 SQL 了
 ENV MYSQL_DATABASE=whatthedogdoing
 
-# 暴露 MySQL 默认端口
+# 解决中文字符集和连接权限的问题
+CMD ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci", "--default-authentication-plugin=mysql_native_password"]
+
 EXPOSE 3306
