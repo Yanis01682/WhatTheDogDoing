@@ -356,6 +356,7 @@ function App() {
   }
 
 // 获取当前会话信息（正常软件的空状态逻辑）
+// 获取当前会话信息（正常软件的空状态逻辑）
   const getCurrentSession = () => {
     const allSessions = [...dynamicSessions, ...sessions]
     
@@ -366,11 +367,11 @@ function App() {
     // 2. 如果没选中，但列表里有会话，默认显示第一个
     if (allSessions.length > 0) return allSessions[0]
     
-    // 3. 真实软件逻辑：如果列表全空（新注册用户），返回一个安全的“系统欢迎界面”占位对象，防止前端崩溃
+    // 3. 极度关键：给新注册用户一个安全的占位对象，防止读取 .avatar 时页面崩溃白屏！
     return {
-      id: -1, // 虚拟ID
+      id: -1, 
       title: '欢迎来到 WhatTheDogDoing',
-      avatar: '🐶',
+      avatar: '🐶', // 有了这个就不会再报 reading 'avatar' 的错误了
       lastMessage: '暂无消息，点击左侧添加好友开始聊天吧！',
       time: '',
       badge: 0,
