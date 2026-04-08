@@ -997,7 +997,7 @@ function App() {
     // 从消息列表中移除
     setMessages(prev => ({
       ...prev,
-      [currentChat]: prev[currentChat].filter(msg => msg.id !== messageId)
+      [currentChat]: (prev[currentChat] || []).filter(msg => msg.id !== messageId)
     }))
     
     closeContextMenu()
