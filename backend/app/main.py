@@ -4,7 +4,6 @@ from fastapi import FastAPI, Depends, HTTPException
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
-from sqlalchemy.exc import OperationalError
 
 from .auth import router as auth_router, get_current_user
 from .chat import router as chat_router
@@ -13,21 +12,23 @@ from . import models
 
 app = FastAPI(title="WhatTheDogDoing API")
 
-# 【核心修复】：解决后端比数据库启动快导致的崩溃死锁问题
 @app.on_event("startup")
 def startup_db_client():
-    retries = 10  # 最多重试10次，每次等3秒
+    # 【核心修复 1】大幅度延长等待时间！云平台的数据库首次启动可能需要 1~2 分钟
+    retries = 30  
     while retries > 0:
         try:
+            # 尝试连接数据库并创建所有表
             models.Base.metadata.create_all(bind=engine)
             print("Successfully connected to the database and created tables.")
             break
-        except OperationalError:
-            print(f"Database not ready yet, retrying... ({retries} attempts left)")
+        except Exception as e:
+            # 捕获所有类型的连接异常，继续默默等待
+            print(f"Database not ready yet, retrying... ({retries} attempts left). Error: {e}")
             retries -= 1
-            time.sleep(3)
+            time.sleep(5)
     if retries == 0:
-        print("WARNING: Failed to connect to the database after multiple attempts.")
+        print("WARNING: Failed to connect to the database after multiple attempts. Tables might not be created!")
 
 app.add_middleware(
     CORSMiddleware,
