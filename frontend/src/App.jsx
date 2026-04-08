@@ -89,6 +89,7 @@ function App() {
   ]) // 收到的好友请求（待我审批）
   const [sentFriendRequests, setSentFriendRequests] = useState([]) // 我发出的好友申请（用于展示审批状态）
   const [sessions, setSessions] = useState([]) // 存储真实的会话列表
+  const [messages, setMessages] = useState(INITIAL_MESSAGES)
   const [myFriends, setMyFriends] = useState(INITIAL_FRIENDS) // 我的好友列表
   const [collapsedGroups, setCollapsedGroups] = useState([]) // 已折叠的分组
   const [customGroups, setCustomGroups] = useState(INITIAL_CUSTOM_GROUPS) // 自定义分组列表
@@ -852,7 +853,6 @@ function App() {
       handleCloseChatDetail()
     }
   }
-  const [messages, setMessages] = useState(INITIAL_MESSAGES)
 
   // 我的角色（用于权限判断）
   const myRole = MY_ROLE_MAP
