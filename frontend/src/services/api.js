@@ -58,7 +58,11 @@ export async function getCurrentUser() {
     const res = await apiClient.get('/auth/me')
     return res.data
   } catch (err) {
-    if (err.response && err.response.status === 401) return null
+    // 将 404 (新数据库查无此人) 和 401 (Token失效) 都妥善处理，防止控制台爆红报错
+    if (err.response && (err.response.status === 401 || err.response.status === 404)) {
+      setAuthToken(null) // 清除本地过期的毒 Token
+      return null
+    }
     throw err
   }
 }
