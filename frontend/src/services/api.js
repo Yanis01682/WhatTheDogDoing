@@ -1,4 +1,4 @@
- import axios from 'axios'
+import axios from 'axios'
 
 // frontend/src/services/api.js
 const apiClient = axios.create({
@@ -66,6 +66,7 @@ export async function getCurrentUser() {
 export function logout() {
   setAuthToken(null)
 }
+
 export async function deleteAccount(password) {
   await apiClient.delete('/api/users/me', { data: { password } })
   setAuthToken(null)
@@ -79,8 +80,6 @@ export function getAuthToken() {
   }
 }
 
-export default apiClient
-
 export async function getProfile() {
   const res = await apiClient.get('/auth/profile')
   return res.data
@@ -91,4 +90,25 @@ export async function updateProfile(data) {
   return res.data
 }
 
+// ====== 新增聊天相关真实 API 接口 ======
+export async function getSessions() {
+  const res = await apiClient.get('/api/chat/sessions')
+  return res.data
+}
 
+export async function getFriends() {
+  const res = await apiClient.get('/api/chat/friends')
+  return res.data
+}
+
+export async function getMessages(conversationId) {
+  const res = await apiClient.get(`/api/chat/messages?conversation_id=${conversationId}`)
+  return res.data
+}
+
+export async function sendChatMessage(conversationId, content) {
+  const res = await apiClient.post(`/api/chat/messages/send?conversation_id=${conversationId}&content=${encodeURIComponent(content)}`)
+  return res.data
+}
+
+export default apiClient
