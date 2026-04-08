@@ -1,5 +1,6 @@
 # backend/app/main.py
 import time
+import threading  # 1. 引入 threading 模块
 from fastapi import FastAPI, Depends, HTTPException
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,21 +15,25 @@ app = FastAPI(title="WhatTheDogDoing API")
 
 @app.on_event("startup")
 def startup_db_client():
-    # 【核心修复 1】大幅度延长等待时间！云平台的数据库首次启动可能需要 1~2 分钟
-    retries = 30  
-    while retries > 0:
-        try:
-            # 尝试连接数据库并创建所有表
-            models.Base.metadata.create_all(bind=engine)
-            print("Successfully connected to the database and created tables.")
-            break
-        except Exception as e:
-            # 捕获所有类型的连接异常，继续默默等待
-            print(f"Database not ready yet, retrying... ({retries} attempts left). Error: {e}")
-            retries -= 1
-            time.sleep(5)
-    if retries == 0:
-        print("WARNING: Failed to connect to the database after multiple attempts. Tables might not be created!")
+    # 2. 将原本阻塞主线程的代码封装进一个内部函数
+    def init_db():
+        retries = 30  
+        while retries > 0:
+            try:
+                models.Base.metadata.create_all(bind=engine)
+                print("Successfully connected to the database and created tables.")
+                break
+            except Exception as e:
+                print(f"Database not ready yet, retrying... ({retries} attempts left). Error: {e}")
+                retries -= 1
+                time.sleep(5)
+        if retries == 0:
+            print("WARNING: Failed to connect to the database after multiple attempts.")
+            
+    # 3. 开启后台线程执行数据库初始化，立刻放行主线程！
+    threading.Thread(target=init_db, daemon=True).start()
+
+# ... 下方 app.add_middleware 及后续路由代码保持完全不变 ...
 
 app.add_middleware(
     CORSMiddleware,
