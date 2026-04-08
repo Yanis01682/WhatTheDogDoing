@@ -1597,12 +1597,8 @@ const handleSendMessage = async () => {
           onOpenFriendChat={handleOpenFriendChat}
           chatlistWidth={chatlistWidth}
           pinnedChatIds={pinnedChatIds}
-          blacklist={blacklist}
           onRemoveFromBlacklist={handleRemoveFromBlacklist}
           onOpenBlacklistChat={handleOpenBlacklistChat}
-          currentChat={currentChat}
-          setCurrentChat={setCurrentChat}
-          handleOpenFriendChat={handleOpenFriendChat}
         />
 
         {/* 左侧会话列表和聊天窗口之间的拖拽分隔线 */}
