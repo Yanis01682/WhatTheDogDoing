@@ -146,10 +146,10 @@ def get_messages(conversation_id: int, db: Session = Depends(get_db), current_us
     if not is_member:
         raise HTTPException(status_code=403, detail="Not a member of this conversation")
 
-    # 2. 获取消息记录（按创建时间升序排列，即旧消息在前，新消息在底）
+    # 2. 获取消息记录（按创建时间升序排列，注意这里的字段名是 timestamp）
     messages = db.query(models.Message).filter(
         models.Message.conversation_id == conversation_id
-    ).order_by(models.Message.created_at.asc()).all()
+    ).order_by(models.Message.timestamp.asc()).all()
 
     # 3. 格式化返回数据
     return [
@@ -158,6 +158,7 @@ def get_messages(conversation_id: int, db: Session = Depends(get_db), current_us
             "conversation_id": msg.conversation_id,
             "sender_id": msg.sender_id,
             "content": msg.content,
-            "created_at": msg.created_at.isoformat() if msg.created_at else None
+            # 将后端的 timestamp 映射为前端期望的 created_at
+            "created_at": msg.timestamp.isoformat() if msg.timestamp else None
         } for msg in messages
     ]
