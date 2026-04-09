@@ -1,11 +1,11 @@
-# 换用更加轻量级、且与 MySQL 完美兼容的 mariadb
-# 彻底解决 Secoder 平台上因内存不足导致的数据库崩溃问题
-FROM mariadb:10.6
+FROM mysql:8.0
 
+# 既然 UI 不让填，咱们直接写在 Dockerfile 里！
+# 这里的 123456 就是你给数据库设置的 root 密码，你可以随便改
 ENV MYSQL_ROOT_PASSWORD=123456
+
+# 顺手把数据库也自动建好，省得连进去敲 SQL 了
 ENV MYSQL_DATABASE=whatthedogdoing
 
-# 设置字符集以支持中文和 Emoji，防止乱码
-CMD ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
-
+# 暴露 MySQL 默认端口
 EXPOSE 3306

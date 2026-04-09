@@ -1,8 +1,8 @@
-import axios from 'axios'
+ import axios from 'axios'
 
 // frontend/src/services/api.js
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '',
+  baseURL: 'https://backend-dyno-whatthedogdoing.app.spring26b.secoder.net',
   timeout: 10000,
   headers: { 'Content-Type': 'application/json' },
 })
@@ -39,7 +39,12 @@ apiClient.interceptors.response.use(
 )
 
 export async function login({ username, password }) {
-  const res = await apiClient.post('/auth/login', { username, password })
+  const params = new URLSearchParams()
+  params.append('username', username)
+  params.append('password', password)
+  const res = await apiClient.post('/auth/login', params, {
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+  })
   const data = res.data
   const token = data.access_token || data.token
   if (token) setAuthToken(token)
@@ -58,21 +63,12 @@ export async function getCurrentUser() {
     const res = await apiClient.get('/auth/me')
     return res.data
   } catch (err) {
-    // 将 404 (新数据库查无此人) 和 401 (Token失效) 都妥善处理，防止控制台爆红报错
-    if (err.response && (err.response.status === 401 || err.response.status === 404)) {
-      setAuthToken(null) // 清除本地过期的毒 Token
-      return null
-    }
+    if (err.response && err.response.status === 401) return null
     throw err
   }
 }
 
 export function logout() {
-  setAuthToken(null)
-}
-
-export async function deleteAccount(password) {
-  await apiClient.delete('/api/users/me', { data: { password } })
   setAuthToken(null)
 }
 
@@ -82,37 +78,6 @@ export function getAuthToken() {
   } catch (e) {
     return null
   }
-}
-
-export async function getProfile() {
-  const res = await apiClient.get('/auth/profile')
-  return res.data
-}
-
-export async function updateProfile(data) {
-  const res = await apiClient.patch('/auth/profile', data)
-  return res.data
-}
-
-// ====== 新增聊天相关真实 API 接口 ======
-export async function getSessions() {
-  const res = await apiClient.get('/api/chat/sessions')
-  return res.data
-}
-
-export async function getFriends() {
-  const res = await apiClient.get('/api/chat/friends')
-  return res.data
-}
-
-export async function getMessages(conversationId) {
-  const res = await apiClient.get(`/api/chat/messages?conversation_id=${conversationId}`)
-  return res.data
-}
-
-export async function sendChatMessage(conversationId, content) {
-  const res = await apiClient.post(`/api/chat/messages/send?conversation_id=${conversationId}&content=${encodeURIComponent(content)}`)
-  return res.data
 }
 
 export default apiClient

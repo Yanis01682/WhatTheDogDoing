@@ -9,7 +9,7 @@ import {
   INITIAL_PROFILE_DATA,
   MY_ROLE_MAP
 } from './features/chat/mockData'
-import { login, register, getCurrentUser, deleteAccount, getProfile, updateProfile, getSessions, getFriends, getMessages, sendChatMessage } from './services/api'
+import { login, register, getCurrentUser } from './services/api'
 import AuthView from './components/stage2/AuthView'
 import TopBar from './components/stage2/TopBar'
 import SidebarPanel from './components/stage2/SidebarPanel'
@@ -36,7 +36,6 @@ function App() {
   const [peerProfile, setPeerProfile] = useState(null) // 当前查看的对方资料
   const [isNightMode, setIsNightMode] = useState(false) // 夜间模式
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false) // 注销账户二次确认
-  const [deletePassword, setDeletePassword] = useState('')
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false) // 退出登录二次确认
   const [sessionFilter, setSessionFilter] = useState('all') // 会话筛选：all-全部 | personal-个人 | group-群聊
   const [showSearch, setShowSearch] = useState(false) // 搜索框显示/隐藏状态
@@ -88,8 +87,6 @@ function App() {
     }
   ]) // 收到的好友请求（待我审批）
   const [sentFriendRequests, setSentFriendRequests] = useState([]) // 我发出的好友申请（用于展示审批状态）
-  const [sessions, setSessions] = useState([]) // 存储真实的会话列表
-  const [messages, setMessages] = useState(INITIAL_MESSAGES)
   const [myFriends, setMyFriends] = useState(INITIAL_FRIENDS) // 我的好友列表
   const [collapsedGroups, setCollapsedGroups] = useState([]) // 已折叠的分组
   const [customGroups, setCustomGroups] = useState(INITIAL_CUSTOM_GROUPS) // 自定义分组列表
@@ -104,7 +101,7 @@ function App() {
       try {
         const user = await getCurrentUser()
         if (user) {
-          setProfileData(prev => ({ ...prev, id: user.id, name: user.username, email: user.email }))
+          setProfileData(prev => ({ ...prev, name: user.username, email: user.email }))
           setIsLoggedIn(true)
         }
       } catch (e) {
@@ -113,70 +110,6 @@ function App() {
     }
     checkAuth()
   }, [])
-
-// 登录成功后，拉取真实会话和好友列表
-  useEffect(() => {
-    if (isLoggedIn) {
-      const fetchInitialData = async () => {
-        try {
-          const sessionsData = await getSessions()
-          const formattedSessions = sessionsData.map(s => ({
-            id: s.id,
-            title: s.title,
-            avatar: s.is_group ? '群' : (s.title.charAt(0) || 'U'),
-            lastMessage: '点击查看消息',
-            time: s.updated_at ? new Date(s.updated_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '',
-            badge: 0,
-            online: 1,
-            isGroup: s.is_group,
-            realName: s.title
-          }))
-          setSessions(formattedSessions)
-          if (formattedSessions.length > 0) setCurrentChat(formattedSessions[0].id)
-
-          const friendsData = await getFriends()
-          const formattedFriends = friendsData.map(f => ({
-            id: f.id,
-            accountId: f.username,
-            name: f.nickname || f.username,
-            avatar: (f.nickname || f.username).charAt(0),
-            status: 'offline',
-            group: '我的好友',
-            remark: '',
-            signature: f.bio || '这个人很懒，什么都没写~'
-          }))
-          setMyFriends(formattedFriends)
-        } catch (e) {
-          console.error('获取初始数据失败', e)
-        }
-      }
-      fetchInitialData()
-    }
-  }, [isLoggedIn])
-
-  // 切换聊天窗口时，拉取该窗口的真实历史消息
-  useEffect(() => {
-    if (isLoggedIn && currentChat > 0) {
-      const fetchMessages = async () => {
-        try {
-          const msgs = await getMessages(currentChat)
-          const formattedMsgs = msgs.map(m => ({
-            id: m.id,
-            text: m.content,
-            sender: m.sender_id === profileData.id ? 'me' : 'other',
-            time: m.created_at ? new Date(m.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ''
-          }))
-          setMessages(prev => ({
-            ...prev,
-            [currentChat]: formattedMsgs
-          }))
-        } catch (e) {
-          console.error('获取消息失败', e)
-        }
-      }
-      fetchMessages()
-    }
-  }, [currentChat, isLoggedIn, profileData.id])
 
   // 加载保存的头像
   useEffect(() => {
@@ -356,11 +289,10 @@ function App() {
     setShowChatDetail(false)
   }
 
-// 获取当前会话信息（正常软件的空状态逻辑）
-// 获取当前会话信息（正常软件的空状态逻辑）
+  // 获取当前会话信息
   const getCurrentSession = () => {
     const allSessions = [...dynamicSessions, ...sessions]
-    return allSessions.find(s => s.id === currentChat) || sessions[0] || { id: -1, avatar: '', title: '加载中...', isGroup: false, online: 0 }
+    return allSessions.find(s => s.id === currentChat) || sessions[0]
   }
 
   // 根据被点击的消息，解析对方资料（群聊/私聊）
@@ -855,6 +787,7 @@ function App() {
       handleCloseChatDetail()
     }
   }
+  const [messages, setMessages] = useState(INITIAL_MESSAGES)
 
   // 我的角色（用于权限判断）
   const myRole = MY_ROLE_MAP
@@ -870,17 +803,7 @@ function App() {
         await login({ username: account, password })
         const user = await getCurrentUser()
         if (user) {
-          const profile = await getProfile()
-          setProfileData(prev => ({
-            ...prev,
-            id: user.id,
-            name: user.username,
-            email: profile.email || user.email || '',
-            nickname: profile.nickname || '',
-            gender: profile.gender || 'other',
-            phone: profile.phone || '',
-            bio: profile.bio || '',
-          }))
+          setProfileData(prev => ({ ...prev, name: user.username, email: user.email }))
           setIsLoggedIn(true)
         }
       } catch (err) {
@@ -999,7 +922,7 @@ function App() {
     // 从消息列表中移除
     setMessages(prev => ({
       ...prev,
-      [currentChat]: (prev[currentChat] || []).filter(msg => msg.id !== messageId)
+      [currentChat]: prev[currentChat].filter(msg => msg.id !== messageId)
     }))
     
     closeContextMenu()
@@ -1047,23 +970,11 @@ function App() {
   }
 
   // 保存个人信息
-  const handleSaveProfile = async () => {
-    try {
-      const updated = await updateProfile({
-        nickname: profileData.nickname,
-        gender: profileData.gender,
-        email: profileData.email,
-        phone: profileData.phone,
-        bio: profileData.bio,
-      })
-      setProfileData(prev => ({ ...prev, ...updated }))
-      localStorage.setItem('userProfile', JSON.stringify({ ...profileData, ...updated }))
-      setIsEditingProfile(false)
-      alert('个人信息保存成功！')
-    } catch (err) {
-      const msg = err.response?.data?.detail || err.message || '保存失败'
-      alert(msg)
-    }
+  const handleSaveProfile = () => {
+    // 保存到 localStorage
+    localStorage.setItem('userProfile', JSON.stringify(profileData))
+    setIsEditingProfile(false)
+    alert('个人信息保存成功！')
   }
 
   // 取消编辑个人信息
@@ -1135,34 +1046,29 @@ function App() {
   }
 
   // 发送消息
-const handleSendMessage = async () => {
+  const handleSendMessage = () => {
     if (!messageInput.trim()) return
     
-    const textToSend = messageInput
-    setMessageInput('') // 提前清空输入框提升体验
-    
-    try {
-      // 对接真实后端 API
-      const res = await sendChatMessage(currentChat, textToSend)
-      
-      const newMessage = {
-        id: res.message_id || Date.now(),
-        text: textToSend,
-        sender: 'me',
-        time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
-        replyTo: replyToMessage ? { ...replyToMessage } : null
-      }
-      
-      setMessages(prev => ({
-        ...prev,
-        [currentChat]: [...(prev[currentChat] || []), newMessage]
-      }))
-      setReplyToMessage(null)
-      setEditingMessageId(null)
-    } catch (e) {
-      alert('消息发送失败，请稍后重试')
-      setMessageInput(textToSend) // 发送失败恢复用户输入的内容
+    const newMessage = {
+      id: editingMessageId || Date.now(),
+      text: messageInput,
+      sender: 'me',
+      time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+      replyTo: replyToMessage ? {
+        id: replyToMessage.id,
+        text: replyToMessage.text,
+        sender: replyToMessage.sender
+      } : null
     }
+    
+    setMessages(prev => ({
+      ...prev,
+      [currentChat]: [...(prev[currentChat] || []), newMessage]
+    }))
+    
+    setMessageInput('')
+    setReplyToMessage(null)
+    setEditingMessageId(null)
   }
 
   // 发送图片消息（本地预览模式）
@@ -1269,29 +1175,26 @@ const handleSendMessage = async () => {
   }
 
   // 确认注销账户
-  const confirmDeleteAccount = async () => {
-    if (!deletePassword) {
-      alert('请输入密码')
-      return
-    }
+  const confirmDeleteAccount = () => {
+    // 仅前端实现：清除登录状态和本地数据
+    setIsLoggedIn(false)
+    setCurrentChat(0)
+    setShowUserPanel(false)
+    setShowDeleteConfirm(false)
+    
+    // 清除 localStorage 中的 token
     try {
-      await deleteAccount(deletePassword)
-      setIsLoggedIn(false)
-      setCurrentChat(0)
-      setShowUserPanel(false)
-      setShowDeleteConfirm(false)
-      setDeletePassword('')
-      alert('账户已成功注销')
-    } catch (err) {
-      const msg = err.response?.data?.detail || err.message || '注销失败'
-      alert(msg)
+      localStorage.removeItem('auth_token')
+    } catch (e) {
+      // ignore
     }
+    
+    alert('账户已成功注销')
   }
 
   // 取消注销账户
   const cancelDeleteAccount = () => {
     setShowDeleteConfirm(false)
-    setDeletePassword('')
   }
 
   // 切换用户面板显示/隐藏
@@ -1533,6 +1436,8 @@ const handleSendMessage = async () => {
     alert(`已向 ${peerProfile.name} 发送好友申请`)
   }
 
+  // 会话数据
+  const sessions = DEFAULT_SESSIONS
 
   // 获取当前群主
   const getCurrentOwner = () => {
@@ -1599,8 +1504,12 @@ const handleSendMessage = async () => {
           onOpenFriendChat={handleOpenFriendChat}
           chatlistWidth={chatlistWidth}
           pinnedChatIds={pinnedChatIds}
+          blacklist={blacklist}
           onRemoveFromBlacklist={handleRemoveFromBlacklist}
           onOpenBlacklistChat={handleOpenBlacklistChat}
+          currentChat={currentChat}
+          setCurrentChat={setCurrentChat}
+          handleOpenFriendChat={handleOpenFriendChat}
         />
 
         {/* 左侧会话列表和聊天窗口之间的拖拽分隔线 */}
@@ -1707,8 +1616,6 @@ const handleSendMessage = async () => {
         handleDismissGroup={handleDismissGroup}
         handleExitGroup={handleExitGroup}
         showDeleteConfirm={showDeleteConfirm}
-        deletePassword={deletePassword}
-        setDeletePassword={setDeletePassword}
         cancelDeleteAccount={cancelDeleteAccount}
         confirmDeleteAccount={confirmDeleteAccount}
         isEditingRemark={isEditingRemark}

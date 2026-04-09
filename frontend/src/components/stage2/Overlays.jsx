@@ -125,8 +125,6 @@ function Overlays({
   handleToggleSelectFriend,
   handleCreateGroup,
   showDeleteConfirm,
-  deletePassword,
-  setDeletePassword,
   cancelDeleteAccount,
   confirmDeleteAccount
 }) {
@@ -798,15 +796,6 @@ function Overlays({
             <div className="delete-confirm-body">
               <p>您确定要注销账户吗？此操作不可恢复！</p>
               <p style={{ color: '#ff4444', fontWeight: 'bold' }}>所有数据将被永久删除</p>
-              <div style={{ marginTop: '12px' }}>
-                <input
-                  type="password"
-                  placeholder="请输入密码以确认"
-                  value={deletePassword}
-                  onChange={(e) => setDeletePassword(e.target.value)}
-                  style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #ccc', boxSizing: 'border-box' }}
-                />
-              </div>
             </div>
             <div className="delete-confirm-footer">
               <button className="cancel-btn" onClick={cancelDeleteAccount}>取消</button>
