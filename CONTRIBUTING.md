@@ -284,7 +284,7 @@ npm run build
 
 - 本地开发：默认仍可使用 SQLite
 - 部署环境：优先读取 `DATABASE_URL`
-- 后端 Docker 默认会连接 `mysql-db`
+- 后端 Docker 默认会连接 `mysql-db.WhatTheDogDoing.secoder.local`
 
 这意味着：
 
@@ -297,6 +297,7 @@ npm run build
 2. 只有在数据库镜像或数据库部署配置真的需要调整时，才改 `database/`
 3. 如果部署后发现账号全没了，优先检查是不是数据库 dyno 被替换重建了
 4. 如果后端连不上数据库，优先检查 `DATABASE_URL` 是否正确，以及 `mysql-db` 服务是否已启动
+5. 在 Secoder 里不要假设短主机名 `mysql-db` 一定可解析；优先使用平台显示的内网域名，例如 `mysql-db.WhatTheDogDoing.secoder.local`
 
 ## 12. 一条最实用的记忆口诀
 
