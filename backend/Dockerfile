@@ -1,6 +1,7 @@
 FROM python:3.12
 
 ENV HOME=/opt/app
+ENV DATABASE_URL=mysql+pymysql://root:123456@mysql-db:3306/whatthedogdoing
 WORKDIR $HOME
 
 # 先只拷贝依赖清单，利用 Docker 缓存机制加速构建

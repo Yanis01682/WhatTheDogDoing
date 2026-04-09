@@ -7,5 +7,8 @@ ENV MYSQL_ROOT_PASSWORD=123456
 # 顺手把数据库也自动建好，省得连进去敲 SQL 了
 ENV MYSQL_DATABASE=whatthedogdoing
 
+# 声明数据目录，便于平台或运行时挂载持久卷
+VOLUME /var/lib/mysql
+
 # 暴露 MySQL 默认端口
 EXPOSE 3306
