@@ -2,13 +2,13 @@ import { useState, useEffect } from 'react'
 import './App.css'
 import {
   INITIAL_CUSTOM_GROUPS,
-  INITIAL_GROUP_MEMBERS,
   INITIAL_PROFILE_DATA,
-  MY_ROLE_MAP
 } from './features/chat/mockData'
 import {
-  addFriend,
   deleteFriend,
+  createGroup,
+  getFriendRequests,
+  getGroupMembers,
   getCurrentUser,
   getFriends,
   getMessages,
@@ -16,7 +16,10 @@ import {
   login,
   logout,
   register,
+  acceptFriendRequest,
+  rejectFriendRequest,
   searchUsers,
+  sendFriendRequest,
   sendChatMessage
 } from './services/api'
 import AuthView from './components/stage2/AuthView'
@@ -88,27 +91,19 @@ function App() {
   const [friendSearchQuery, setFriendSearchQuery] = useState('') // 搜索好友关键词
   const [showFriendSearch, setShowFriendSearch] = useState(false) // 好友搜索框显示/隐藏状态
   const [archivedGroupIds, setArchivedGroupIds] = useState([]) // 手动收纳的群聊 id 列表
-  const [friendRequestList, setFriendRequestList] = useState([
-    {
-      id: 1,
-      userId: 'coco789',
-      name: 'Coco',
-      avatar: 'C',
-      status: 'pending',
-      type: 'incoming'
-    }
-  ]) // 收到的好友请求（待我审批）
+  const [friendRequestList, setFriendRequestList] = useState([]) // 收到的好友请求（待我审批）
   const [sentFriendRequests, setSentFriendRequests] = useState([]) // 我发出的好友申请（用于展示审批状态）
   const [myFriends, setMyFriends] = useState([]) // 我的好友列表
   const [collapsedGroups, setCollapsedGroups] = useState([]) // 已折叠的分组
   const [customGroups, setCustomGroups] = useState(INITIAL_CUSTOM_GROUPS) // 自定义分组列表
   const [dynamicSessions, setDynamicSessions] = useState([]) // 动态创建的会话（好友私聊）
-  const [groupMembers, setGroupMembers] = useState(INITIAL_GROUP_MEMBERS) // 群成员数据（包含角色信息）
+  const [groupMembers, setGroupMembers] = useState({}) // 群成员数据（包含角色信息）
   const [profileData, setProfileData] = useState(INITIAL_PROFILE_DATA) // 个人信息数据
   const [pinnedChatIds, setPinnedChatIds] = useState([]) // 置顶聊天 ID 列表
   const [sessions, setSessions] = useState([])
   const [messages, setMessages] = useState({})
   const [friendSearchResults, setFriendSearchResults] = useState([])
+  const [currentUserId, setCurrentUserId] = useState(null)
 
   const syncProfileFromUser = (user) => {
     if (!user) return
@@ -118,6 +113,7 @@ function App() {
       nickname: user.username || prev.nickname,
       email: user.email ?? prev.email
     }))
+    setCurrentUserId(user.id ?? null)
   }
 
   const refreshRealtimeChatData = async (preferredChatId = null) => {
@@ -144,6 +140,12 @@ function App() {
     })
   }
 
+  const refreshFriendRequests = async () => {
+    const data = await getFriendRequests()
+    setFriendRequestList(data.incoming || [])
+    setSentFriendRequests(data.outgoing || [])
+  }
+
   const refreshConversationMessages = async (conversationId) => {
     if (!conversationId || dynamicSessions.some((session) => session.id === conversationId)) {
       return
@@ -156,6 +158,21 @@ function App() {
     }))
   }
 
+  const refreshGroupConversationMembers = async (conversationId) => {
+    if (!conversationId) return
+
+    const fetchedMembers = await getGroupMembers(conversationId)
+    setGroupMembers((prev) => ({
+      ...prev,
+      [conversationId]: fetchedMembers
+    }))
+
+    const mine = fetchedMembers.find((member) => member.id === currentUserId)
+    if (mine) {
+      setUserRole(mine.role)
+    }
+  }
+
   // 初始加载时尝试获取用户信息
   useEffect(() => {
     const checkAuth = async () => {
@@ -165,6 +182,7 @@ function App() {
           syncProfileFromUser(user)
           setIsLoggedIn(true)
           await refreshRealtimeChatData()
+          await refreshFriendRequests()
           if (currentChat) {
             await refreshConversationMessages(currentChat)
           }
@@ -249,6 +267,23 @@ function App() {
   }, [currentChat, dynamicSessions, isLoggedIn])
 
   useEffect(() => {
+    if (!isLoggedIn || !currentChat) return
+
+    const session = sessions.find((item) => item.id === currentChat)
+    if (!session?.isGroup) return
+
+    const loadGroupMembers = async () => {
+      try {
+        await refreshGroupConversationMembers(currentChat)
+      } catch (err) {
+        console.error('加载群成员失败', err)
+      }
+    }
+
+    loadGroupMembers()
+  }, [currentChat, currentUserId, isLoggedIn, sessions])
+
+  useEffect(() => {
     if (!isLoggedIn) return
 
     const pollSessions = async () => {
@@ -256,6 +291,7 @@ function App() {
 
       try {
         await refreshRealtimeChatData(currentChat)
+        await refreshFriendRequests()
       } catch (err) {
         console.error('刷新会话失败', err)
       }
@@ -564,36 +600,12 @@ function App() {
     }
 
     try {
-      const result = await addFriend(Number(targetUser.accountId))
-      await refreshRealtimeChatData(result.conversation_id)
-      setActiveTab('chats')
-      setShowAddFriendModal(false)
-      setFriendSearchQuery('')
-      setFriendSearchResults([])
-      alert(`已添加 ${targetUser.name} 为好友`)
+      await sendFriendRequest(Number(targetUser.accountId))
+      await refreshFriendRequests()
+      alert(`已向 ${targetUser.name} 发送好友申请`)
     } catch (err) {
       alert(err.response?.data?.detail || '添加好友失败')
     }
-  }
-
-  // 模拟对方审批通过（用于本地演示）。
-  // 通过后将申请状态改为 approved，并将对方写入我的好友列表。
-  const handleMockApproveSentRequest = (requestId) => {
-    const request = sentFriendRequests.find((item) => item.id === requestId)
-    if (!request || request.status !== 'pending') return
-
-    if (!isAlreadyFriend(request.userId, request.name)) {
-      setMyFriends((prev) => [...prev, createFriendRecord(request)])
-    }
-
-    setSentFriendRequests((prev) =>
-      prev.map((item) =>
-        item.id === requestId
-          ? { ...item, status: 'approved', approvedAt: new Date().toLocaleString('zh-CN') }
-          : item
-      )
-    )
-    alert(`${request.name} 已通过你的好友申请`)
   }
 
   // 删除好友
@@ -653,21 +665,26 @@ function App() {
   }
 
   // 接受好友请求：将 incoming 申请转为好友关系并从待审批列表移除。
-  const handleAcceptRequest = (requestId) => {
-    const request = friendRequestList.find(r => r.id === requestId)
-    if (request) {
-      if (!isAlreadyFriend(request.userId, request.name)) {
-        setMyFriends(prev => [...prev, createFriendRecord(request)])
-      }
-      setFriendRequestList(prev => prev.filter(r => r.id !== requestId))
-      alert(`已接受 ${request.name} 的好友请求`)
+  const handleAcceptRequest = async (requestId) => {
+    try {
+      const result = await acceptFriendRequest(requestId)
+      await refreshRealtimeChatData(result.conversation_id)
+      await refreshFriendRequests()
+      alert(`已接受 ${result.friend.name} 的好友请求`)
+    } catch (err) {
+      alert(err.response?.data?.detail || '接受好友申请失败')
     }
   }
 
   // 拒绝好友请求：仅移除申请记录，不改动好友列表。
-  const handleRejectRequest = (requestId) => {
-    setFriendRequestList(prev => prev.filter(r => r.id !== requestId))
-    alert('已拒绝好友请求')
+  const handleRejectRequest = async (requestId) => {
+    try {
+      await rejectFriendRequest(requestId)
+      await refreshFriendRequests()
+      alert('已拒绝好友请求')
+    } catch (err) {
+      alert(err.response?.data?.detail || '拒绝好友申请失败')
+    }
   }
 
   // 切换分组折叠状态
@@ -855,7 +872,7 @@ function App() {
   }
 
   // 创建群聊
-  const handleCreateGroup = () => {
+  const handleCreateGroup = async () => {
     if (selectedFriends.length === 0) {
       alert('请至少选择一位好友')
       return
@@ -864,47 +881,17 @@ function App() {
       alert('请输入群聊名称')
       return
     }
-    
-    // 创建新群聊
-    const newGroupId = sessions.length + dynamicSessions.length
-    const newGroup = {
-      id: newGroupId,
-      title: groupName,
-      avatar: '群',
-      lastMessage: `你们加入了群聊，共${selectedFriends.length + 1}人`,
-      time: '刚刚',
-      badge: 0,
-      online: selectedFriends.length + 1,
-      isGroup: true
+
+    try {
+      const result = await createGroup(groupName, selectedFriends)
+      await refreshRealtimeChatData(result.conversation_id)
+      await refreshGroupConversationMembers(result.conversation_id)
+      setActiveTab('chats')
+      alert(`群聊"${groupName}"创建成功！`)
+      handleCloseCreateGroup()
+    } catch (err) {
+      alert(err.response?.data?.detail || '创建群聊失败')
     }
-    
-    // 添加到动态会话列表
-    setDynamicSessions(prev => [newGroup, ...prev])
-    
-    // 初始化群成员（包含在线状态）
-    const newMembers = [
-      { id: 0, name: '我', avatar: '我', role: 'owner', online: true },
-      ...myFriends.filter(f => selectedFriends.includes(f.id)).map(f => ({
-        id: f.id,
-        name: f.name,
-        avatar: f.avatar,
-        role: 'member',
-        online: true // 默认都在线
-      }))
-    ]
-    
-    // 更新群成员数据
-    setGroupMembers(prev => ({
-      ...prev,
-      [newGroupId]: newMembers
-    }))
-    
-    // 这里应该调用 API 创建群聊并保存到服务器
-    console.log('创建群聊:', newGroup)
-    console.log('群成员:', newMembers)
-    
-    alert(`群聊"${groupName}"创建成功！`)
-    handleCloseCreateGroup()
   }
 
   // 开始编辑群公告
@@ -956,9 +943,6 @@ function App() {
       handleCloseChatDetail()
     }
   }
-  // 我的角色（用于权限判断）
-  const myRole = MY_ROLE_MAP
-
   // 登录处理
       const handleLogin = async (e) => {
     e.preventDefault()
@@ -968,12 +952,13 @@ function App() {
     if (account && password) {
       try {
         await login({ username: account, password })
-        const user = await getCurrentUser()
-        if (user) {
-          syncProfileFromUser(user)
-          setIsLoggedIn(true)
-          await refreshRealtimeChatData()
-        }
+      const user = await getCurrentUser()
+      if (user) {
+        syncProfileFromUser(user)
+        setIsLoggedIn(true)
+        await refreshRealtimeChatData()
+        await refreshFriendRequests()
+      }
       } catch (err) {
         alert(err.message || '登录失败')
       }
@@ -1051,6 +1036,7 @@ function App() {
         setIsLoggedIn(true)
         setShowRegisterForm(false)
         await refreshRealtimeChatData()
+        await refreshFriendRequests()
       }
     } catch (err) {
       alert(err.message || '注册失败')
@@ -1616,9 +1602,9 @@ function App() {
     }
 
     try {
-      await addFriend(Number(peerProfile.userId))
-      await refreshRealtimeChatData()
-      alert(`已添加 ${peerProfile.name} 为好友`)
+      await sendFriendRequest(Number(peerProfile.userId))
+      await refreshFriendRequests()
+      alert(`已向 ${peerProfile.name} 发送好友申请`)
     } catch (err) {
       alert(err.response?.data?.detail || '添加好友失败')
     }
@@ -1630,6 +1616,8 @@ function App() {
     const owner = members.find(m => m.role === 'owner')
     return owner ? owner.name : '未知'
   }
+
+  const myRole = { [currentChat]: userRole }
 
   // 未登录时显示登录界面
   if (!isLoggedIn) {
@@ -1822,7 +1810,6 @@ function App() {
         handleSendFriendRequest={handleSendFriendRequest}
         friendRequestList={friendRequestList}
         sentFriendRequests={sentFriendRequests}
-        handleMockApproveSentRequest={handleMockApproveSentRequest}
         handleAcceptRequest={handleAcceptRequest}
         handleRejectRequest={handleRejectRequest}
         showSearchMessageModal={showSearchMessageModal}

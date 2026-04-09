@@ -82,6 +82,28 @@ export async function getFriends() {
   return res.data
 }
 
+export async function getFriendRequests() {
+  const res = await apiClient.get('/api/chat/friends/requests')
+  return res.data
+}
+
+export async function sendFriendRequest(friendId) {
+  const res = await apiClient.post('/api/chat/friends/requests', {
+    friend_id: friendId,
+  })
+  return res.data
+}
+
+export async function acceptFriendRequest(requestId) {
+  const res = await apiClient.post(`/api/chat/friends/requests/${requestId}/accept`)
+  return res.data
+}
+
+export async function rejectFriendRequest(requestId) {
+  const res = await apiClient.post(`/api/chat/friends/requests/${requestId}/reject`)
+  return res.data
+}
+
 export async function addFriend(friendId) {
   const res = await apiClient.post('/api/chat/friends/add', {
     friend_id: friendId,
@@ -101,6 +123,19 @@ export async function getSessions() {
 
 export async function getMessages(conversationId) {
   const res = await apiClient.get(`/api/chat/sessions/${conversationId}/messages`)
+  return res.data
+}
+
+export async function createGroup(name, memberIds) {
+  const res = await apiClient.post('/api/chat/groups', {
+    name,
+    member_ids: memberIds,
+  })
+  return res.data
+}
+
+export async function getGroupMembers(conversationId) {
+  const res = await apiClient.get(`/api/chat/groups/${conversationId}/members`)
   return res.data
 }
 

@@ -96,7 +96,6 @@ function Overlays({
   handleSendFriendRequest,
   friendRequestList,
   sentFriendRequests,
-  handleMockApproveSentRequest,
   handleAcceptRequest,
   handleRejectRequest,
   // 查找消息。
@@ -612,11 +611,9 @@ function Overlays({
                         </p>
                       </div>
                       <div className="request-actions">
-                        {request.status === 'pending' ? (
-                          <button className="accept-btn" onClick={() => handleMockApproveSentRequest(request.id)}>模拟通过</button>
-                        ) : (
-                          <button className="accept-btn" disabled>已通过</button>
-                        )}
+                        <button className="accept-btn" disabled>
+                          {request.status === 'pending' ? '待审批' : '已通过'}
+                        </button>
                       </div>
                     </div>
                   ))}
