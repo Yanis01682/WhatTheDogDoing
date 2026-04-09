@@ -113,3 +113,32 @@ def test_send_and_read_messages():
     assert messages[0]["text"] == "hello frank"
     assert messages[0]["sender"] == "other"
     assert messages[0]["senderName"] == "eve"
+
+
+def test_delete_friend_removes_friendship_and_private_session():
+    headers_alice, _ = register_and_login("gina", "gina@example.com")
+    headers_bob, bob_user = register_and_login("hank", "hank@example.com")
+
+    add_friend_res = client.post(
+        "/api/chat/friends/add",
+        json={"friend_id": bob_user["id"]},
+        headers=headers_alice,
+    )
+    conversation_id = add_friend_res.json()["conversation_id"]
+
+    delete_res = client.delete(f"/api/chat/friends/{bob_user['id']}", headers=headers_alice)
+    assert delete_res.status_code == 200
+
+    alice_friends = client.get("/api/chat/friends", headers=headers_alice)
+    bob_friends = client.get("/api/chat/friends", headers=headers_bob)
+    alice_sessions = client.get("/api/chat/sessions", headers=headers_alice)
+    bob_sessions = client.get("/api/chat/sessions", headers=headers_bob)
+    bob_messages = client.get(f"/api/chat/sessions/{conversation_id}/messages", headers=headers_bob)
+
+    assert alice_friends.status_code == 200
+    assert bob_friends.status_code == 200
+    assert alice_friends.json() == []
+    assert bob_friends.json() == []
+    assert alice_sessions.json() == []
+    assert bob_sessions.json() == []
+    assert bob_messages.status_code == 403

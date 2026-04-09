@@ -250,6 +250,55 @@ def add_friend(
     }
 
 
+@router.delete("/friends/{friend_id}")
+def delete_friend(
+    friend_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    target_user = db.query(models.User).filter(models.User.id == friend_id).first()
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    friendships = (
+        db.query(models.Friendship)
+        .filter(
+            or_(
+                (models.Friendship.user_id == current_user.id) & (models.Friendship.friend_id == friend_id),
+                (models.Friendship.user_id == friend_id) & (models.Friendship.friend_id == current_user.id),
+            )
+        )
+        .all()
+    )
+    if not friendships:
+        raise HTTPException(status_code=404, detail="Friendship not found")
+
+    conversation = _get_private_conversation_between(db, current_user.id, friend_id)
+
+    for friendship in friendships:
+        db.delete(friendship)
+
+    if conversation:
+        messages = (
+            db.query(models.Message)
+            .filter(models.Message.conversation_id == conversation.id)
+            .all()
+        )
+        memberships = (
+            db.query(models.ConversationMember)
+            .filter(models.ConversationMember.conversation_id == conversation.id)
+            .all()
+        )
+        for message in messages:
+            db.delete(message)
+        for membership in memberships:
+            db.delete(membership)
+        db.delete(conversation)
+
+    db.commit()
+    return {"message": "Friend deleted successfully"}
+
+
 @router.post("/messages/send")
 def send_message(
     payload: MessageSendPayload = Body(...),
