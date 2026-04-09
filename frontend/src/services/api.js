@@ -68,6 +68,45 @@ export async function getCurrentUser() {
   }
 }
 
+export async function searchUsers(query) {
+  const keyword = query.trim()
+  if (!keyword) return []
+  const res = await apiClient.get('/api/chat/users/search', {
+    params: { q: keyword },
+  })
+  return res.data
+}
+
+export async function getFriends() {
+  const res = await apiClient.get('/api/chat/friends')
+  return res.data
+}
+
+export async function addFriend(friendId) {
+  const res = await apiClient.post('/api/chat/friends/add', {
+    friend_id: friendId,
+  })
+  return res.data
+}
+
+export async function getSessions() {
+  const res = await apiClient.get('/api/chat/sessions')
+  return res.data
+}
+
+export async function getMessages(conversationId) {
+  const res = await apiClient.get(`/api/chat/sessions/${conversationId}/messages`)
+  return res.data
+}
+
+export async function sendChatMessage(conversationId, content) {
+  const res = await apiClient.post('/api/chat/messages/send', {
+    conversation_id: conversationId,
+    content,
+  })
+  return res.data
+}
+
 export function logout() {
   setAuthToken(null)
 }

@@ -56,6 +56,8 @@ function ChatMainView({
 }) {
   const imageInputRef = useRef(null)
   const videoInputRef = useRef(null)
+  const currentSession = getCurrentSession()
+  const hasActiveConversation = Boolean(currentSession?.id)
 
   const renderMessageAvatar = (avatarValue, onClick) => {
     if (typeof avatarValue === 'string' && avatarValue.startsWith('data:image')) {
@@ -84,10 +86,10 @@ function ChatMainView({
     <section className="panel chat-panel">
       <header className="chat-topbar">
         <div className="chat-user">
-          <div className="avatar large">{getCurrentSession().avatar}</div>
+          <div className="avatar large">{currentSession.avatar}</div>
           <div>
-            <h2>{getCurrentSession().title}</h2>
-            {getCurrentSession().isGroup ? (
+            <h2>{currentSession.title}</h2>
+            {currentSession.isGroup ? (
               (() => {
                 const members = groupMembers[currentChat] || []
                 const onlineCount = members.filter((m) => m.online).length
@@ -102,19 +104,25 @@ function ChatMainView({
               })()
             ) : (
               <span className="online-status">
-                <span className={`online-dot ${getCurrentSession().online > 0 ? 'online' : 'offline'}`}></span>
-                {getCurrentSession().online > 0 ? '在线' : '离线'}
+                <span className={`online-dot ${currentSession.online > 0 ? 'online' : 'offline'}`}></span>
+                {hasActiveConversation ? (currentSession.online > 0 ? '在线' : '离线') : '等待开始聊天'}
               </span>
             )}
           </div>
         </div>
         <div className="chat-actions">
-          <button className="icon-btn" type="button" aria-label="搜索消息" onClick={handleOpenSearchMessage}>🔍</button>
-          <button className="icon-btn" type="button" aria-label="更多操作" onClick={handleOpenChatDetail}>⋯</button>
+          <button className="icon-btn" type="button" aria-label="搜索消息" onClick={handleOpenSearchMessage} disabled={!hasActiveConversation}>🔍</button>
+          <button className="icon-btn" type="button" aria-label="更多操作" onClick={handleOpenChatDetail} disabled={!hasActiveConversation}>⋯</button>
         </div>
       </header>
 
       <div className="chat-messages" onClick={handleMessagesClick}>
+        {!hasActiveConversation && (
+          <div className="empty-chat-state">
+            <p>还没有真实会话</p>
+            <p>去好友面板添加一个真实账号开始聊天吧。</p>
+          </div>
+        )}
         {messages[currentChat]?.map((msg, index) => (
           <div
             key={msg.id}
@@ -125,7 +133,7 @@ function ChatMainView({
             {msg.sender !== 'system' && (
               msg.sender === 'me'
                 ? renderMessageAvatar(userAvatar)
-                : renderMessageAvatar(getCurrentSession().avatar, () => handleOpenPeerProfile(msg))
+                : renderMessageAvatar(currentSession.avatar, () => handleOpenPeerProfile(msg))
             )}
             <div className="message-content">
               {msg.replyTo && (
@@ -183,11 +191,12 @@ function ChatMainView({
           value={messageInput}
           onChange={(e) => setMessageInput(e.target.value)}
           onKeyPress={handleKeyPress}
+          disabled={!hasActiveConversation}
           rows="3"
         />
 
         <div className="composer-actions">
-          <button className="send-btn" onClick={handleSendMessage}>发送</button>
+          <button className="send-btn" onClick={handleSendMessage} disabled={!hasActiveConversation}>发送</button>
         </div>
 
         <div className={`composer-resize-handle ${isComposingResizing ? 'resizing' : ''}`} onMouseDown={handleComposerResizeStart}></div>

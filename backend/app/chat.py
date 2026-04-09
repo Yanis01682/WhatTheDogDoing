@@ -50,6 +50,8 @@ def _serialize_user(user: models.User):
         "avatar": display_name[:1].upper(),
         "signature": user.email or "",
         "status": "online",
+        "group": "常用",
+        "remark": "",
     }
 
 

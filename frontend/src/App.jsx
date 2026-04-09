@@ -1,34 +1,45 @@
 import { useState, useEffect } from 'react'
 import './App.css'
 import {
-  DEFAULT_SESSIONS,
   INITIAL_CUSTOM_GROUPS,
-  INITIAL_FRIENDS,
   INITIAL_GROUP_MEMBERS,
-  INITIAL_MESSAGES,
   INITIAL_PROFILE_DATA,
   MY_ROLE_MAP
 } from './features/chat/mockData'
-import { login, register, getCurrentUser, logout } from './services/api'
+import {
+  addFriend,
+  getCurrentUser,
+  getFriends,
+  getMessages,
+  getSessions,
+  login,
+  logout,
+  register,
+  searchUsers,
+  sendChatMessage
+} from './services/api'
 import AuthView from './components/stage2/AuthView'
 import TopBar from './components/stage2/TopBar'
 import SidebarPanel from './components/stage2/SidebarPanel'
 import ChatMainView from './components/stage2/ChatMainView'
 import Overlays from './components/stage2/Overlays'
 
-// 可搜索的用户目录（示例数据）。
-// 用法：添加好友弹窗输入关键词后，从该目录检索候选用户并发起好友申请。
-const FRIEND_DIRECTORY = [
-  { userId: 'alice123', name: 'Alice', avatar: 'A', signature: '今天也要加油' },
-  { userId: 'bob456', name: 'Bob', avatar: 'B', signature: '代码就是生活' },
-  { userId: 'coco789', name: 'Coco', avatar: 'C', signature: '周末一起打游戏' },
-  { userId: 'david001', name: 'David', avatar: 'D', signature: 'Coffee first' }
-]
+const EMPTY_SESSION = {
+  id: null,
+  title: '暂无会话',
+  avatar: '聊',
+  lastMessage: '去添加一个真实好友开始聊天吧',
+  time: '',
+  badge: 0,
+  online: 0,
+  isGroup: false,
+  realName: '暂无会话'
+}
 
 function App() {
   // 是否已登录，决定渲染认证视图还是 IM 主界面。
   const [isLoggedIn, setIsLoggedIn] = useState(false)
-  const [currentChat, setCurrentChat] = useState(0)
+  const [currentChat, setCurrentChat] = useState(null)
   const [messageInput, setMessageInput] = useState('')
   const [showMemberModal, setShowMemberModal] = useState(false)
   const [showUserPanel, setShowUserPanel] = useState(false) // 用户面板显示状态
@@ -87,13 +98,16 @@ function App() {
     }
   ]) // 收到的好友请求（待我审批）
   const [sentFriendRequests, setSentFriendRequests] = useState([]) // 我发出的好友申请（用于展示审批状态）
-  const [myFriends, setMyFriends] = useState(INITIAL_FRIENDS) // 我的好友列表
+  const [myFriends, setMyFriends] = useState([]) // 我的好友列表
   const [collapsedGroups, setCollapsedGroups] = useState([]) // 已折叠的分组
   const [customGroups, setCustomGroups] = useState(INITIAL_CUSTOM_GROUPS) // 自定义分组列表
   const [dynamicSessions, setDynamicSessions] = useState([]) // 动态创建的会话（好友私聊）
   const [groupMembers, setGroupMembers] = useState(INITIAL_GROUP_MEMBERS) // 群成员数据（包含角色信息）
   const [profileData, setProfileData] = useState(INITIAL_PROFILE_DATA) // 个人信息数据
   const [pinnedChatIds, setPinnedChatIds] = useState([]) // 置顶聊天 ID 列表
+  const [sessions, setSessions] = useState([])
+  const [messages, setMessages] = useState({})
+  const [friendSearchResults, setFriendSearchResults] = useState([])
 
   const syncProfileFromUser = (user) => {
     if (!user) return
@@ -105,6 +119,30 @@ function App() {
     }))
   }
 
+  const refreshRealtimeChatData = async (preferredChatId = null) => {
+    const [fetchedFriends, fetchedSessions] = await Promise.all([
+      getFriends(),
+      getSessions()
+    ])
+
+    setMyFriends(
+      fetchedFriends.map((friend) => ({
+        ...friend,
+        group: friend.group || customGroups[0] || '我的好友',
+        remark: friend.remark || ''
+      }))
+    )
+    setSessions(fetchedSessions)
+
+    setCurrentChat((prev) => {
+      const nextChatId = preferredChatId ?? prev
+      if (nextChatId && fetchedSessions.some((session) => session.id === nextChatId)) {
+        return nextChatId
+      }
+      return fetchedSessions[0]?.id ?? null
+    })
+  }
+
   // 初始加载时尝试获取用户信息
   useEffect(() => {
     const checkAuth = async () => {
@@ -113,6 +151,7 @@ function App() {
         if (user) {
           syncProfileFromUser(user)
           setIsLoggedIn(true)
+          await refreshRealtimeChatData()
         }
       } catch (e) {
         // 未登录或错误，保持未登录状态
@@ -176,6 +215,48 @@ function App() {
       }
     }
   }, [])
+
+  useEffect(() => {
+    if (!isLoggedIn || !currentChat || dynamicSessions.some((session) => session.id === currentChat)) {
+      return
+    }
+
+    const loadMessages = async () => {
+      try {
+        const fetchedMessages = await getMessages(currentChat)
+        setMessages((prev) => ({
+          ...prev,
+          [currentChat]: fetchedMessages
+        }))
+      } catch (err) {
+        console.error('加载消息失败', err)
+      }
+    }
+
+    loadMessages()
+  }, [currentChat, dynamicSessions, isLoggedIn])
+
+  useEffect(() => {
+    if (!showAddFriendModal) return
+
+    const loadUsers = async () => {
+      const keyword = friendSearchQuery.trim()
+      if (!keyword) {
+        setFriendSearchResults([])
+        return
+      }
+
+      try {
+        const results = await searchUsers(keyword)
+        setFriendSearchResults(results)
+      } catch (err) {
+        console.error('搜索用户失败', err)
+        setFriendSearchResults([])
+      }
+    }
+
+    loadUsers()
+  }, [friendSearchQuery, showAddFriendModal])
 
   // 持久化手动收纳状态
   useEffect(() => {
@@ -302,7 +383,7 @@ function App() {
   // 获取当前会话信息
   const getCurrentSession = () => {
     const allSessions = [...dynamicSessions, ...sessions]
-    return allSessions.find(s => s.id === currentChat) || sessions[0]
+    return allSessions.find(s => s.id === currentChat) || allSessions[0] || EMPTY_SESSION
   }
 
   // 根据被点击的消息，解析对方资料（群聊/私聊）
@@ -311,7 +392,6 @@ function App() {
 
     const currentSession = getCurrentSession()
 
-    const directoryCandidateByName = FRIEND_DIRECTORY.find((user) => user.name === msg.senderName)
     if (currentSession.isGroup) {
       const members = groupMembers[currentChat] || []
       const candidate =
@@ -321,7 +401,7 @@ function App() {
         members[0]
 
       const friendByName = myFriends.find((f) => f.name === candidate?.name)
-      const userId = friendByName?.accountId || directoryCandidateByName?.userId || `group_${candidate?.name || 'member'}`
+      const userId = friendByName?.accountId || `group_${candidate?.name || 'member'}`
 
       return {
         name: candidate?.name || '群成员',
@@ -341,8 +421,7 @@ function App() {
         f.remark === currentSession.title
     )
 
-    const directoryCandidate = FRIEND_DIRECTORY.find((u) => u.name === (friend?.name || currentSession.realName || currentSession.title))
-    const userId = friend?.accountId || directoryCandidate?.userId || `private_${currentSession.realName || currentSession.title}`
+    const userId = friend?.accountId || `private_${currentSession.realName || currentSession.title}`
 
     return {
       name: friend?.name || currentSession.realName || currentSession.title,
@@ -378,6 +457,7 @@ function App() {
   const handleCloseAddFriend = () => {
     setShowAddFriendModal(false)
     setFriendSearchQuery('')
+    setFriendSearchResults([])
   }
 
   // 搜索好友
@@ -416,24 +496,10 @@ function App() {
     return request?.status || null
   }
 
-  // 添加好友搜索结果：基于目录进行前端模糊匹配。
-  const friendSearchResults = friendSearchQuery.trim()
-    ? FRIEND_DIRECTORY.filter((user) => {
-        const keyword = friendSearchQuery.toLowerCase().trim()
-        return (
-          user.userId.toLowerCase().includes(keyword) ||
-          user.name.toLowerCase().includes(keyword)
-        )
-      })
-    : []
-
   // 发送好友请求。
-  // 规则：
-  // 1) 目标不存在则拦截。
-  // 2) 已是好友或重复 pending 申请则拦截。
-  // 3) 合法时写入 sentFriendRequests，状态置为 pending。
-  const handleSendFriendRequest = (userId) => {
-    const targetUser = FRIEND_DIRECTORY.find((user) => user.userId === userId)
+  // 当前版本直接创建真实好友关系和私聊会话，不再使用假数据目录。
+  const handleSendFriendRequest = async (userId) => {
+    const targetUser = friendSearchResults.find((user) => user.userId === userId)
     if (!targetUser) {
       alert('用户不存在')
       return
@@ -449,20 +515,17 @@ function App() {
       return
     }
 
-    setSentFriendRequests((prev) => [
-      {
-        id: Date.now(),
-        userId: targetUser.userId,
-        name: targetUser.name,
-        avatar: targetUser.avatar,
-        signature: targetUser.signature,
-        status: 'pending',
-        type: 'outgoing',
-        createdAt: new Date().toLocaleString('zh-CN')
-      },
-      ...prev
-    ])
-    alert(`已向 ${targetUser.name} 发送好友申请，等待对方审批`)
+    try {
+      const result = await addFriend(Number(targetUser.accountId))
+      await refreshRealtimeChatData(result.conversation_id)
+      setActiveTab('chats')
+      setShowAddFriendModal(false)
+      setFriendSearchQuery('')
+      setFriendSearchResults([])
+      alert(`已添加 ${targetUser.name} 为好友`)
+    } catch (err) {
+      alert(err.response?.data?.detail || '添加好友失败')
+    }
   }
 
   // 模拟对方审批通过（用于本地演示）。
@@ -494,7 +557,7 @@ function App() {
     }
 
     if (window.confirm('确定要删除该好友吗？')) {
-      const currentSession = [...dynamicSessions, ...DEFAULT_SESSIONS].find((session) => session.id === currentChat)
+      const currentSession = [...dynamicSessions, ...sessions].find((session) => session.id === currentChat)
       const isCurrentFriendChat =
         currentSession &&
         !currentSession.isGroup &&
@@ -523,7 +586,7 @@ function App() {
         )
       )
       if (isCurrentFriendChat) {
-        setCurrentChat(0)
+        setCurrentChat(sessions[0]?.id ?? null)
         setShowChatDetail(false)
       }
       alert('好友已删除')
@@ -834,8 +897,6 @@ function App() {
       handleCloseChatDetail()
     }
   }
-  const [messages, setMessages] = useState(INITIAL_MESSAGES)
-
   // 我的角色（用于权限判断）
   const myRole = MY_ROLE_MAP
 
@@ -852,6 +913,7 @@ function App() {
         if (user) {
           syncProfileFromUser(user)
           setIsLoggedIn(true)
+          await refreshRealtimeChatData()
         }
       } catch (err) {
         alert(err.message || '登录失败')
@@ -929,6 +991,7 @@ function App() {
         syncProfileFromUser(user)
         setIsLoggedIn(true)
         setShowRegisterForm(false)
+        await refreshRealtimeChatData()
       }
     } catch (err) {
       alert(err.message || '注册失败')
@@ -1093,9 +1156,44 @@ function App() {
   }
 
   // 发送消息
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!messageInput.trim()) return
-    
+
+    const activeSession = getCurrentSession()
+    const shouldUseBackend =
+      activeSession.id &&
+      !dynamicSessions.some((session) => session.id === activeSession.id) &&
+      !editingMessageId &&
+      !replyToMessage
+
+    if (shouldUseBackend) {
+      try {
+        const result = await sendChatMessage(activeSession.id, messageInput)
+        setMessages((prev) => ({
+          ...prev,
+          [activeSession.id]: [...(prev[activeSession.id] || []), result.message]
+        }))
+        setSessions((prev) =>
+          prev.map((session) =>
+            session.id === activeSession.id
+              ? {
+                  ...session,
+                  lastMessage: result.message.text,
+                  time: result.message.time
+                }
+              : session
+          )
+        )
+        setMessageInput('')
+        setReplyToMessage(null)
+        setEditingMessageId(null)
+        return
+      } catch (err) {
+        alert(err.response?.data?.detail || '发送消息失败')
+        return
+      }
+    }
+
     const newMessage = {
       id: editingMessageId || Date.now(),
       text: messageInput,
@@ -1207,7 +1305,10 @@ function App() {
   const confirmLogout = () => {
     logout()
     setIsLoggedIn(false)
-    setCurrentChat(0)
+    setCurrentChat(null)
+    setSessions([])
+    setMessages({})
+    setMyFriends([])
     setShowUserPanel(false)
     setShowLogoutConfirm(false)
   }
@@ -1226,7 +1327,10 @@ function App() {
   const confirmDeleteAccount = () => {
     // 仅前端实现：清除登录状态和本地数据
     setIsLoggedIn(false)
-    setCurrentChat(0)
+    setCurrentChat(null)
+    setSessions([])
+    setMessages({})
+    setMyFriends([])
     setShowUserPanel(false)
     setShowDeleteConfirm(false)
     
@@ -1397,23 +1501,15 @@ function App() {
   // 从好友列表打开（或创建）私聊会话
   const handleOpenFriendChat = (friend) => {
     const allSessions = [...sessions, ...dynamicSessions]
-    const existingSession = allSessions.find(s => s.title === friend.name)
+    const existingSession = allSessions.find(
+      (session) =>
+        session.title === friend.name ||
+        session.realName === friend.name ||
+        session.title === friend.remark
+    )
 
     if (!existingSession) {
-      const newSessionId = sessions.length + dynamicSessions.length
-      const newSession = {
-        id: newSessionId,
-        title: friend.remark || friend.name,
-        avatar: friend.avatar,
-        lastMessage: friend.signature || '新联系人',
-        time: '刚刚',
-        badge: 0,
-        online: friend.status === 'online' ? 1 : 0,
-        isGroup: false,
-        realName: friend.name
-      }
-      setDynamicSessions(prev => [newSession, ...prev])
-      setCurrentChat(newSessionId)
+      alert('该好友的私聊会话还没有创建，请先重新添加好友或刷新页面')
     } else {
       setCurrentChat(existingSession.id)
     }
@@ -1452,7 +1548,7 @@ function App() {
   }
 
   // 在“对方详情页”点击添加好友
-  const handleAddPeerAsFriend = () => {
+  const handleAddPeerAsFriend = async () => {
     if (!peerProfile) return
 
     if (isAlreadyFriend(peerProfile.userId, peerProfile.name)) {
@@ -1460,32 +1556,14 @@ function App() {
       return
     }
 
-    const pending = sentFriendRequests.some(
-      (item) => item.status === 'pending' && (item.userId === peerProfile.userId || item.name === peerProfile.name)
-    )
-    if (pending) {
-      alert('好友申请已发送，请等待对方审批')
-      return
+    try {
+      await addFriend(Number(peerProfile.userId))
+      await refreshRealtimeChatData()
+      alert(`已添加 ${peerProfile.name} 为好友`)
+    } catch (err) {
+      alert(err.response?.data?.detail || '添加好友失败')
     }
-
-    setSentFriendRequests((prev) => [
-      {
-        id: Date.now(),
-        userId: peerProfile.userId,
-        name: peerProfile.name,
-        avatar: peerProfile.avatar,
-        signature: peerProfile.signature,
-        status: 'pending',
-        type: 'outgoing',
-        createdAt: new Date().toLocaleString('zh-CN')
-      },
-      ...prev
-    ])
-    alert(`已向 ${peerProfile.name} 发送好友申请`)
   }
-
-  // 会话数据
-  const sessions = DEFAULT_SESSIONS
 
   // 获取当前群主
   const getCurrentOwner = () => {
