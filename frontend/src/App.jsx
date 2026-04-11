@@ -99,7 +99,7 @@ function App() {
   const [sentFriendRequests, setSentFriendRequests] = useState([]) // 我发出的好友申请（用于展示审批状态）
   const [myFriends, setMyFriends] = useState([]) // 我的好友列表
   const [collapsedGroups, setCollapsedGroups] = useState([]) // 已折叠的分组
-  const [_customGroups, setCustomGroups] = useState(INITIAL_CUSTOM_GROUPS) // 自定义分组列表
+  const [_customGroups, _setCustomGroups] = useState(INITIAL_CUSTOM_GROUPS) // 自定义分组列表
   const [dynamicSessions, setDynamicSessions] = useState([]) // 动态创建的会话（好友私聊）
   const [groupMembers, setGroupMembers] = useState({}) // 群成员数据（包含角色信息）
   const [profileData, setProfileData] = useState(INITIAL_PROFILE_DATA) // 个人信息数据
@@ -193,7 +193,7 @@ function App() {
             await refreshConversationMessages(currentChat)
           }
         }
-      } catch (_e) {
+      } catch {
         // 未登录或错误，保持未登录状态
       }
     }
@@ -270,7 +270,7 @@ function App() {
     }
 
     loadMessages()
-  }, [currentChat, dynamicSessions, isLoggedIn]) // eslint-disable-line react-hooks/exhaustive-deps // eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentChat, dynamicSessions, isLoggedIn]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!isLoggedIn || !currentChat) return
@@ -1648,9 +1648,10 @@ function App() {
       document.removeEventListener('mouseup', handleComposerResizeEnd)
       document.removeEventListener('click', handleClickOutside)
     }
-  }, [isResizing, isComposingResizing])
+  }, [isResizing, isComposingResizing]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // 点击在线人数
+  // eslint-disable-next-line no-unused-vars
   const handleOnlineClick = () => {
     setShowMemberModal(true)
   }
