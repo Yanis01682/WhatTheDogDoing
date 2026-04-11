@@ -324,7 +324,7 @@ function App() {
 
     const timerId = window.setInterval(pollMessages, 3000)
     return () => window.clearInterval(timerId)
-  }, [currentChat, dynamicSessions, isLoggedIn]) // eslint-disable-line react-hooks/exhaustive-deps // eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentChat, dynamicSessions, isLoggedIn]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!showAddFriendModal) return
@@ -768,7 +768,7 @@ function App() {
     )
   }
 
-  // 移动好友到另一个分组
+  // eslint-disable-next-line no-unused-vars
   const handleMoveFriendToGroup = (friendId, newGroup) => {
     setMyFriends(prev => 
       prev.map(f => f.id === friendId ? { ...f, group: newGroup } : f)
@@ -993,7 +993,7 @@ function App() {
   }
 
   // 转让群主
-  const handleTransferGroup = (memberId) => {
+  const handleTransferGroup = (_memberId) => {
     if (window.confirm('确定要转让群主吗？转让后您将成为普通成员。')) {
       setUserRole('member')
       alert('群主已转让')
@@ -1458,7 +1458,7 @@ function App() {
     // 清除 localStorage 中的 token
     try {
       localStorage.removeItem('auth_token')
-    } catch (_e) {
+    } catch {
       // ignore
     }
     
@@ -1593,8 +1593,8 @@ function App() {
     const container = document.querySelector('.composer')
     if (!container) return
     
-    const rect = container.getBoundingClientRect()
-    const _newHeight = window.innerHeight - e.clientY
+    const _rect = container.getBoundingClientRect()
+    const newHeight = window.innerHeight - e.clientY
     // 限制最小和最大高度
     if (newHeight >= 80 && newHeight <= 400) {
       setComposerHeight(newHeight)
@@ -1648,11 +1648,10 @@ function App() {
       document.removeEventListener('mouseup', handleComposerResizeEnd)
       document.removeEventListener('click', handleClickOutside)
     }
-  }, [isResizing, isComposingResizing, handleResizeMove, handleComposerResizeMove]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isResizing, isComposingResizing])
 
   // 点击在线人数
-  // eslint-disable-next-line no-unused-vars
-  const _handleOnlineClick = () => {
+  const handleOnlineClick = () => {
     setShowMemberModal(true)
   }
 
@@ -1668,7 +1667,7 @@ function App() {
 
   // 任命管理员
   const handleMakeAdmin = (_memberId) => {
-    alert(`已任命成员 ${memberId} 为管理员`)
+    alert(`已任命成员为管理员`)
     // 实际应用中需要调用 API 更新成员角色
   }
 
@@ -1801,7 +1800,7 @@ function App() {
           currentChat={currentChat}
           setCurrentChat={setCurrentChat}
           myFriends={myFriends}
-          customGroups={customGroups}
+          customGroups={_customGroups}
           collapsedGroups={collapsedGroups}
           toggleGroupCollapse={toggleGroupCollapse}
           archivedGroupIds={archivedGroupIds}
