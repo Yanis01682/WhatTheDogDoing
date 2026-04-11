@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from . import models
 from .database import get_db
+from enum import Enum
 
 SECRET_KEY = "whatthedogdoing-secret-key"
 ALGORITHM = "HS256"
@@ -28,15 +29,29 @@ class UserResponse(BaseModel):
     id: int
     username: str
     email: Optional[str] = None
-    
+    status: str
     # [修改点2] 修复 Pydantic V2 警告，替换原来的 class Config:
     model_config = ConfigDict(from_attributes=True) 
+    def display_status(self) -> str:
+        """
+        这是给前端展示统一用的状态字段。
+        逻辑：如果是 invisible，统一返回 offline。
+        """
+        if self.status == "invisible":
+            return "offline"
+        return self.status
 
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserResponse
 
+class UserStatus(str, Enum):
+    ONLINE = "online"
+    BUSY = "busy"
+    AWAY = "away"
+    INVISIBLE = "invisible"
+    OFFLINE = "offline"
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return bcrypt.checkpw(plain_password.encode(), hashed_password.encode())
@@ -117,3 +132,34 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return user
+
+@router.post("/login", response_model=TokenResponse)
+def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    user = authenticate_user(db, form_data.username, form_data.password)
+    if not user:
+        raise HTTPException(...)
+    
+    # [新增] 登录成功，设置状态为在线
+    user.status = "online"
+    db.commit()
+    
+    access_token = create_access_token(data={"sub": user.username})
+    return TokenResponse(access_token=access_token, user=user)
+
+# [新增] 退出登录接口
+@router.post("/logout")
+def logout(current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    current_user.status = "offline"
+    db.commit()
+    return {"message": "Successfully logged out"}
+
+@router.put("/update-status")
+def update_status(
+    new_status: UserStatus, 
+    current_user: models.User = Depends(get_current_user), 
+    db: Session = Depends(get_db)
+):
+    current_user.status = new_status.value
+    db.commit()
+    db.refresh(current_user)
+    return {"message": "Status updated", "current_status": current_user.status}
