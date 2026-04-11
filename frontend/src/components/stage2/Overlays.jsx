@@ -59,6 +59,9 @@ function Overlays({
   showChatDetail,
   handleCloseChatDetail,
   getCurrentSession,
+  handleOpenChatDetailPeerProfile,
+  handleOpenOwnerProfile,
+  handleOpenMemberProfile,
   handleOpenSearchMessage,
   isEditingAnnouncement,
   groupAnnouncement,
@@ -275,11 +278,6 @@ function Overlays({
               )}
               <div className="user-panel-info">
                 <h3>{profileData.nickname || '我的账号'}</h3>
-                <div className="user-status-selector" onClick={() => setShowStatusMenu(!showStatusMenu)}>
-                  <span className="user-status-icon">{getStatusIcon(userStatus)}</span>
-                  <span className="user-status-text">{getStatusText(userStatus)}</span>
-                  <span className={`user-status-arrow ${showStatusMenu ? 'active' : ''}`}>›</span>
-                </div>
               </div>
             </div>
 
@@ -445,7 +443,15 @@ function Overlays({
                   </div>
 
                   <div className="detail-section"><div className="section-title">群公告</div><div className="section-content"><p>欢迎加入{getCurrentSession().title}！请遵守群规，文明交流。</p></div></div>
-                  <div className="detail-section"><div className="section-title">群主</div><div className="section-content owner-info"><div className="owner-avatar">{getCurrentOwner().charAt(0)}</div><div className="owner-info"><div className="owner-name">{getCurrentOwner()}</div><div className="owner-role">群主</div></div></div></div>
+                  <div className="detail-section"><div className="section-title">群主</div><div className="section-content owner-info"><div className="owner-avatar" onClick={() => handleOpenOwnerProfile()} style={{ cursor: 'pointer' }}>{getCurrentOwner().charAt(0)}</div><div className="owner-info"><div className="owner-name">{getCurrentOwner()}</div><div className="owner-role">群主</div></div></div></div>
+
+                  <div className="detail-section">
+                    <div className="section-title">成员</div>
+                    <div className="section-content members-preview">
+                      {groupMembers[currentChat]?.slice(0, 8).map((member, index) => <div key={index} className="member-avatar-small" title={member.name} onClick={() => handleOpenMemberProfile(member)} style={{ cursor: 'pointer' }}>{member.avatar}</div>)}
+                      <div className="view-all-members invite-action" onClick={handleOpenInviteMember} title="邀请好友">+</div>
+                    </div>
+                  </div>
                   <div className="detail-section"><div className="section-title">我在本群的昵称</div><div className="section-content"><div className="my-nickname">{profileData.nickname || '未设置'}<button className="edit-nickname-btn">编辑</button></div></div></div>
                   <div className="detail-section"><div className="section-title">消息免打扰</div><div className="section-content"><label className="toggle-switch-label"><input type="checkbox" className="toggle-checkbox" /><span className="toggle-slider"></span></label></div></div>
                   <div className="detail-section"><div className="section-title">置顶聊天</div><div className="section-content"><label className="toggle-switch-label"><input type="checkbox" className="toggle-checkbox" checked={isChatPinned(currentChat)} onChange={() => handleTogglePinChat(currentChat)} /><span className="toggle-slider"></span></label></div></div>
@@ -484,13 +490,7 @@ function Overlays({
                     <div className="detail-section"><div className="section-title">危险操作</div><div className="section-content"><button className="danger-btn" onClick={handleExitGroup}>退出群聊</button></div></div>
                   )}
 
-                  <div className="detail-section">
-                    <div className="section-title">成员</div>
-                    <div className="section-content members-preview">
-                      {groupMembers[currentChat]?.slice(0, 8).map((member, index) => <div key={index} className="member-avatar-small" title={member.name}>{member.avatar}</div>)}
-                      <div className="view-all-members invite-action" onClick={handleOpenInviteMember} title="邀请好友">+</div>
-                    </div>
-                  </div>
+
                 </div>
               ) : (
                 <div className="personal-chat-detail">

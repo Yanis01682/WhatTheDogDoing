@@ -113,9 +113,11 @@ function App() {
     if (!user) return
 
     setProfileData((prev) => ({
-      ...prev,
-      nickname: user.username || prev.nickname,
-      email: user.email ?? prev.email
+      nickname: user.username || prev.nickname || '',
+      email: user.email ?? prev.email ?? '',
+      phone: prev.phone || '',
+      bio: prev.bio || '',
+      gender: prev.gender || 'male'
     }))
     setCurrentUserId(user.id ?? null)
   }
@@ -551,6 +553,50 @@ function App() {
   const handleClosePeerProfile = () => {
     setShowPeerProfileModal(false)
     setPeerProfile(null)
+  }
+
+  // 点击群主头像打开群主详情页
+  const handleOpenOwnerProfile = () => {
+    const members = groupMembers[currentChat] || []
+    const owner = members.find(m => m.role === 'owner')
+    if (!owner) return
+
+    const friendByName = myFriends.find((f) => f.name === owner.name)
+    const userId = friendByName?.accountId || `group_${owner.name}`
+    const email = friendByName?.email || `${owner.name}@example.com`
+
+    const profile = {
+      name: owner.name,
+      userId,
+      avatar: owner.avatar,
+      status: owner.online ? 'online' : 'offline',
+      email: email,
+      wechatId: userId,
+      source: 'group'
+    }
+    setPeerProfile(profile)
+    setShowPeerProfileModal(true)
+  }
+
+  // 点击群成员头像打开成员详情页
+  const handleOpenMemberProfile = (member) => {
+    if (!member) return
+
+    const friendByName = myFriends.find((f) => f.name === member.name)
+    const userId = friendByName?.accountId || `group_${member.name}`
+    const email = friendByName?.email || `${member.name}@example.com`
+
+    const profile = {
+      name: member.name,
+      userId,
+      avatar: member.avatar,
+      status: member.online ? 'online' : 'offline',
+      email: email,
+      wechatId: userId,
+      source: 'group'
+    }
+    setPeerProfile(profile)
+    setShowPeerProfileModal(true)
   }
 
   // 从聊天详情头像打开对方详情页
@@ -1861,6 +1907,8 @@ function App() {
         handleCloseChatDetail={handleCloseChatDetail}
         getCurrentSession={getCurrentSession}
         handleOpenChatDetailPeerProfile={handleOpenChatDetailPeerProfile}
+        handleOpenOwnerProfile={handleOpenOwnerProfile}
+        handleOpenMemberProfile={handleOpenMemberProfile}
         handleOpenSearchMessage={handleOpenSearchMessage}
         isEditingAnnouncement={isEditingAnnouncement}
         groupAnnouncement={groupAnnouncement}
