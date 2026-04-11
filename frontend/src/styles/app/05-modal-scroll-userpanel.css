@@ -359,6 +359,27 @@
   animation: pulse 2s ease-in-out infinite;
 }
 
+/* 鍦嚎鐘舵€侀滆壊 */
+.user-status-dot.status-online {
+  background: #07c160;
+}
+
+.user-status-dot.status-busy {
+  background: #ff4d4f;
+}
+
+.user-status-dot.status-away {
+  background: #faad14;
+}
+
+.user-status-dot.status-invisible {
+  background: #722ed1;
+}
+
+.user-status-dot.status-offline {
+  background: #b0b0b0;
+}
+
 /* 鐢ㄦ埛闈㈡澘閬僵灞?*/
 .user-panel-overlay {
   position: fixed;
@@ -616,7 +637,7 @@
 }
 
 .night-mode .chatlist-panel {
-  background: #141414 !important;
+  background: #2d2d2d !important;
   border-right-color: rgba(255, 255, 255, 0.08);
 }
 
@@ -627,7 +648,7 @@
 }
 
 .night-mode .session-tabs {
-  background: #141414;
+  background: #2d2d2d;
   border-bottom-color: rgba(255, 255, 255, 0.08);
 }
 

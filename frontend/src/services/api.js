@@ -2,7 +2,7 @@ import axios from 'axios'
 
 // frontend/src/services/api.js
 const apiClient = axios.create({
-  baseURL: '/',
+  baseURL: 'http://localhost:8000',
   timeout: 10000,
   headers: { 'Content-Type': 'application/json' },
 })
@@ -66,6 +66,21 @@ export async function getCurrentUser() {
     if (err.response && err.response.status === 401) return null
     throw err
   }
+}
+
+export async function changePassword(oldPassword, newPassword) {
+  const res = await apiClient.put('/auth/change-password', {
+    old_password: oldPassword,
+    new_password: newPassword,
+  })
+  return res.data
+}
+
+export async function updateStatus(status) {
+  const res = await apiClient.put('/auth/status', {
+    status: status,
+  })
+  return res.data
 }
 
 export async function searchUsers(query) {

@@ -75,6 +75,45 @@
   line-height: 1;
 }
 
+/* 纯 CSS 月亮图标 */
+.moon-icon {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #722ed1;
+  position: relative;
+  vertical-align: middle;
+}
+
+/* 紫色隐身月亮 */
+.moon-icon-invisible {
+  color: #722ed1;
+}
+
+.moon-icon-invisible::after {
+  content: '';
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #ffffff;
+}
+
+/* 顶部状态栏的紫色月亮 */
+.status-icon-svg {
+  width: 1rem;
+  height: 1rem;
+  vertical-align: middle;
+}
+
+.status-icon-invisible {
+  color: #722ed1;
+  fill: #722ed1;
+}
+
 .status-menu-text {
   flex: 1;
   font-size: 0.9rem;
@@ -350,6 +389,12 @@
   color: #ffffff;
   margin-bottom: 16px;
   box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.personal-avatar-large:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
 }
 
 .personal-name {

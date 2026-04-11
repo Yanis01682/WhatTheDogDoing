@@ -384,6 +384,45 @@
   box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
 }
 
+/* 会话列表头像包装器 */
+.avatar-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+/* 会话列表状态点 */
+.session-status-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  border: 2px solid #ffffff;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+/* 在线状态颜色 */
+.session-status-dot.status-online {
+  background: #07c160;
+}
+
+.session-status-dot.status-busy {
+  background: #ff4d4f;
+}
+
+.session-status-dot.status-away {
+  background: #faad14;
+}
+
+.session-status-dot.status-invisible {
+  background: #722ed1;
+}
+
+.session-status-dot.status-offline {
+  background: #b0b0b0;
+}
+
 .avatar.large {
   width: 48px;
   height: 48px;
@@ -452,7 +491,7 @@
    夜间模式样式
    ======================================== */
 .night-mode .chatlist-panel {
-  background: #1e1e1e !important;
+  background: #2d2d2d !important;
   border-right-color: rgba(255, 255, 255, 0.08) !important;
 }
 
@@ -502,6 +541,15 @@
   background: #666 !important;
 }
 
+.night-mode .session-tabs {
+  background: #2d2d2d !important;
+  border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.night-mode .session-list {
+  background: #2d2d2d !important;
+}
+
 .night-mode .session-item {
   background: #2d2d2d !important;
   border-bottom-color: rgba(255, 255, 255, 0.08) !important;
@@ -525,6 +573,11 @@
 
 .night-mode .session-meta {
   color: #ffffff;
+}
+
+/* 夜间模式会话列表状态点 */
+.night-mode .session-status-dot {
+  border-color: #1e1e1e;
 }
 
 .night-mode .avatar {

@@ -2,19 +2,18 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm # [修改点1] 引入 RequestForm
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import jwt
 import bcrypt
-from pydantic import BaseModel, ConfigDict # [修改点2] 引入 ConfigDict 修复警告
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 
 from . import models
 from .database import get_db
-from enum import Enum
 
 SECRET_KEY = "whatthedogdoing-secret-key"
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 10080 # 延长seesion时间至7天
+ACCESS_TOKEN_EXPIRE_MINUTES = 10080
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -25,39 +24,33 @@ class UserAuth(BaseModel):
     password: str
     email: Optional[str] = None
 
+
+class ChangePasswordRequest(BaseModel):
+    old_password: str
+    new_password: str
+
+
 class UserResponse(BaseModel):
     id: int
     username: str
     email: Optional[str] = None
-    status: str
-    # [修改点2] 修复 Pydantic V2 警告，替换原来的 class Config:
-    model_config = ConfigDict(from_attributes=True) 
-    def display_status(self) -> str:
-        """
-        这是给前端展示统一用的状态字段。
-        逻辑：如果是 invisible，统一返回 offline。
-        """
-        if self.status == "invisible":
-            return "offline"
-        return self.status
+    status: str = "online"
+    model_config = ConfigDict(from_attributes=True)
+
 
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserResponse
 
-class UserStatus(str, Enum):
-    ONLINE = "online"
-    BUSY = "busy"
-    AWAY = "away"
-    INVISIBLE = "invisible"
-    OFFLINE = "offline"
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return bcrypt.checkpw(plain_password.encode(), hashed_password.encode())
 
+
 def get_password_hash(password: str) -> str:
     return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+
 
 def create_access_token(data: dict):
     to_encode = data.copy()
@@ -65,17 +58,20 @@ def create_access_token(data: dict):
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
+
 def get_user_by_username(db: Session, username: str):
     user = db.query(models.User).filter(models.User.username == username).first()
     if not user:
         user = db.query(models.User).filter(models.User.email == username).first()
     return user
 
+
 def authenticate_user(db: Session, username: str, password: str):
     user = get_user_by_username(db, username)
     if not user or not verify_password(password, user.hashed_password):
         return None
     return user
+
 
 @router.post("/register", response_model=UserResponse)
 def register(user_data: UserAuth, db: Session = Depends(get_db)):
@@ -92,7 +88,7 @@ def register(user_data: UserAuth, db: Session = Depends(get_db)):
     db.refresh(new_user)
     return new_user
 
-# [修改点1] 登录接口的参数改为依赖 OAuth2PasswordRequestForm
+
 @router.post("/login", response_model=TokenResponse)
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = authenticate_user(db, form_data.username, form_data.password)
@@ -100,10 +96,14 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="用户名或密码错误",
-            headers={"WWW-Authenticate": "Bearer"}, # 加上标准鉴权头
+            headers={"WWW-Authenticate": "Bearer"},
         )
+    user.status = "online"
+    db.commit()
     access_token = create_access_token(data={"sub": user.username})
-    return TokenResponse(access_token=access_token, user=user)
+    user_response = UserResponse.model_validate(user)
+    return TokenResponse(access_token=access_token, user=user_response)
+
 
 @router.get("/me", response_model=UserResponse)
 def me(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
@@ -119,6 +119,7 @@ def me(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="User not found")
     return user
 
+
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
@@ -127,39 +128,49 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
             raise HTTPException(status_code=401, detail="Could not validate credentials")
     except Exception:
         raise HTTPException(status_code=401, detail="Could not validate credentials")
-    
+
     user = get_user_by_username(db, username)
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return user
 
-@router.post("/login", response_model=TokenResponse)
-def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    user = authenticate_user(db, form_data.username, form_data.password)
-    if not user:
-        raise HTTPException(...)
-    
-    # [新增] 登录成功，设置状态为在线
-    user.status = "online"
-    db.commit()
-    
-    access_token = create_access_token(data={"sub": user.username})
-    return TokenResponse(access_token=access_token, user=user)
 
-# [新增] 退出登录接口
 @router.post("/logout")
 def logout(current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     current_user.status = "offline"
     db.commit()
     return {"message": "Successfully logged out"}
 
-@router.put("/update-status")
-def update_status(
-    new_status: UserStatus, 
-    current_user: models.User = Depends(get_current_user), 
+
+@router.put("/change-password")
+def change_password(
+    request: ChangePasswordRequest,
+    current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    current_user.status = new_status.value
+    if not verify_password(request.old_password, current_user.hashed_password):
+        raise HTTPException(status_code=400, detail="旧密码不正确")
+
+    if len(request.new_password) < 6:
+        raise HTTPException(status_code=400, detail="新密码长度不能少于 6 位")
+
+    current_user.hashed_password = get_password_hash(request.new_password)
     db.commit()
-    db.refresh(current_user)
-    return {"message": "Status updated", "current_status": current_user.status}
+    return {"message": "密码修改成功"}
+
+
+@router.put("/status")
+def update_status(
+    request: dict,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """更新用户在线状态"""
+    new_status = request.get("status")
+    valid_statuses = ["online", "offline", "busy", "away", "invisible"]
+    if new_status not in valid_statuses:
+        raise HTTPException(status_code=400, detail=f"无效的状态值，必须是: {', '.join(valid_statuses)}")
+
+    current_user.status = new_status
+    db.commit()
+    return {"message": "状态更新成功", "status": new_status}

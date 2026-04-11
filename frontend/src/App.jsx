@@ -6,6 +6,7 @@ import {
 } from './features/chat/mockData'
 import {
   addFriend,
+  changePassword,
   deleteFriend,
   createGroup,
   getFriendRequests,
@@ -20,7 +21,8 @@ import {
   acceptFriendRequest,
   rejectFriendRequest,
   searchUsers,
-  sendChatMessage
+  sendChatMessage,
+  updateStatus
 } from './services/api'
 import AuthView from './components/stage2/AuthView'
 import TopBar from './components/stage2/TopBar'
@@ -66,6 +68,8 @@ function App() {
   const [editingMessageId, setEditingMessageId] = useState(null) // 正在编辑的消息 ID
   const [userAvatar, setUserAvatar] = useState('我') // 用户头像（支持图片或文字）
   const [showProfileModal, setShowProfileModal] = useState(false) // 个人信息模态框
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false) // 修改密码模态框
+  const [changePasswordForm, setChangePasswordForm] = useState({ oldPassword: '', newPassword: '', confirmPassword: '' }) // 修改密码表单
   const [isEditingProfile, setIsEditingProfile] = useState(false) // 是否正在编辑个人信息
   const [userStatus, setUserStatus] = useState('online') // 在线状态：online-在线，offline-离线，busy-忙碌，away-离开，invisible-隐身
   const [showStatusMenu, setShowStatusMenu] = useState(false) // 状态选择菜单
@@ -424,10 +428,19 @@ function App() {
   }
 
   // 切换在线状态
-  const handleChangeStatus = (status) => {
+  const handleChangeStatus = async (status) => {
     setUserStatus(status)
     localStorage.setItem('userStatus', status)
     setShowStatusMenu(false)
+    
+    // 调用后端 API 更新数据库中的状态
+    try {
+      await updateStatus(status)
+      // 更新后重新获取好友列表，这样其他用户就能看到新状态
+      await refreshRealtimeChatData()
+    } catch (error) {
+      console.error('更新状态失败:', error)
+    }
   }
 
   // 获取状态文本
@@ -444,12 +457,18 @@ function App() {
 
   // 获取状态图标
   const getStatusIcon = (status) => {
+    if (status === 'invisible') {
+      return (
+        <svg className="status-icon-svg status-icon-invisible" viewBox="0 0 24 24" width="16" height="16">
+          <path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.389 5.389 0 0 1-4.4 2.26 5.403 5.403 0 0 1-3.14-9.8c-.44-.06-.9-.1-1.36-.1z"/>
+        </svg>
+      )
+    }
     const iconMap = {
       'online': '🟢',
       'offline': '⚫',
       'busy': '🔴',
-      'away': '🟡',
-      'invisible': '🌙'
+      'away': '🟡'
     }
     return iconMap[status] || '🟢'
   }
@@ -486,13 +505,14 @@ function App() {
 
       const friendByName = myFriends.find((f) => f.name === candidate?.name)
       const userId = friendByName?.accountId || `group_${candidate?.name || 'member'}`
+      const email = friendByName?.email || `${candidate?.name || 'member'}@example.com`
 
       return {
         name: candidate?.name || '群成员',
         userId,
         avatar: candidate?.avatar || currentSession.avatar,
         status: candidate?.online ? 'online' : 'offline',
-        signature: friendByName?.signature || '来自群聊成员',
+        email: email,
         wechatId: userId,
         source: 'group'
       }
@@ -506,13 +526,14 @@ function App() {
     )
 
     const userId = friend?.accountId || `private_${currentSession.realName || currentSession.title}`
+    const email = friend?.email || `${currentSession.realName || currentSession.title}@example.com`
 
     return {
       name: friend?.name || currentSession.realName || currentSession.title,
       userId,
       avatar: friend?.avatar || currentSession.avatar,
       status: friend?.status || (currentSession.online > 0 ? 'online' : 'offline'),
-      signature: friend?.signature || '这个人很懒，什么都没写~',
+      email: email,
       wechatId: userId,
       source: 'private'
     }
@@ -530,6 +551,36 @@ function App() {
   const handleClosePeerProfile = () => {
     setShowPeerProfileModal(false)
     setPeerProfile(null)
+  }
+
+  // 从聊天详情头像打开对方详情页
+  const handleOpenChatDetailPeerProfile = () => {
+    const currentSession = getCurrentSession()
+    if (!currentSession || currentSession.isGroup) return
+
+    const friend = myFriends.find(
+      (f) =>
+        f.name === currentSession.realName ||
+        f.name === currentSession.title ||
+        f.remark === currentSession.title
+    )
+
+    const userId = friend?.accountId || `private_${currentSession.realName || currentSession.title}`
+    const email = friend?.email || `${currentSession.realName || currentSession.title}@example.com`
+
+    const profile = {
+      name: friend?.name || currentSession.realName || currentSession.title,
+      userId,
+      avatar: friend?.avatar || currentSession.avatar,
+      status: friend?.status || (currentSession.online > 0 ? 'online' : 'offline'),
+      email: email,
+      wechatId: userId,
+      source: 'private'
+    }
+
+    setPeerProfile(profile)
+    setShowPeerProfileModal(true)
+    setShowChatDetail(false)
   }
 
   // 打开添加好友模态框
@@ -1001,6 +1052,10 @@ function App() {
       alert('两次输入的密码不一致')
       return
     }
+    if (data.agreementAccepted !== 'true') {
+      alert('请阅读并同意用户协议和隐私政策')
+      return
+    }
     
     try {
       await register({ username: data.username, email: data.email, password: data.password })
@@ -1369,6 +1424,58 @@ function App() {
     setShowDeleteConfirm(false)
   }
 
+  // 打开修改密码弹窗
+  const handleOpenChangePassword = () => {
+    setShowChangePasswordModal(true)
+    setShowUserPanel(false)
+    setChangePasswordForm({ oldPassword: '', newPassword: '', confirmPassword: '' })
+  }
+
+  // 关闭修改密码弹窗
+  const handleCloseChangePassword = () => {
+    setShowChangePasswordModal(false)
+    setChangePasswordForm({ oldPassword: '', newPassword: '', confirmPassword: '' })
+  }
+
+  // 修改密码表单输入
+  const handleChangePasswordInput = (field, value) => {
+    setChangePasswordForm(prev => ({ ...prev, [field]: value }))
+  }
+
+  // 提交修改密码
+  const handleSubmitChangePassword = async () => {
+    const { oldPassword, newPassword, confirmPassword } = changePasswordForm
+
+    if (!oldPassword || !newPassword || !confirmPassword) {
+      alert('请填写所有密码字段')
+      return
+    }
+
+    if (newPassword.length < 6) {
+      alert('新密码长度不能少于 6 位')
+      return
+    }
+
+    if (newPassword !== confirmPassword) {
+      alert('两次输入的新密码不一致')
+      return
+    }
+
+    if (oldPassword === newPassword) {
+      alert('新密码不能与旧密码相同')
+      return
+    }
+
+    try {
+      await changePassword(oldPassword, newPassword)
+      alert('密码修改成功')
+      handleCloseChangePassword()
+    } catch (err) {
+      const msg = err.response?.data?.detail || err.message || '密码修改失败'
+      alert(msg)
+    }
+  }
+
   // 切换用户面板显示/隐藏
   const toggleUserPanel = () => {
     setShowUserPanel(!showUserPanel)
@@ -1655,12 +1762,8 @@ function App() {
           onOpenFriendChat={handleOpenFriendChat}
           chatlistWidth={chatlistWidth}
           pinnedChatIds={pinnedChatIds}
-          blacklist={blacklist}
           onRemoveFromBlacklist={handleRemoveFromBlacklist}
           onOpenBlacklistChat={handleOpenBlacklistChat}
-          currentChat={currentChat}
-          setCurrentChat={setCurrentChat}
-          handleOpenFriendChat={handleOpenFriendChat}
         />
 
         {/* 左侧会话列表和聊天窗口之间的拖拽分隔线 */}
@@ -1673,9 +1776,11 @@ function App() {
         <ChatMainView
           getCurrentSession={getCurrentSession}
           groupMembers={groupMembers}
+          myFriends={myFriends}
           currentChat={currentChat}
           userAvatar={userAvatar}
           handleOpenPeerProfile={handleOpenPeerProfile}
+          handleOpenProfile={handleOpenProfile}
           handleOpenMemberList={handleOpenMemberList}
           handleOpenChatDetail={handleOpenChatDetail}
           handleOpenSearchMessage={handleOpenSearchMessage}
@@ -1735,6 +1840,12 @@ function App() {
         cancelLogout={cancelLogout}
         showProfileModal={showProfileModal}
         setShowProfileModal={setShowProfileModal}
+        handleOpenChangePassword={handleOpenChangePassword}
+        showChangePasswordModal={showChangePasswordModal}
+        handleCloseChangePassword={handleCloseChangePassword}
+        changePasswordForm={changePasswordForm}
+        handleChangePasswordInput={handleChangePasswordInput}
+        handleSubmitChangePassword={handleSubmitChangePassword}
         showPeerProfileModal={showPeerProfileModal}
         peerProfile={peerProfile}
         handleClosePeerProfile={handleClosePeerProfile}
@@ -1749,6 +1860,7 @@ function App() {
         showChatDetail={showChatDetail}
         handleCloseChatDetail={handleCloseChatDetail}
         getCurrentSession={getCurrentSession}
+        handleOpenChatDetailPeerProfile={handleOpenChatDetailPeerProfile}
         handleOpenSearchMessage={handleOpenSearchMessage}
         isEditingAnnouncement={isEditingAnnouncement}
         groupAnnouncement={groupAnnouncement}

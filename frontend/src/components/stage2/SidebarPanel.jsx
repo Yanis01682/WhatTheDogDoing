@@ -130,26 +130,40 @@ function SidebarPanel({
     setSessionContextMenu(null)
   }
 
-  const renderSessionItem = (session) => (
-    <li
-      key={session.id}
-      className={`session-item ${currentChat === session.id ? 'active' : ''}`}
-      onClick={() => setCurrentChat(session.id)}
-      onContextMenu={(e) => handleSessionContextMenu(e, session)}
-    >
-      <div className="avatar">{session.avatar}</div>
-      <div className="session-main">
-        <div className="session-row">
-          <p className="session-title">{session.title}</p>
-          <span className="session-time">{session.time}</span>
+  const renderSessionItem = (session) => {
+    // 获取好友的在线状态（只针对个人私聊）
+    let friendStatus = null
+    if (!session.isGroup) {
+      const friend = myFriends.find(f => f.name === session.realName || f.id === session.id || f.id.toString() === session.title)
+      if (friend) {
+        friendStatus = friend.status || null
+      }
+    }
+    
+    return (
+      <li
+        key={session.id}
+        className={`session-item ${currentChat === session.id ? 'active' : ''}`}
+        onClick={() => setCurrentChat(session.id)}
+        onContextMenu={(e) => handleSessionContextMenu(e, session)}
+      >
+        <div className="avatar-wrapper">
+          <div className="avatar">{session.avatar}</div>
+          {friendStatus && <span className={`session-status-dot status-${friendStatus}`}></span>}
         </div>
-        <div className="session-row">
-          <p className="session-meta">{session.lastMessage}</p>
-          {session.badge > 0 && <span className="session-badge">{session.badge}</span>}
+        <div className="session-main">
+          <div className="session-row">
+            <p className="session-title">{session.title}</p>
+            <span className="session-time">{session.time}</span>
+          </div>
+          <div className="session-row">
+            <p className="session-meta">{session.lastMessage}</p>
+            {session.badge > 0 && <span className="session-badge">{session.badge}</span>}
+          </div>
         </div>
-      </div>
-    </li>
-  )
+      </li>
+    )
+  }
 
   return (
     <aside

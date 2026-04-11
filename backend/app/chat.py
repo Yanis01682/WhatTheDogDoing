@@ -66,14 +66,19 @@ def _ensure_private_friendship(db: Session, user_id: int, friend_id: int):
 
 def _serialize_user(user: models.User):
     display_name = user.username
+    # 隐身状态在对方视角显示为离线
+    status = user.status or "online"
+    if status == "invisible":
+        status = "offline"
     return {
         "id": user.id,
         "userId": user.username,
         "accountId": str(user.id),
         "name": display_name,
         "avatar": display_name[:1].upper(),
-        "signature": user.email or "",
-        "status": "online",
+        "signature": "",
+        "email": user.email or "",
+        "status": status,
         "group": "常用",
         "remark": "",
     }
@@ -619,7 +624,8 @@ def read_group_members(
                 "name": user.username,
                 "avatar": user.username[:1].upper(),
                 "role": "owner" if index == 0 else "member",
-                "online": True,
+                "status": user.status or "online",  # 使用数据库中真实的在线状态
+                "online": user.status != "offline" and user.status != "invisible",  # 兼容性字段
             }
         )
 

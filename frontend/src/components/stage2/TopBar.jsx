@@ -53,7 +53,9 @@ function TopBar({
                 {userStatus === 'away' && <span className="status-menu-check">✓</span>}
               </div>
               <div className="status-menu-item" onClick={() => handleChangeStatus('invisible')}>
-                <span className="status-menu-icon">🌙</span>
+                <span className="status-menu-icon">
+                  <span className="moon-icon moon-icon-invisible"></span>
+                </span>
                 <span className="status-menu-text">隐身</span>
                 {userStatus === 'invisible' && <span className="status-menu-check">✓</span>}
               </div>
@@ -74,7 +76,7 @@ function TopBar({
               <span>{userAvatar}</span>
             </div>
           )}
-          <span className="user-status-dot"></span>
+          <span className={`user-status-dot status-${userStatus}`}></span>
         </div>
       </div>
     </header>
