@@ -5,12 +5,12 @@
 import { useEffect, useRef, useState } from 'react'
 
 function LegalModal({ isOpen, onClose, title, children, onReadComplete }) {
-  if (!isOpen) return null
-
   const [isReadComplete, setIsReadComplete] = useState(false)
   const modalBodyRef = useRef(null)
 
   useEffect(() => {
+    if (!isOpen) return
+    
     const handleScroll = () => {
       const body = modalBodyRef.current
       if (!body) return
@@ -49,6 +49,8 @@ function LegalModal({ isOpen, onClose, title, children, onReadComplete }) {
       }
     }
   }, [isOpen, onReadComplete])
+
+  if (!isOpen) return null
 
   return (
     <div className="legal-modal-overlay" onClick={onClose}>
