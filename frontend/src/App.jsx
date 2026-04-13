@@ -22,6 +22,7 @@ import {
   rejectFriendRequest,
   searchUsers,
   sendChatMessage,
+  revokeMessage,
   updateStatus,
   getProfile,
   updateProfile
@@ -1157,10 +1158,19 @@ function App() {
   }
 
   // 撤回消息
-  const handleRevokeMessage = () => {
+  const handleRevokeMessage = async () => {
     if (!contextMenu) return
     
     const { messageId } = contextMenu
+
+    try {
+      await revokeMessage(messageId)
+    } catch (err) {
+      // 撤回失败时提示
+      alert(err.response?.data?.detail || '撤回失败，请重试')
+      closeContextMenu()
+      return
+    }
     
     // 从消息列表中移除
     setMessages(prev => ({
@@ -1169,8 +1179,6 @@ function App() {
     }))
     
     closeContextMenu()
-    
-    // TODO: 调用后端 API 撤回消息
   }
 
   // 回复消息
@@ -1306,12 +1314,11 @@ function App() {
     const shouldUseBackend =
       activeSession.id &&
       !dynamicSessions.some((session) => session.id === activeSession.id) &&
-      !editingMessageId &&
-      !replyToMessage
+      !editingMessageId
 
     if (shouldUseBackend) {
       try {
-        const result = await sendChatMessage(activeSession.id, messageInput)
+        const result = await sendChatMessage(activeSession.id, messageInput, replyToMessage?.id)
         setMessages((prev) => ({
           ...prev,
           [activeSession.id]: [...(prev[activeSession.id] || []), result.message]
@@ -1879,7 +1886,7 @@ function App() {
         contextMenu={contextMenu}
         closeContextMenu={closeContextMenu}
         handleReplyMessage={handleReplyMessage}
-        handleEditMessage={handleEditMessage}
+
         handleRevokeMessage={handleRevokeMessage}
         showMemberModal={showMemberModal}
         closeMemberModal={closeMemberModal}

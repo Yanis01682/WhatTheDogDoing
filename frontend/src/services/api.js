@@ -154,11 +154,15 @@ export async function getGroupMembers(conversationId) {
   return res.data
 }
 
-export async function sendChatMessage(conversationId, content) {
-  const res = await apiClient.post('/api/chat/messages/send', {
-    conversation_id: conversationId,
-    content,
-  })
+export async function sendChatMessage(conversationId, content, replyToId) {
+  const payload = { conversation_id: conversationId, content }
+  if (replyToId) payload.reply_to_id = replyToId
+  const res = await apiClient.post('/api/chat/messages/send', payload)
+  return res.data
+}
+
+export async function revokeMessage(messageId) {
+  const res = await apiClient.delete(`/api/chat/messages/${messageId}`)
   return res.data
 }
 
