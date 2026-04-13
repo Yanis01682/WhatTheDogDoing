@@ -127,7 +127,7 @@ function AuthView({
                 type="text"
                 id="account"
                 name="account"
-                placeholder="邮箱 / 手机号"
+                placeholder="用户名 / 邮箱"
                 autoComplete="username"
               />
             </div>
