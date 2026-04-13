@@ -114,14 +114,23 @@ def _serialize_session(db: Session, conversation: models.Conversation, current_u
     title = conversation.name or "未命名会话"
     avatar = title[:1] if title else "会"
     real_name = title
+    online_count = 0
 
-    if not conversation.is_group:
+    if conversation.is_group:
+        member_users = db.query(models.User).filter(models.User.id.in_(member_ids)).all() if member_ids else []
+        online_count = sum(
+            1
+            for user in member_users
+            if (user.status or "offline") not in ("offline", "invisible")
+        )
+    else:
         peer_id = next((member_id for member_id in member_ids if member_id != current_user.id), None)
         peer_user = db.query(models.User).filter(models.User.id == peer_id).first() if peer_id else None
         if peer_user:
             title = peer_user.username
             real_name = peer_user.username
             avatar = peer_user.username[:1].upper()
+            online_count = 0 if peer_user.status in ("offline", "invisible") else 1
 
     return {
         "id": conversation.id,
@@ -130,7 +139,7 @@ def _serialize_session(db: Session, conversation: models.Conversation, current_u
         "lastMessage": latest_message.content if latest_message else "暂无消息",
         "time": latest_message.timestamp.strftime("%H:%M") if latest_message and latest_message.timestamp else "",
         "badge": 0,
-        "online": max(len(member_ids) - 1, 0) if conversation.is_group else 1,
+        "online": online_count,
         "isGroup": conversation.is_group,
         "realName": real_name,
     }

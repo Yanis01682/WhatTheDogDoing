@@ -8,3 +8,10 @@ dist/
 .vscode/
 .idea/
 *.db
+
+# local course docs (do not commit)
+即时通讯系统 消息系统示例.pdf
+大作业过程分细则.pdf
+
+# coverage artifacts
+.coverage

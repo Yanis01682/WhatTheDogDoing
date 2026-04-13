@@ -4,6 +4,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from app.main import app
 from app.database import get_db
+from app.auth import create_access_token
 from app import models
 
 # 1. 创建一个专门用于测试的内存数据库 (运行完就销毁，干干净净)
@@ -118,3 +119,143 @@ def test_chat_sessions_placeholder():
     )
     assert response.status_code == 200
     assert response.json() == []
+
+
+def test_get_current_user_invalid_subject_token():
+    """token 中缺少 sub 时返回 401"""
+    bad_token = create_access_token({"foo": "bar"})
+    response = client.get(
+        "/auth/profile",
+        headers={"Authorization": f"Bearer {bad_token}"},
+    )
+    assert response.status_code == 401
+
+
+def test_get_current_user_user_not_found():
+    """token 的 sub 对应用户不存在时返回 404"""
+    missing_user_token = create_access_token({"sub": "ghost_user_for_test"})
+    response = client.get(
+        "/auth/profile",
+        headers={"Authorization": f"Bearer {missing_user_token}"},
+    )
+    assert response.status_code == 404
+
+
+def test_logout_and_status_and_change_password_flow():
+    """覆盖 logout/status/change-password 的关键分支"""
+    client.post(
+        "/auth/register",
+        json={"username": "state_user", "password": "oldpass123", "email": "state_user@example.com"},
+    )
+    login_res = client.post(
+        "/auth/login",
+        data={"username": "state_user", "password": "oldpass123"},
+    )
+    token = login_res.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    bad_status = client.put("/auth/status", json={"status": "sleeping"}, headers=headers)
+    assert bad_status.status_code == 400
+
+    ok_status = client.put("/auth/status", json={"status": "away"}, headers=headers)
+    assert ok_status.status_code == 200
+    assert ok_status.json()["status"] == "away"
+
+    wrong_old = client.put(
+        "/auth/change-password",
+        json={"old_password": "wrong-old", "new_password": "newpass123"},
+        headers=headers,
+    )
+    assert wrong_old.status_code == 400
+
+    short_new = client.put(
+        "/auth/change-password",
+        json={"old_password": "oldpass123", "new_password": "123"},
+        headers=headers,
+    )
+    assert short_new.status_code == 400
+
+    changed = client.put(
+        "/auth/change-password",
+        json={"old_password": "oldpass123", "new_password": "newpass123"},
+        headers=headers,
+    )
+    assert changed.status_code == 200
+
+    logout_res = client.post("/auth/logout", headers=headers)
+    assert logout_res.status_code == 200
+
+    old_login = client.post(
+        "/auth/login",
+        data={"username": "state_user", "password": "oldpass123"},
+    )
+    assert old_login.status_code == 401
+
+    new_login = client.post(
+        "/auth/login",
+        data={"username": "state_user", "password": "newpass123"},
+    )
+    assert new_login.status_code == 200
+
+
+def test_update_profile_and_read_profile():
+    """覆盖 profile 更新与读取"""
+    client.post(
+        "/auth/register",
+        json={"username": "profile_user", "password": "profilepass", "email": "profile_user@example.com"},
+    )
+    login_res = client.post(
+        "/auth/login",
+        data={"username": "profile_user", "password": "profilepass"},
+    )
+    token = login_res.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    update_res = client.put(
+        "/auth/profile",
+        json={
+            "nickname": "Profile Nick",
+            "gender": "female",
+            "phone": "13800138000",
+            "bio": "hello",
+            "email": "updated_profile_user@example.com",
+        },
+        headers=headers,
+    )
+    assert update_res.status_code == 200
+    updated = update_res.json()
+    assert updated["nickname"] == "Profile Nick"
+    assert updated["gender"] == "female"
+    assert updated["phone"] == "13800138000"
+    assert updated["bio"] == "hello"
+    assert updated["email"] == "updated_profile_user@example.com"
+
+    profile_res = client.get("/auth/profile", headers=headers)
+    assert profile_res.status_code == 200
+    assert profile_res.json()["nickname"] == "Profile Nick"
+
+
+def test_delete_account_endpoint():
+    """覆盖 /api/users/me 删除账号分支"""
+    client.post(
+        "/auth/register",
+        json={"username": "delete_me_user", "password": "deletepass", "email": "delete_me_user@example.com"},
+    )
+    login_res = client.post(
+        "/auth/login",
+        data={"username": "delete_me_user", "password": "deletepass"},
+    )
+    token = login_res.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    delete_res = client.delete("/api/users/me", headers=headers)
+    assert delete_res.status_code == 200
+
+    me_after_delete = client.get("/auth/me", headers=headers)
+    assert me_after_delete.status_code in (401, 404)
+
+    relogin = client.post(
+        "/auth/login",
+        data={"username": "delete_me_user", "password": "deletepass"},
+    )
+    assert relogin.status_code == 401

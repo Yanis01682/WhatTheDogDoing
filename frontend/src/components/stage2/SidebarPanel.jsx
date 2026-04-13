@@ -70,9 +70,13 @@ function SidebarPanel({
 }) {
   const [isGroupFolderOpen, setIsGroupFolderOpen] = useState(false)
   const [sessionContextMenu, setSessionContextMenu] = useState(null)
+  const [headerMenu, setHeaderMenu] = useState(null)
 
   useEffect(() => {
-    const closeMenu = () => setSessionContextMenu(null)
+    const closeMenu = () => {
+      setSessionContextMenu(null)
+      setHeaderMenu(null)
+    }
     document.addEventListener('click', closeMenu)
     return () => document.removeEventListener('click', closeMenu)
   }, [])
@@ -128,6 +132,64 @@ function SidebarPanel({
     if (!sessionContextMenu) return
     onToggleGroupArchive(sessionContextMenu.sessionId)
     setSessionContextMenu(null)
+  }
+
+  const handleComposeClick = () => {
+    if (activeTab === 'friends') {
+      handleOpenCreateGroup()
+      return
+    }
+    if (activeTab === 'chats') {
+      setActiveTab('friends')
+      handleOpenAddFriend()
+      return
+    }
+    setActiveTab('chats')
+  }
+
+  const handleMenuClick = (e) => {
+    e.stopPropagation()
+    setHeaderMenu((prev) => (
+      prev
+        ? null
+        : {
+            x: e.clientX,
+            y: e.clientY,
+          }
+    ))
+  }
+
+  const handleHeaderMenuAction = (action) => {
+    setHeaderMenu(null)
+    if (action === 'new-friend') {
+      setActiveTab('friends')
+      handleOpenAddFriend()
+      return
+    }
+    if (action === 'new-group') {
+      setActiveTab('friends')
+      handleOpenCreateGroup()
+      return
+    }
+    if (action === 'toggle-search') {
+      if (activeTab === 'friends') {
+        setShowFriendSearch((prev) => !prev)
+      } else {
+        setShowSearch((prev) => !prev)
+      }
+      return
+    }
+    if (action === 'go-chats') {
+      setActiveTab('chats')
+      return
+    }
+    if (action === 'go-friends') {
+      setActiveTab('friends')
+      return
+    }
+    if (action === 'go-blacklist') {
+      setActiveTab('blacklist')
+    }
   }
 
   const renderSessionItem = (session) => {
@@ -206,11 +268,11 @@ function SidebarPanel({
             className="icon-btn"
             type="button"
             aria-label={activeTab === 'friends' ? '创建群聊' : '新建会话'}
-            onClick={activeTab === 'friends' ? handleOpenCreateGroup : () => alert('新建会话功能待开发')}
+            onClick={handleComposeClick}
           >
             ✎
           </button>
-          <button className="icon-btn" type="button" aria-label="菜单">⋯</button>
+          <button className="icon-btn" type="button" aria-label="菜单" onClick={handleMenuClick}>⋯</button>
         </div>
       </div>
 
@@ -406,6 +468,33 @@ function SidebarPanel({
           <span className="tab-label">黑名单</span>
         </button>
       </div>
+
+      {headerMenu && (
+        <div
+          className="session-context-menu"
+          style={{ top: headerMenu.y, left: headerMenu.x }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button type="button" className="session-context-item" onClick={() => handleHeaderMenuAction('new-friend')}>
+            添加好友
+          </button>
+          <button type="button" className="session-context-item" onClick={() => handleHeaderMenuAction('new-group')}>
+            创建群聊
+          </button>
+          <button type="button" className="session-context-item" onClick={() => handleHeaderMenuAction('toggle-search')}>
+            {activeTab === 'friends' ? (showFriendSearch ? '关闭搜索' : '搜索好友') : (showSearch ? '关闭搜索' : '搜索会话')}
+          </button>
+          <button type="button" className="session-context-item" onClick={() => handleHeaderMenuAction('go-chats')}>
+            切换到会话
+          </button>
+          <button type="button" className="session-context-item" onClick={() => handleHeaderMenuAction('go-friends')}>
+            切换到好友
+          </button>
+          <button type="button" className="session-context-item" onClick={() => handleHeaderMenuAction('go-blacklist')}>
+            切换到黑名单
+          </button>
+        </div>
+      )}
 
       {sessionContextMenu && (
         <div
