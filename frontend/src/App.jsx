@@ -171,9 +171,21 @@ function App() {
     }
 
     const fetchedMessages = await getMessages(conversationId)
+    const locallyDeleted = getLocallyDeleted(conversationId)
+    // 1. 过滤掉本地删除的消息
+    const filtered = locallyDeleted.size > 0 ? fetchedMessages.filter(m => !locallyDeleted.has(m.id)) : fetchedMessages
+    // 2. 将引用了本地删除消息的 replyTo 标记为已删除
+    const withMarkedReplies = locallyDeleted.size > 0
+      ? filtered.map(m => {
+          if (m.replyTo && locallyDeleted.has(m.replyTo.id)) {
+            return { ...m, replyTo: { ...m.replyTo, deleted: true, deletedLabel: '该消息已删除' } }
+          }
+          return m
+        })
+      : filtered
     setMessages((prev) => ({
       ...prev,
-      [conversationId]: fetchedMessages
+      [conversationId]: withMarkedReplies
     }))
   }
 
@@ -193,6 +205,32 @@ function App() {
   }
 
   // 初始加载时尝试获取用户信息
+  // ===== 本地删除消息持久化 =====
+  const getLocallyDeleted = (convId) => {
+    try {
+      const data = JSON.parse(localStorage.getItem('wtdd_deleted_msgs') || '{}')
+      return new Set(data[String(convId)] || [])
+    } catch { return new Set() }
+  }
+  const addLocallyDeleted = (convId, msgId) => {
+    try {
+      const data = JSON.parse(localStorage.getItem('wtdd_deleted_msgs') || '{}')
+      const ids = new Set(data[String(convId)] || [])
+      ids.add(msgId)
+      data[String(convId)] = [...ids]
+      localStorage.setItem('wtdd_deleted_msgs', JSON.stringify(data))
+    } catch { /* ignore */ }
+  }
+  const markReplyToDeleted = (convId, deletedMsgId, label) => {
+    setMessages(prev => {
+      const conv = prev[convId] || []
+      const updated = conv.map(m =>
+        m.replyTo?.id === deletedMsgId ? { ...m, replyTo: { ...m.replyTo, deleted: true, deletedLabel: label } } : m
+      )
+      return { ...prev, [convId]: updated }
+    })
+  }
+
   useEffect(() => {
     const checkAuth = async () => {
       try {
@@ -1139,16 +1177,20 @@ function App() {
     const canRevoke = msg.sender === 'me'
     const canReply = msg.sender !== 'system'
     
-    if (!canRevoke && !canReply) return
+    const canDelete = msg.sender !== 'system'
+    
+    if (!canRevoke && !canReply && !canDelete) return
     
     setContextMenu({
       messageId: msg.id,
       messageText: msg.text,
       messageSender: msg.sender,
+      messageSenderName: msg.senderName || null,
       x: e.clientX,
       y: e.clientY,
       canRevoke,
-      canReply
+      canReply,
+      canDelete,
     })
   }
 
@@ -1172,7 +1214,7 @@ function App() {
       return
     }
     
-    // 从消息列表中移除
+    markReplyToDeleted(currentChat, messageId, '该消息已撤回')
     setMessages(prev => ({
       ...prev,
       [currentChat]: prev[currentChat].filter(msg => msg.id !== messageId)
@@ -1181,16 +1223,33 @@ function App() {
     closeContextMenu()
   }
 
+  // 本地删除消息（仅从自己视图移除，持久化到 localStorage）
+  // 本地删除：只在自己视图消失，消息仍在服务器，其他人不受影响
+  const handleDeleteMessage = () => {
+    if (!contextMenu) return
+    const { messageId } = contextMenu
+
+    // 持久化到 localStorage，刷新后仍过滤
+    addLocallyDeleted(currentChat, messageId)
+    markReplyToDeleted(currentChat, messageId, '该消息已删除')
+    setMessages(prev => ({
+      ...prev,
+      [currentChat]: prev[currentChat].filter(msg => msg.id !== messageId)
+    }))
+    closeContextMenu()
+  }
+
   // 回复消息
   const handleReplyMessage = () => {
     if (!contextMenu) return
     
-    const { messageId, messageText, messageSender } = contextMenu
+    const { messageId, messageText, messageSender, messageSenderName } = contextMenu
     
     setReplyToMessage({
       id: messageId,
       text: messageText,
-      sender: messageSender
+      sender: messageSender,
+      senderName: messageSenderName,
     })
     
     closeContextMenu()
@@ -1888,6 +1947,7 @@ function App() {
         handleReplyMessage={handleReplyMessage}
 
         handleRevokeMessage={handleRevokeMessage}
+        handleDeleteMessage={handleDeleteMessage}
         showMemberModal={showMemberModal}
         closeMemberModal={closeMemberModal}
         sessions={sessions}

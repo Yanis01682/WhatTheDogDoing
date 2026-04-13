@@ -7,7 +7,7 @@
   background: rgba(0, 0, 0, 0.06);
   border-radius: 6px;
   padding: 4px 8px;
-  margin-bottom: 4px;
+  margin-top: 4px;
   font-size: 0.8rem;
   display: flex;
   flex-direction: column;
@@ -17,6 +17,17 @@
 
 .message.incoming .message-reply {
   background: rgba(0, 0, 0, 0.05);
+}
+
+.message-reply.reply-deleted {
+  background: transparent;
+  padding: 2px 6px;
+}
+
+.reply-deleted-text {
+  color: #aaa;
+  font-style: italic;
+  font-size: 0.78rem;
 }
 
 .message.outgoing .message-reply {
@@ -54,10 +65,10 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 16px;
-  background: rgba(0, 0, 0, 0.05);
-  border-radius: 8px;
-  margin-bottom: 12px;
+  padding: 8px 16px;
+  background: rgba(0, 0, 0, 0.04);
+  border-top: 1px solid rgba(0, 0, 0, 0.07);
+  flex-shrink: 0;
   animation: slideDown 0.2s ease;
 }
 
@@ -183,6 +194,14 @@
 
 .context-menu-item.revoke:hover {
   background: rgba(255, 107, 107, 0.1);
+}
+
+.context-menu-item.delete {
+  color: #e53e3e;
+}
+
+.context-menu-item.delete:hover {
+  background: rgba(229, 62, 62, 0.08);
 }
 
 .menu-item-icon {

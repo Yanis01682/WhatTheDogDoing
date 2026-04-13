@@ -13,6 +13,7 @@ function Overlays({
   closeContextMenu,
   handleReplyMessage,
   handleRevokeMessage,
+  handleDeleteMessage,
   // 群成员弹层。
   showMemberModal,
   closeMemberModal,
@@ -217,6 +218,12 @@ function Overlays({
               <button className="context-menu-item revoke" onClick={handleRevokeMessage} type="button">
                 <span className="menu-item-icon">↩️</span>
                 <span className="menu-item-text">撤回</span>
+              </button>
+            )}
+            {contextMenu.canDelete && (
+              <button className="context-menu-item delete" onClick={handleDeleteMessage} type="button">
+                <span className="menu-item-icon">🗑️</span>
+                <span className="menu-item-text">删除</span>
               </button>
             )}
           </div>

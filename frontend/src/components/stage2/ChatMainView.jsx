@@ -183,14 +183,6 @@ function ChatMainView({
                 : renderMessageAvatar(peerAvatar, () => handleOpenPeerProfile(msg), peerStatus)
             )}
             <div className="message-content">
-              {msg.replyTo && (
-                <div className="message-reply">
-                  <span className="reply-label">
-                    {msg.replyTo.sender === 'me' ? '回复自己' : '回复'} {msg.replyTo.sender === 'other' ? '对方' : msg.replyTo.sender}:
-                  </span>
-                  <span className="reply-text">{msg.replyTo.text}</span>
-                </div>
-              )}
               <div className="bubble">
                 {msg.type === 'image' && msg.mediaUrl ? (
                   <div className="message-media-wrap">
@@ -204,6 +196,22 @@ function ChatMainView({
                   msg.text
                 )}
               </div>
+              {(msg.replyTo || msg.replyToId) && (
+                <div className={`message-reply${msg.replyTo?.deleted || (!msg.replyTo && msg.replyToId) ? ' reply-deleted' : ''}`}>
+                  {msg.replyTo?.deleted || (!msg.replyTo && msg.replyToId) ? (
+                    <span className="reply-text reply-deleted-text">
+                      {msg.replyTo?.deletedLabel || '该消息已撤回'}
+                    </span>
+                  ) : (
+                    <>
+                      <span className="reply-label">
+                        回复 {msg.replyTo.senderName || (msg.replyTo.sender === 'me' ? '我' : '对方')}:
+                      </span>
+                      <span className="reply-text">{msg.replyTo.text}</span>
+                    </>
+                  )}
+                </div>
+              )}
               <span className="message-time">{msg.time}</span>
             </div>
           </div>
@@ -211,18 +219,18 @@ function ChatMainView({
         })}
       </div>
 
-      <footer className="composer" style={{ height: `${composerHeight}px` }}>
-        {replyToMessage && (
-          <div className="reply-preview">
-            <div className="reply-preview-content">
-              <span className="reply-preview-label">
-                {replyToMessage.sender === 'me' ? '回复自己' : '回复'} {replyToMessage.sender === 'other' ? '对方' : replyToMessage.sender}:
-              </span>
-              <span className="reply-preview-text">{replyToMessage.text}</span>
-            </div>
-            <button className="cancel-reply-btn" type="button" aria-label="取消回复" onClick={cancelReply}>✕</button>
+      {replyToMessage && (
+        <div className="reply-preview">
+          <div className="reply-preview-content">
+            <span className="reply-preview-label">
+              回复 {replyToMessage.senderName || (replyToMessage.sender === 'me' ? '我' : '对方')}:
+            </span>
+            <span className="reply-preview-text">{replyToMessage.text}</span>
           </div>
-        )}
+          <button className="cancel-reply-btn" type="button" aria-label="取消回复" onClick={cancelReply}>✕</button>
+        </div>
+      )}
+      <footer className="composer" style={{ height: `${composerHeight}px` }}>
 
         <div className="composer-toolbar">
           <button className="toolbar-btn" type="button" aria-label="发送图片" onClick={() => imageInputRef.current?.click()}>📷</button>
