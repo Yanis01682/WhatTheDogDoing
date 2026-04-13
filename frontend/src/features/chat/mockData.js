@@ -49,6 +49,7 @@ export const INITIAL_GROUP_MEMBERS = {
 
 // 个人资料初始值：在用户首次登录或本地缓存缺失时作为兜底数据。
 export const INITIAL_PROFILE_DATA = {
+  username: '',
   nickname: '',
   email: '',
   phone: '',

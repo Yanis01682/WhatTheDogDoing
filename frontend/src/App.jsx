@@ -117,7 +117,8 @@ function App() {
     try {
       const profile = await getProfile()
       setProfileData({
-        nickname: profile.nickname || user.username || '',
+        username: user.username || '',
+        nickname: profile.nickname || '',
         email: profile.email || user.email || '',
         phone: profile.phone || '',
         bio: profile.bio || '',
@@ -126,7 +127,8 @@ function App() {
     } catch {
       setProfileData((prev) => ({
         ...prev,
-        nickname: user.username || prev.nickname || '',
+        username: user.username || '',
+        nickname: prev.nickname || '',
         email: user.email ?? prev.email ?? '',
       }))
     }
