@@ -165,6 +165,15 @@ function Overlays({
         avatar: currentSession.avatar
       }
   const currentGroupOwner = (groupMembers[currentChat] || []).find((member) => member.role === 'owner')
+  const currentPrivateStatus = currentPrivateFriend?.status || (currentSession.online > 0 ? 'online' : 'offline')
+  const currentPrivateStatusText = {
+    online: '🟢 在线',
+    busy: '🔴 忙碌',
+    away: '🟡 离开',
+    invisible: '🌙 隐身',
+    offline: '⚫ 离线',
+  }[currentPrivateStatus] || '⚫ 离线'
+
 
   return (
     <>
@@ -512,7 +521,7 @@ function Overlays({
                   <div className="personal-info-section">
                     <div className="personal-avatar-large">{currentSession.avatar}</div>
                     <h2 className="personal-name">{currentSession.title}</h2>
-                    <p className="personal-status">{currentSession.online > 0 ? '🟢 在线' : '⚫ 离线'}</p>
+                    <p className="personal-status">{currentPrivateStatusText}</p>
                   </div>
 
                   <div className="detail-section">
