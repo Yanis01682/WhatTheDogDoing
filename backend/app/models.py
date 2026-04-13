@@ -18,6 +18,10 @@ class User(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
     last_login = Column(DateTime(timezone=True), nullable=True)
     status = Column(String, default="offline")
+    nickname = Column(String(64), nullable=True)
+    gender = Column(String(16), nullable=True)
+    phone = Column(String(32), nullable=True)
+    bio = Column(String(500), nullable=True)
 
 
 class Conversation(Base):

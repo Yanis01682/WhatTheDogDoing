@@ -52,6 +52,19 @@ def initialize_database():
                     connection.execute(text("ALTER TABLE users ADD COLUMN status VARCHAR(32) DEFAULT 'offline'"))
                     connection.commit()
                     logger.info("Migrated: added users.status column")
+            with engine.connect() as connection:
+                for col, definition in [
+                    ("nickname", "VARCHAR(64)"),
+                    ("gender", "VARCHAR(16)"),
+                    ("phone", "VARCHAR(32)"),
+                    ("bio", "VARCHAR(500)"),
+                ]:
+                    try:
+                        connection.execute(text(f"SELECT {col} FROM users LIMIT 1"))
+                    except Exception:
+                        connection.execute(text(f"ALTER TABLE users ADD COLUMN {col} {definition}"))
+                        connection.commit()
+                        logger.info("Migrated: added users.%s column", col)
             logger.info("Database initialized successfully on attempt %s", attempt)
             return
         except SQLAlchemyError as exc:

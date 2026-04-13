@@ -22,7 +22,9 @@ import {
   rejectFriendRequest,
   searchUsers,
   sendChatMessage,
-  updateStatus
+  updateStatus,
+  getProfile,
+  updateProfile
 } from './services/api'
 import AuthView from './components/stage2/AuthView'
 import TopBar from './components/stage2/TopBar'
@@ -109,17 +111,25 @@ function App() {
   const [friendSearchResults, setFriendSearchResults] = useState([])
   const [currentUserId, setCurrentUserId] = useState(null)
 
-  const syncProfileFromUser = (user) => {
+  const syncProfileFromUser = async (user) => {
     if (!user) return
-
-    setProfileData((prev) => ({
-      nickname: user.username || prev.nickname || '',
-      email: user.email ?? prev.email ?? '',
-      phone: prev.phone || '',
-      bio: prev.bio || '',
-      gender: prev.gender || 'male'
-    }))
     setCurrentUserId(user.id ?? null)
+    try {
+      const profile = await getProfile()
+      setProfileData({
+        nickname: profile.nickname || user.username || '',
+        email: profile.email || user.email || '',
+        phone: profile.phone || '',
+        bio: profile.bio || '',
+        gender: profile.gender || 'male',
+      })
+    } catch {
+      setProfileData((prev) => ({
+        ...prev,
+        nickname: user.username || prev.nickname || '',
+        email: user.email ?? prev.email ?? '',
+      }))
+    }
   }
 
   const refreshRealtimeChatData = async (preferredChatId = null) => {
@@ -1201,11 +1211,21 @@ function App() {
   }
 
   // 保存个人信息
-  const handleSaveProfile = () => {
-    // 保存到 localStorage
-    localStorage.setItem('userProfile', JSON.stringify(profileData))
-    setIsEditingProfile(false)
-    alert('个人信息保存成功！')
+  const handleSaveProfile = async () => {
+    try {
+      await updateProfile({
+        nickname: profileData.nickname || null,
+        gender: profileData.gender || null,
+        phone: profileData.phone || null,
+        bio: profileData.bio || null,
+        email: profileData.email || null,
+      })
+      localStorage.setItem('userProfile', JSON.stringify(profileData))
+      setIsEditingProfile(false)
+      alert('个人信息保存成功！')
+    } catch (err) {
+      alert(err.response?.data?.detail || '保存失败，请重试')
+    }
   }
 
   // 取消编辑个人信息

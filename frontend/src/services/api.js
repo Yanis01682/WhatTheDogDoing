@@ -2,7 +2,7 @@ import axios from 'axios'
 
 // frontend/src/services/api.js
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL ?? '',
+  baseURL: '',
   timeout: 10000,
   headers: { 'Content-Type': 'application/json' },
 })
@@ -175,3 +175,13 @@ export function getAuthToken() {
 }
 
 export default apiClient
+
+export async function getProfile() {
+  const res = await apiClient.get('/auth/profile')
+  return res.data
+}
+
+export async function updateProfile(payload) {
+  const res = await apiClient.put('/auth/profile', payload)
+  return res.data
+}

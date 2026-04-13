@@ -183,3 +183,40 @@ def update_status(
     current_user.status = new_status
     db.commit()
     return {"message": "状态更新成功", "status": new_status}
+
+
+class UserProfileUpdate(BaseModel):
+    nickname: Optional[str] = None
+    gender: Optional[str] = None
+    phone: Optional[str] = None
+    bio: Optional[str] = None
+    email: Optional[str] = None
+
+
+class UserProfileResponse(BaseModel):
+    id: int
+    username: str
+    nickname: Optional[str] = None
+    gender: Optional[str] = None
+    phone: Optional[str] = None
+    bio: Optional[str] = None
+    email: Optional[str] = None
+    model_config = ConfigDict(from_attributes=True)
+
+
+@router.get("/profile", response_model=UserProfileResponse)
+def get_profile(current_user: models.User = Depends(get_current_user)):
+    return current_user
+
+
+@router.put("/profile", response_model=UserProfileResponse)
+def update_profile(
+    data: UserProfileUpdate,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    for field, value in data.model_dump(exclude_none=True).items():
+        setattr(current_user, field, value)
+    db.commit()
+    db.refresh(current_user)
+    return current_user
