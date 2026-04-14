@@ -202,6 +202,8 @@ function SidebarPanel({
       }
     }
     
+    const showSessionStatusDot = !session.isGroup && Boolean(friendStatus)
+
     return (
       <li
         key={session.id}
@@ -211,7 +213,7 @@ function SidebarPanel({
       >
         <div className="avatar-wrapper">
           <div className="avatar">{session.avatar}</div>
-          {friendStatus && <span className={`session-status-dot status-${friendStatus}`}></span>}
+          {showSessionStatusDot && <span className={`session-status-dot status-${friendStatus}`}></span>}
         </div>
         <div className="session-main">
           <div className="session-row">
