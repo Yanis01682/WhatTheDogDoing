@@ -16,6 +16,7 @@ import {
   getFriends,
   getMessages,
   getSessions,
+  pinChatSession,
   login,
   logout,
   register,
@@ -23,6 +24,7 @@ import {
   rejectFriendRequest,
   searchUsers,
   sendChatMessage,
+  unpinChatSession,
   revokeMessage,
   updateStatus,
   getProfile,
@@ -155,6 +157,11 @@ function App() {
       }))
     )
     setSessions(fetchedSessions)
+    setPinnedChatIds((prev) => {
+      const localPinnedDynamicIds = prev.filter((id) => dynamicSessions.some((session) => session.id === id))
+      const serverPinnedIds = fetchedSessions.filter((session) => session.isPinned).map((session) => session.id)
+      return [...localPinnedDynamicIds, ...serverPinnedIds.filter((id) => !localPinnedDynamicIds.includes(id))]
+    })
 
     setCurrentChat((prev) => {
       const nextChatId = preferredChatId ?? prev
@@ -296,19 +303,6 @@ function App() {
       }
     }
 
-    // 加载保存的置顶聊天
-    const savedPinnedChats = localStorage.getItem('pinnedChatIds')
-    if (savedPinnedChats) {
-      try {
-        const parsed = JSON.parse(savedPinnedChats)
-        if (Array.isArray(parsed)) {
-          setPinnedChatIds(parsed)
-        }
-      } catch (err) {
-        console.warn('解析 pinnedChatIds 失败，使用默认值', err)
-      }
-    }
-
     // 加载保存的黑名单
     const savedBlacklist = localStorage.getItem('blacklist')
     if (savedBlacklist) {
@@ -420,27 +414,42 @@ function App() {
     localStorage.setItem('archivedGroupIds', JSON.stringify(archivedGroupIds))
   }, [archivedGroupIds])
 
-  // 持久化置顶聊天状态
-  useEffect(() => {
-    localStorage.setItem('pinnedChatIds', JSON.stringify(pinnedChatIds))
-  }, [pinnedChatIds])
-
   // 切换聊天置顶状态
-  const handleTogglePinChat = (chatId) => {
-    setPinnedChatIds(prev => {
-      if (prev.includes(chatId)) {
-        // 取消置顶
-        return prev.filter(id => id !== chatId)
+  const handleTogglePinChat = async (chatId) => {
+    const isDynamicSession = dynamicSessions.some((session) => session.id === chatId)
+    if (isDynamicSession) {
+      setPinnedChatIds((prev) => (
+        prev.includes(chatId) ? prev.filter((id) => id !== chatId) : [chatId, ...prev]
+      ))
+      return
+    }
+
+    const targetSession = sessions.find((session) => session.id === chatId)
+    if (!targetSession) return
+
+    try {
+      if (targetSession.isPinned) {
+        await unpinChatSession(chatId)
       } else {
-        // 添加置顶
-        return [chatId, ...prev]
+        await pinChatSession(chatId)
       }
-    })
+
+      setSessions((prev) => prev.map((session) => (
+        session.id === chatId ? { ...session, isPinned: !session.isPinned } : session
+      )))
+      setPinnedChatIds((prev) => (
+        targetSession.isPinned
+          ? prev.filter((id) => id !== chatId)
+          : [chatId, ...prev.filter((id) => id !== chatId)]
+      ))
+    } catch (err) {
+      alert(err.response?.data?.detail || '更新置顶状态失败')
+    }
   }
 
   // 检查聊天是否置顶
   const isChatPinned = (chatId) => {
-    return pinnedChatIds.includes(chatId)
+    return pinnedChatIds.includes(chatId) || sessions.some((session) => session.id === chatId && session.isPinned)
   }
 
   // 持久化黑名单状态
@@ -1962,6 +1971,7 @@ function App() {
           onOpenFriendChat={handleOpenFriendChat}
           chatlistWidth={chatlistWidth}
           pinnedChatIds={pinnedChatIds}
+          onTogglePinChat={handleTogglePinChat}
           onRemoveFromBlacklist={handleRemoveFromBlacklist}
           onOpenBlacklistChat={handleOpenBlacklistChat}
         />

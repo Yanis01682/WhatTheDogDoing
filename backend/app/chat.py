@@ -172,6 +172,18 @@ def _format_message_time(timestamp):
     return timestamp.strftime("%H:%M")
 
 
+def _is_session_pinned(db: Session, conversation_id: int, user_id: int):
+    return (
+        db.query(models.ConversationPin)
+        .filter(
+            models.ConversationPin.conversation_id == conversation_id,
+            models.ConversationPin.user_id == user_id,
+        )
+        .first()
+        is not None
+    )
+
+
 def _serialize_user(user: models.User):
     display_name = user.username
     # 隐身状态在对方视角显示为离线
@@ -250,6 +262,7 @@ def _serialize_session(db: Session, conversation: models.Conversation, current_u
         "online": online_count,
         "isGroup": conversation.is_group,
         "realName": real_name,
+        "isPinned": _is_session_pinned(db, conversation.id, current_user.id),
     }
 
 
@@ -426,8 +439,54 @@ def read_sessions(
 
     conversations = db.query(models.Conversation).filter(models.Conversation.id.in_(conversation_ids)).all()
     serialized = [_serialize_session(db, conversation, current_user) for conversation in conversations]
-    serialized.sort(key=lambda item: (item["time"], item["id"]), reverse=True)
+    serialized.sort(key=lambda item: (item["isPinned"], item["time"], item["id"]), reverse=True)
     return serialized
+
+
+@router.post("/sessions/{conversation_id}/pin")
+def pin_session(
+    conversation_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    _ensure_conversation_membership(db, conversation_id, current_user.id)
+
+    pin = (
+        db.query(models.ConversationPin)
+        .filter(
+            models.ConversationPin.conversation_id == conversation_id,
+            models.ConversationPin.user_id == current_user.id,
+        )
+        .first()
+    )
+    if not pin:
+        db.add(models.ConversationPin(conversation_id=conversation_id, user_id=current_user.id))
+        db.commit()
+
+    return {"message": "Session pinned successfully", "conversation_id": conversation_id, "isPinned": True}
+
+
+@router.delete("/sessions/{conversation_id}/pin")
+def unpin_session(
+    conversation_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    _ensure_conversation_membership(db, conversation_id, current_user.id)
+
+    pin = (
+        db.query(models.ConversationPin)
+        .filter(
+            models.ConversationPin.conversation_id == conversation_id,
+            models.ConversationPin.user_id == current_user.id,
+        )
+        .first()
+    )
+    if pin:
+        db.delete(pin)
+        db.commit()
+
+    return {"message": "Session unpinned successfully", "conversation_id": conversation_id, "isPinned": False}
 
 
 @router.get("/sessions/{conversation_id}/messages")

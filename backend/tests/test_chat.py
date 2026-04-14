@@ -223,6 +223,47 @@ def test_send_message_response_time_matches_messages_list():
     assert sessions_response.json()[0]["lastMessage"] == "time sync"
 
 
+def test_pin_session_only_affects_current_user_order():
+    headers_alice, _ = register_and_login("pin_alice", "pin_alice@example.com")
+    headers_bob, bob_user = register_and_login("pin_bob", "pin_bob@example.com")
+    headers_cathy, cathy_user = register_and_login("pin_cathy", "pin_cathy@example.com")
+
+    first_res = client.post(
+        "/api/chat/friends/add",
+        json={"friend_id": bob_user["id"]},
+        headers=headers_alice,
+    )
+    second_res = client.post(
+        "/api/chat/friends/add",
+        json={"friend_id": cathy_user["id"]},
+        headers=headers_alice,
+    )
+    first_conversation_id = first_res.json()["conversation_id"]
+    second_conversation_id = second_res.json()["conversation_id"]
+
+    pin_res = client.post(f"/api/chat/sessions/{first_conversation_id}/pin", headers=headers_alice)
+    assert pin_res.status_code == 200
+    assert pin_res.json()["isPinned"] is True
+
+    alice_sessions = client.get("/api/chat/sessions", headers=headers_alice)
+    bob_sessions = client.get("/api/chat/sessions", headers=headers_bob)
+
+    assert alice_sessions.status_code == 200
+    assert alice_sessions.json()[0]["id"] == first_conversation_id
+    assert alice_sessions.json()[0]["isPinned"] is True
+    assert any(session["id"] == second_conversation_id and session["isPinned"] is False for session in alice_sessions.json())
+
+    assert bob_sessions.status_code == 200
+    assert bob_sessions.json()[0]["isPinned"] is False
+
+    unpin_res = client.delete(f"/api/chat/sessions/{first_conversation_id}/pin", headers=headers_alice)
+    assert unpin_res.status_code == 200
+    assert unpin_res.json()["isPinned"] is False
+
+    alice_sessions_after_unpin = client.get("/api/chat/sessions", headers=headers_alice)
+    assert all(session["isPinned"] is False for session in alice_sessions_after_unpin.json())
+
+
 def test_delete_friend_removes_friendship_and_private_session():
     headers_alice, _ = register_and_login("gina", "gina@example.com")
     headers_bob, bob_user = register_and_login("hank", "hank@example.com")

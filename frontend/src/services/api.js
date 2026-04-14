@@ -141,6 +141,16 @@ export async function getMessages(conversationId) {
   return res.data
 }
 
+export async function pinChatSession(conversationId) {
+  const res = await apiClient.post(`/api/chat/sessions/${conversationId}/pin`)
+  return res.data
+}
+
+export async function unpinChatSession(conversationId) {
+  const res = await apiClient.delete(`/api/chat/sessions/${conversationId}/pin`)
+  return res.data
+}
+
 export async function createGroup(name, memberIds) {
   const res = await apiClient.post('/api/chat/groups', {
     name,
