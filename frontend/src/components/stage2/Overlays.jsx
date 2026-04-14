@@ -75,6 +75,14 @@ function Overlays({
   isEditingAnnouncement,
   groupAnnouncement,
   userRole,
+  canRenameCurrentGroup,
+  isEditingGroupName,
+  tempGroupName,
+  setTempGroupName,
+  isRenamingGroup,
+  handleStartEditGroupName,
+  handleSaveGroupName,
+  handleCancelEditGroupName,
   handleStartEditAnnouncement,
   tempAnnouncement,
   setTempAnnouncement,
@@ -462,7 +470,36 @@ function Overlays({
                 <div className="group-chat-detail">
                   <div className="group-info-section">
                     <div className="group-avatar-large">{getCurrentSession().avatar}</div>
-                    <h2 className="group-name">{getCurrentSession().title}</h2>
+                    {!isEditingGroupName ? (
+                      <div className="group-name-row">
+                        <h2 className="group-name">{getCurrentSession().title}</h2>
+                        {canRenameCurrentGroup && (
+                          <button className="edit-group-name-btn" type="button" onClick={handleStartEditGroupName}>
+                            编辑名称
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="group-name-edit-row">
+                        <input
+                          className="group-name-edit-input"
+                          type="text"
+                          value={tempGroupName}
+                          onChange={(e) => setTempGroupName(e.target.value)}
+                          maxLength={64}
+                          placeholder="请输入群聊名称"
+                          autoFocus
+                        />
+                        <div className="group-name-edit-actions">
+                          <button className="save-group-name-btn" type="button" onClick={handleSaveGroupName} disabled={isRenamingGroup}>
+                            {isRenamingGroup ? '保存中...' : '保存'}
+                          </button>
+                          <button className="cancel-group-name-btn" type="button" onClick={handleCancelEditGroupName} disabled={isRenamingGroup}>
+                            取消
+                          </button>
+                        </div>
+                      </div>
+                    )}
                     <p className="group-member-count">{(groupMembers[currentChat] || []).length} 位成员</p>
                   </div>
 

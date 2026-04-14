@@ -353,11 +353,80 @@
   box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
 }
 
+.group-name-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
 .group-name {
-  margin: 0 0 8px 0;
+  margin: 0;
   font-size: 1.5rem;
   font-weight: 600;
   color: #0a0a0a;
+}
+
+.edit-group-name-btn,
+.save-group-name-btn,
+.cancel-group-name-btn {
+  padding: 6px 12px;
+  border: 1px solid #d0d0d0;
+  border-radius: 8px;
+  background: #ffffff;
+  font-size: 0.82rem;
+  color: #555;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.edit-group-name-btn:hover,
+.save-group-name-btn:hover,
+.cancel-group-name-btn:hover {
+  border-color: #667eea;
+  color: #667eea;
+  background: rgba(102, 126, 234, 0.08);
+}
+
+.group-name-edit-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 8px;
+  width: min(360px, 100%);
+}
+
+.group-name-edit-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d9d9d9;
+  border-radius: 10px;
+  font-size: 0.92rem;
+  outline: none;
+}
+
+.group-name-edit-input:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.15);
+}
+
+.group-name-edit-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.save-group-name-btn:disabled,
+.cancel-group-name-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.save-group-name-btn:disabled:hover,
+.cancel-group-name-btn:disabled:hover {
+  border-color: #d0d0d0;
+  color: #555;
+  background: #ffffff;
 }
 
 .group-member-count {
@@ -664,17 +733,52 @@
 }
 
 .night-mode .edit-nickname-btn,
-.night-mode .edit-remark-btn {
+.night-mode .edit-remark-btn,
+.night-mode .edit-group-name-btn,
+.night-mode .save-group-name-btn,
+.night-mode .cancel-group-name-btn {
   border-color: rgba(255, 255, 255, 0.2);
   background: #2a2a2a;
   color: #b0b0b0;
 }
 
 .night-mode .edit-nickname-btn:hover,
-.night-mode .edit-remark-btn:hover {
+.night-mode .edit-remark-btn:hover,
+.night-mode .edit-group-name-btn:hover,
+.night-mode .save-group-name-btn:hover,
+.night-mode .cancel-group-name-btn:hover {
   border-color: #667eea;
   color: #667eea;
   background: rgba(102, 126, 234, 0.1);
+}
+
+.night-mode .group-name {
+  color: #ffffff;
+}
+
+.night-mode .group-name-edit-input {
+  background: #2a2a2a;
+  color: #e0e0e0;
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.night-mode .group-name-edit-input:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+}
+
+.night-mode .save-group-name-btn:disabled,
+.night-mode .cancel-group-name-btn:disabled {
+  border-color: rgba(255, 255, 255, 0.16);
+  background: #2a2a2a;
+  color: #888;
+}
+
+.night-mode .save-group-name-btn:disabled:hover,
+.night-mode .cancel-group-name-btn:disabled:hover {
+  border-color: rgba(255, 255, 255, 0.16);
+  background: #2a2a2a;
+  color: #888;
 }
 
 .night-mode .member-avatar-small {

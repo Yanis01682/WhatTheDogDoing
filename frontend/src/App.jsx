@@ -9,6 +9,7 @@ import {
   changePassword,
   deleteFriend,
   createGroup,
+  renameGroup,
   getFriendRequests,
   getGroupMembers,
   getCurrentUser,
@@ -90,6 +91,11 @@ function App() {
   const [groupAnnouncement, setGroupAnnouncement] = useState('') // 群公告
   const [isEditingAnnouncement, setIsEditingAnnouncement] = useState(false) // 是否正在编辑公告
   const [tempAnnouncement, setTempAnnouncement] = useState('') // 临时公告内容
+  const [isEditingGroupName, setIsEditingGroupName] = useState(false)
+  const [tempGroupName, setTempGroupName] = useState('')
+  const [isRenamingGroup, setIsRenamingGroup] = useState(false)
+  const [groupOwnerIdMap, setGroupOwnerIdMap] = useState({})
+  const [groupOwnerNameMap, setGroupOwnerNameMap] = useState({})
   const [showMemberListModal, setShowMemberListModal] = useState(false) // 成员列表模态框
   const [showInviteMemberModal, setShowInviteMemberModal] = useState(false) // 邀请成员模态框
   const [showCreateGroupModal, setShowCreateGroupModal] = useState(false) // 创建群聊模态框
@@ -196,6 +202,16 @@ function App() {
     setGroupMembers((prev) => ({
       ...prev,
       [conversationId]: fetchedMembers
+    }))
+
+    const owner = fetchedMembers.find((member) => member.role === 'owner')
+    setGroupOwnerIdMap((prev) => ({
+      ...prev,
+      [conversationId]: owner?.id ?? null,
+    }))
+    setGroupOwnerNameMap((prev) => ({
+      ...prev,
+      [conversationId]: owner?.name ?? '',
     }))
 
     const mine = fetchedMembers.find((member) => member.id === currentUserId)
@@ -528,12 +544,19 @@ function App() {
 
   // 打开聊天详情
   const handleOpenChatDetail = () => {
+    const currentSession = getCurrentSession()
+    if (currentSession?.isGroup) {
+      setTempGroupName(currentSession.title || '')
+      setIsEditingGroupName(false)
+    }
     setShowChatDetail(true)
   }
 
   // 关闭聊天详情
   const handleCloseChatDetail = () => {
     setShowChatDetail(false)
+    setIsEditingGroupName(false)
+    setTempGroupName('')
   }
 
   // 获取当前会话信息
@@ -1014,6 +1037,56 @@ function App() {
       handleCloseCreateGroup()
     } catch (err) {
       alert(err.response?.data?.detail || '创建群聊失败')
+    }
+  }
+
+  const handleStartEditGroupName = () => {
+    const currentSession = getCurrentSession()
+    if (!currentSession?.isGroup) return
+    setTempGroupName(currentSession.title || '')
+    setIsEditingGroupName(true)
+  }
+
+  const handleCancelEditGroupName = () => {
+    const currentSession = getCurrentSession()
+    setTempGroupName(currentSession?.title || '')
+    setIsEditingGroupName(false)
+  }
+
+  const handleSaveGroupName = async () => {
+    const currentSession = getCurrentSession()
+    if (!currentSession?.isGroup) return
+
+    const trimmedName = tempGroupName.trim()
+    if (!trimmedName) {
+      alert('请输入群聊名称')
+      return
+    }
+
+    if (trimmedName === currentSession.title) {
+      setIsEditingGroupName(false)
+      return
+    }
+
+    setIsRenamingGroup(true)
+    try {
+      await renameGroup(currentSession.id, trimmedName)
+      setSessions((prev) => prev.map((session) => (
+        session.id === currentSession.id
+          ? { ...session, title: trimmedName, realName: trimmedName }
+          : session
+      )))
+      setDynamicSessions((prev) => prev.map((session) => (
+        session.id === currentSession.id
+          ? { ...session, title: trimmedName, realName: trimmedName }
+          : session
+      )))
+      setIsEditingGroupName(false)
+      alert('群聊名称已更新')
+    } catch (err) {
+      alert(err.response?.data?.detail || '修改群聊名称失败')
+    } finally {
+      setIsRenamingGroup(false)
     }
   }
 
@@ -1813,10 +1886,21 @@ function App() {
 
   // 获取当前群主
   const getCurrentOwner = () => {
+    if (!currentChat) return '未知'
+    const cachedOwnerName = groupOwnerNameMap[currentChat]
+    if (cachedOwnerName) return cachedOwnerName
     const members = groupMembers[currentChat] || []
     const owner = members.find(m => m.role === 'owner')
     return owner ? owner.name : '未知'
   }
+
+  const canRenameCurrentGroup = Boolean(
+    currentChat &&
+    userRole === 'owner' &&
+    groupOwnerIdMap[currentChat] &&
+    currentUserId &&
+    groupOwnerIdMap[currentChat] === currentUserId
+  )
 
   const myRole = { [currentChat]: userRole }
 
@@ -1984,6 +2068,14 @@ function App() {
         isEditingAnnouncement={isEditingAnnouncement}
         groupAnnouncement={groupAnnouncement}
         userRole={userRole}
+        canRenameCurrentGroup={canRenameCurrentGroup}
+        isEditingGroupName={isEditingGroupName}
+        tempGroupName={tempGroupName}
+        setTempGroupName={setTempGroupName}
+        isRenamingGroup={isRenamingGroup}
+        handleStartEditGroupName={handleStartEditGroupName}
+        handleSaveGroupName={handleSaveGroupName}
+        handleCancelEditGroupName={handleCancelEditGroupName}
         handleStartEditAnnouncement={handleStartEditAnnouncement}
         tempAnnouncement={tempAnnouncement}
         setTempAnnouncement={setTempAnnouncement}

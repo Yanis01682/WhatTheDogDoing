@@ -105,14 +105,10 @@ function ChatMainView({
             {currentSession.isGroup ? (
               (() => {
                 const members = groupMembers[currentChat] || []
-                const onlineCount = members.filter((m) => m.online).length
-                return onlineCount > 0 ? (
+                return (
                   <span className="online-status clickable" onClick={handleOpenMemberList} style={{ cursor: 'pointer' }}>
-                    <span className="online-dot"></span>
-                    {onlineCount}人在线
+                    {members.length}位成员
                   </span>
-                ) : (
-                  <span className="online-status">离线</span>
                 )
               })()
             ) : (
@@ -160,9 +156,9 @@ function ChatMainView({
             const member = members.find((m) => m.id === msg.senderId) || members.find((m) => m.name === msg.senderName)
             if (member) {
               peerAvatar = member.avatar || currentSession.avatar
-              peerStatus = member.status || null
             }
           } else if (!currentSession.isGroup && msg.sender !== 'me' && msg.sender !== 'system') {
+            // 私聊才显示头像状态点
             // 私聊中，从好友列表获取状态
             const friend = myFriends.find((f) => f.id === msg.senderId || f.name === msg.senderName)
             if (friend) {

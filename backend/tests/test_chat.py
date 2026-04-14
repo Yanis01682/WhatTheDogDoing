@@ -235,3 +235,71 @@ def test_create_group_and_read_members():
     assert group_members.status_code == 200
     assert group_members.json()[0]["role"] == "owner"
     assert group_members.json()[1]["name"] == "nick"
+
+
+def test_group_owner_can_rename_group():
+    headers_owner, _ = register_and_login("owner_rename", "owner_rename@example.com")
+    headers_member, member_user = register_and_login("member_rename", "member_rename@example.com")
+
+    group_res = client.post(
+        "/api/chat/groups",
+        json={"name": "原群名", "member_ids": [member_user["id"]]},
+        headers=headers_owner,
+    )
+    assert group_res.status_code == 200
+    conversation_id = group_res.json()["conversation_id"]
+
+    rename_res = client.put(
+        f"/api/chat/groups/{conversation_id}",
+        json={"name": "新群名"},
+        headers=headers_owner,
+    )
+    assert rename_res.status_code == 200
+    assert rename_res.json()["title"] == "新群名"
+
+    owner_sessions = client.get("/api/chat/sessions", headers=headers_owner)
+    member_sessions = client.get("/api/chat/sessions", headers=headers_member)
+    assert any(session["title"] == "新群名" and session["isGroup"] for session in owner_sessions.json())
+    assert any(session["title"] == "新群名" and session["isGroup"] for session in member_sessions.json())
+
+
+def test_non_owner_cannot_rename_group():
+    headers_owner, _ = register_and_login("owner_no_rename", "owner_no_rename@example.com")
+    headers_member, member_user = register_and_login("member_no_rename", "member_no_rename@example.com")
+
+    group_res = client.post(
+        "/api/chat/groups",
+        json={"name": "不可改名群", "member_ids": [member_user["id"]]},
+        headers=headers_owner,
+    )
+    assert group_res.status_code == 200
+    conversation_id = group_res.json()["conversation_id"]
+
+    rename_res = client.put(
+        f"/api/chat/groups/{conversation_id}",
+        json={"name": "成员改名"},
+        headers=headers_member,
+    )
+    assert rename_res.status_code == 403
+    assert rename_res.json()["detail"] == "Only group owner can rename group"
+
+
+def test_rename_group_rejects_empty_name():
+    headers_owner, _ = register_and_login("owner_empty_name", "owner_empty_name@example.com")
+    headers_member, member_user = register_and_login("member_empty_name", "member_empty_name@example.com")
+
+    group_res = client.post(
+        "/api/chat/groups",
+        json={"name": "有名群", "member_ids": [member_user["id"]]},
+        headers=headers_owner,
+    )
+    assert group_res.status_code == 200
+    conversation_id = group_res.json()["conversation_id"]
+
+    rename_res = client.put(
+        f"/api/chat/groups/{conversation_id}",
+        json={"name": "   "},
+        headers=headers_owner,
+    )
+    assert rename_res.status_code == 400
+    assert rename_res.json()["detail"] == "Group name cannot be empty"

@@ -74,7 +74,7 @@ function TopBar({
               <span>{userAvatar}</span>
             </div>
           )}
-          <span className="user-status-dot"></span>
+          <span className={`user-status-dot status-${userStatus}`}></span>
         </div>
       </div>
     </header>

@@ -29,6 +29,10 @@ class GroupCreatePayload(BaseModel):
     member_ids: list[int]
 
 
+class GroupRenamePayload(BaseModel):
+    name: str
+
+
 def _get_private_conversation_between(db: Session, user_a_id: int, user_b_id: int):
     conversations = (
         db.query(models.Conversation)
@@ -589,6 +593,51 @@ def create_group(
     return {
         "message": "Group created successfully",
         "conversation_id": conversation.id,
+    }
+
+
+@router.put("/groups/{conversation_id}")
+def rename_group(
+    conversation_id: int,
+    payload: GroupRenamePayload,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    conversation = db.query(models.Conversation).filter(models.Conversation.id == conversation_id).first()
+    if not conversation or not conversation.is_group:
+        raise HTTPException(status_code=404, detail="Group not found")
+
+    membership = (
+        db.query(models.ConversationMember)
+        .filter(
+            models.ConversationMember.conversation_id == conversation_id,
+            models.ConversationMember.user_id == current_user.id,
+        )
+        .first()
+    )
+    if not membership:
+        raise HTTPException(status_code=403, detail="Not a member of this group")
+
+    owner_membership = (
+        db.query(models.ConversationMember)
+        .filter(models.ConversationMember.conversation_id == conversation_id)
+        .order_by(models.ConversationMember.id.asc())
+        .first()
+    )
+    if not owner_membership or owner_membership.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Only group owner can rename group")
+
+    group_name = payload.name.strip()
+    if not group_name:
+        raise HTTPException(status_code=400, detail="Group name cannot be empty")
+
+    conversation.name = group_name
+    db.commit()
+
+    return {
+        "message": "Group renamed successfully",
+        "conversation_id": conversation.id,
+        "title": conversation.name,
     }
 
 

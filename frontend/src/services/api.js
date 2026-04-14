@@ -154,6 +154,11 @@ export async function getGroupMembers(conversationId) {
   return res.data
 }
 
+export async function renameGroup(conversationId, name) {
+  const res = await apiClient.put(`/api/chat/groups/${conversationId}`, { name })
+  return res.data
+}
+
 export async function sendChatMessage(conversationId, content, replyToId) {
   const payload = { conversation_id: conversationId, content }
   if (replyToId) payload.reply_to_id = replyToId
