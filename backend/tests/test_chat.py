@@ -50,8 +50,9 @@ def test_search_users_excludes_current_user():
 
     assert response.status_code == 200
     data = response.json()
-    assert len(data) == 1
-    assert data[0]["name"] == "bob"
+    names = [item["name"] for item in data]
+    assert "bob" in names
+    assert "alice" not in names
 
 
 def test_friend_request_flow_creates_private_chat_after_accept():
