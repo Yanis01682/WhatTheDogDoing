@@ -61,6 +61,8 @@ function SidebarPanel({
   chatlistWidth,
   // 置顶聊天 ID 列表
   pinnedChatIds,
+  // 切换会话置顶状态
+  onTogglePinChat,
   // 黑名单列表
   blacklist,
   // 移出黑名单回调
@@ -117,20 +119,27 @@ function SidebarPanel({
   const normalSessions = filteredSessions.filter((session) => !shouldArchiveGroup(session))
 
   const handleSessionContextMenu = (e, session) => {
-    if (!session.isGroup) return
     e.preventDefault()
     e.stopPropagation()
     setSessionContextMenu({
       x: e.clientX,
       y: e.clientY,
       sessionId: session.id,
-      isArchived: archivedGroupIds.includes(session.id)
+      isArchived: archivedGroupIds.includes(session.id),
+      isGroup: session.isGroup,
+      isPinned: pinnedChatIds.includes(session.id)
     })
   }
 
   const handleToggleArchiveFromMenu = () => {
     if (!sessionContextMenu) return
     onToggleGroupArchive(sessionContextMenu.sessionId)
+    setSessionContextMenu(null)
+  }
+
+  const handleTogglePinFromMenu = () => {
+    if (!sessionContextMenu) return
+    onTogglePinChat(sessionContextMenu.sessionId)
     setSessionContextMenu(null)
   }
 
@@ -504,9 +513,14 @@ function SidebarPanel({
           style={{ top: sessionContextMenu.y, left: sessionContextMenu.x }}
           onClick={(e) => e.stopPropagation()}
         >
-          <button type="button" className="session-context-item" onClick={handleToggleArchiveFromMenu}>
-            {sessionContextMenu.isArchived ? '移出收纳' : '加入收纳'}
+          <button type="button" className="session-context-item" onClick={handleTogglePinFromMenu}>
+            {sessionContextMenu.isPinned ? '取消置顶' : '置顶会话'}
           </button>
+          {sessionContextMenu.isGroup && (
+            <button type="button" className="session-context-item" onClick={handleToggleArchiveFromMenu}>
+              {sessionContextMenu.isArchived ? '移出收纳' : '加入收纳'}
+            </button>
+          )}
         </div>
       )}
     </aside>

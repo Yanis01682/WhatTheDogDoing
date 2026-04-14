@@ -50,8 +50,9 @@ def test_search_users_excludes_current_user():
 
     assert response.status_code == 200
     data = response.json()
-    assert len(data) == 1
-    assert data[0]["name"] == "bob"
+    names = [item["name"] for item in data]
+    assert "bob" in names
+    assert "alice" not in names
 
 
 def test_friend_request_flow_creates_private_chat_after_accept():
@@ -183,13 +184,19 @@ def test_send_and_read_messages():
     assert messages[0]["text"] == "hello frank"
     assert messages[0]["sender"] == "other"
     assert messages[0]["senderName"] == "eve"
-    assert len(messages[0]["time"]) == 5
-    assert messages[0]["time"][2] == ":"
+    assert len(messages[0]["time"]) == 17
+    assert messages[0]["time"][4] == "年"
+    assert messages[0]["time"][7] == "月"
+    assert messages[0]["time"][10] == "日"
+    assert messages[0]["time"][14] == ":"
 
     alice_sessions = client.get("/api/chat/sessions", headers=headers_alice)
     assert alice_sessions.status_code == 200
-    assert len(alice_sessions.json()[0]["time"]) == 5
-    assert alice_sessions.json()[0]["time"][2] == ":"
+    assert len(alice_sessions.json()[0]["time"]) == 17
+    assert alice_sessions.json()[0]["time"][4] == "年"
+    assert alice_sessions.json()[0]["time"][7] == "月"
+    assert alice_sessions.json()[0]["time"][10] == "日"
+    assert alice_sessions.json()[0]["time"][14] == ":"
     assert alice_sessions.json()[0]["lastMessage"] == "hello frank"
 
 
@@ -221,6 +228,47 @@ def test_send_message_response_time_matches_messages_list():
     assert sessions_response.status_code == 200
     assert sessions_response.json()[0]["time"] == sent_time
     assert sessions_response.json()[0]["lastMessage"] == "time sync"
+
+
+def test_pin_session_only_affects_current_user_order():
+    headers_alice, _ = register_and_login("pin_alice", "pin_alice@example.com")
+    headers_bob, bob_user = register_and_login("pin_bob", "pin_bob@example.com")
+    headers_cathy, cathy_user = register_and_login("pin_cathy", "pin_cathy@example.com")
+
+    first_res = client.post(
+        "/api/chat/friends/add",
+        json={"friend_id": bob_user["id"]},
+        headers=headers_alice,
+    )
+    second_res = client.post(
+        "/api/chat/friends/add",
+        json={"friend_id": cathy_user["id"]},
+        headers=headers_alice,
+    )
+    first_conversation_id = first_res.json()["conversation_id"]
+    second_conversation_id = second_res.json()["conversation_id"]
+
+    pin_res = client.post(f"/api/chat/sessions/{first_conversation_id}/pin", headers=headers_alice)
+    assert pin_res.status_code == 200
+    assert pin_res.json()["isPinned"] is True
+
+    alice_sessions = client.get("/api/chat/sessions", headers=headers_alice)
+    bob_sessions = client.get("/api/chat/sessions", headers=headers_bob)
+
+    assert alice_sessions.status_code == 200
+    assert alice_sessions.json()[0]["id"] == first_conversation_id
+    assert alice_sessions.json()[0]["isPinned"] is True
+    assert any(session["id"] == second_conversation_id and session["isPinned"] is False for session in alice_sessions.json())
+
+    assert bob_sessions.status_code == 200
+    assert bob_sessions.json()[0]["isPinned"] is False
+
+    unpin_res = client.delete(f"/api/chat/sessions/{first_conversation_id}/pin", headers=headers_alice)
+    assert unpin_res.status_code == 200
+    assert unpin_res.json()["isPinned"] is False
+
+    alice_sessions_after_unpin = client.get("/api/chat/sessions", headers=headers_alice)
+    assert all(session["isPinned"] is False for session in alice_sessions_after_unpin.json())
 
 
 def test_delete_friend_removes_friendship_and_private_session():
