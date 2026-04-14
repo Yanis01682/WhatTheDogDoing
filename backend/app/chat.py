@@ -79,6 +79,87 @@ def _ensure_private_friendship(db: Session, user_id: int, friend_id: int):
     return friendship
 
 
+def _ensure_not_self_friend(current_user_id: int, friend_id: int):
+    if friend_id == current_user_id:
+        raise HTTPException(status_code=400, detail=ERR_CANNOT_ADD_SELF)
+
+
+def _get_user_or_404(db: Session, user_id: int):
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail=ERR_USER_NOT_FOUND)
+    return user
+
+
+def _get_pending_friend_request_or_404(db: Session, request_id: int, current_user_id: int):
+    request = (
+        db.query(models.Friendship)
+        .filter(
+            models.Friendship.id == request_id,
+            models.Friendship.friend_id == current_user_id,
+            models.Friendship.status == "pending",
+        )
+        .first()
+    )
+    if not request:
+        raise HTTPException(status_code=404, detail=ERR_FRIEND_REQUEST_NOT_FOUND)
+    return request
+
+
+def _ensure_bidirectional_friendship(db: Session, user_id: int, friend_id: int):
+    _ensure_private_friendship(db, user_id, friend_id)
+    _ensure_private_friendship(db, friend_id, user_id)
+
+
+def _get_group_or_404(db: Session, conversation_id: int):
+    conversation = db.query(models.Conversation).filter(models.Conversation.id == conversation_id).first()
+    if not conversation or not conversation.is_group:
+        raise HTTPException(status_code=404, detail=ERR_GROUP_NOT_FOUND)
+    return conversation
+
+
+def _get_conversation_membership_or_403(db: Session, conversation_id: int, user_id: int, detail: str):
+    membership = (
+        db.query(models.ConversationMember)
+        .filter(
+            models.ConversationMember.conversation_id == conversation_id,
+            models.ConversationMember.user_id == user_id,
+        )
+        .first()
+    )
+    if not membership:
+        raise HTTPException(status_code=403, detail=detail)
+    return membership
+
+
+def _ensure_group_membership(db: Session, conversation_id: int, user_id: int):
+    return _get_conversation_membership_or_403(db, conversation_id, user_id, ERR_NOT_MEMBER_GROUP)
+
+
+def _ensure_conversation_membership(db: Session, conversation_id: int, user_id: int):
+    return _get_conversation_membership_or_403(db, conversation_id, user_id, ERR_NOT_MEMBER_CONVERSATION)
+
+
+def _create_private_conversation(db: Session, user_a_id: int, user_b_id: int):
+    conversation = models.Conversation(is_group=False, name=None)
+    db.add(conversation)
+    db.flush()
+    db.add_all(
+        [
+            models.ConversationMember(conversation_id=conversation.id, user_id=user_a_id),
+            models.ConversationMember(conversation_id=conversation.id, user_id=user_b_id),
+        ]
+    )
+    return conversation
+
+
+def _get_or_create_private_conversation(db: Session, user_a_id: int, user_b_id: int):
+    conversation = _get_private_conversation_between(db, user_a_id, user_b_id)
+    if conversation:
+        return conversation
+    return _create_private_conversation(db, user_a_id, user_b_id)
+
+
 def _serialize_user(user: models.User):
     display_name = user.username
     # 隐身状态在对方视角显示为离线
@@ -270,12 +351,9 @@ def send_friend_request(
     current_user: models.User = Depends(auth.get_current_user),
 ):
     friend_id = payload.friend_id
-    if friend_id == current_user.id:
-        raise HTTPException(status_code=400, detail=ERR_CANNOT_ADD_SELF)
+    _ensure_not_self_friend(current_user.id, friend_id)
 
-    target_user = db.query(models.User).filter(models.User.id == friend_id).first()
-    if not target_user:
-        raise HTTPException(status_code=404, detail=ERR_USER_NOT_FOUND)
+    target_user = _get_user_or_404(db, friend_id)
 
     accepted_friendship = (
         db.query(models.Friendship)
@@ -346,16 +424,7 @@ def read_messages(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user),
 ):
-    membership = (
-        db.query(models.ConversationMember)
-        .filter(
-            models.ConversationMember.conversation_id == conversation_id,
-            models.ConversationMember.user_id == current_user.id,
-        )
-        .first()
-    )
-    if not membership:
-        raise HTTPException(status_code=403, detail=ERR_NOT_MEMBER_CONVERSATION)
+    _ensure_conversation_membership(db, conversation_id, current_user.id)
 
     messages = (
         db.query(models.Message)
@@ -376,44 +445,13 @@ def add_friend(
     current_user: models.User = Depends(auth.get_current_user),
 ):
     friend_id = payload.friend_id
-    if friend_id == current_user.id:
-        raise HTTPException(status_code=400, detail=ERR_CANNOT_ADD_SELF)
+    _ensure_not_self_friend(current_user.id, friend_id)
 
-    target_user = db.query(models.User).filter(models.User.id == friend_id).first()
-    if not target_user:
-        raise HTTPException(status_code=404, detail=ERR_USER_NOT_FOUND)
+    target_user = _get_user_or_404(db, friend_id)
 
-    existing = (
-        db.query(models.Friendship)
-        .filter(models.Friendship.user_id == current_user.id, models.Friendship.friend_id == friend_id)
-        .first()
-    )
-    if existing:
-        existing.status = "accepted"
-    else:
-        db.add(models.Friendship(user_id=current_user.id, friend_id=friend_id, status="accepted"))
+    _ensure_bidirectional_friendship(db, current_user.id, friend_id)
 
-    reverse_existing = (
-        db.query(models.Friendship)
-        .filter(models.Friendship.user_id == friend_id, models.Friendship.friend_id == current_user.id)
-        .first()
-    )
-    if reverse_existing:
-        reverse_existing.status = "accepted"
-    else:
-        db.add(models.Friendship(user_id=friend_id, friend_id=current_user.id, status="accepted"))
-
-    conversation = _get_private_conversation_between(db, current_user.id, friend_id)
-    if not conversation:
-        conversation = models.Conversation(is_group=False, name=None)
-        db.add(conversation)
-        db.flush()
-        db.add_all(
-            [
-                models.ConversationMember(conversation_id=conversation.id, user_id=current_user.id),
-                models.ConversationMember(conversation_id=conversation.id, user_id=friend_id),
-            ]
-        )
+    conversation = _get_or_create_private_conversation(db, current_user.id, friend_id)
 
     db.commit()
     return {
@@ -429,36 +467,14 @@ def accept_friend_request(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user),
 ):
-    request = (
-        db.query(models.Friendship)
-        .filter(
-            models.Friendship.id == request_id,
-            models.Friendship.friend_id == current_user.id,
-            models.Friendship.status == "pending",
-        )
-        .first()
-    )
-    if not request:
-        raise HTTPException(status_code=404, detail=ERR_FRIEND_REQUEST_NOT_FOUND)
+    request = _get_pending_friend_request_or_404(db, request_id, current_user.id)
 
-    target_user = db.query(models.User).filter(models.User.id == request.user_id).first()
-    if not target_user:
-        raise HTTPException(status_code=404, detail=ERR_USER_NOT_FOUND)
+    target_user = _get_user_or_404(db, request.user_id)
 
     request.status = "accepted"
-    _ensure_private_friendship(db, current_user.id, request.user_id)
+    _ensure_bidirectional_friendship(db, current_user.id, request.user_id)
 
-    conversation = _get_private_conversation_between(db, current_user.id, request.user_id)
-    if not conversation:
-        conversation = models.Conversation(is_group=False, name=None)
-        db.add(conversation)
-        db.flush()
-        db.add_all(
-            [
-                models.ConversationMember(conversation_id=conversation.id, user_id=current_user.id),
-                models.ConversationMember(conversation_id=conversation.id, user_id=request.user_id),
-            ]
-        )
+    conversation = _get_or_create_private_conversation(db, current_user.id, request.user_id)
 
     db.commit()
     return {
@@ -474,17 +490,7 @@ def reject_friend_request(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user),
 ):
-    request = (
-        db.query(models.Friendship)
-        .filter(
-            models.Friendship.id == request_id,
-            models.Friendship.friend_id == current_user.id,
-            models.Friendship.status == "pending",
-        )
-        .first()
-    )
-    if not request:
-        raise HTTPException(status_code=404, detail=ERR_FRIEND_REQUEST_NOT_FOUND)
+    request = _get_pending_friend_request_or_404(db, request_id, current_user.id)
 
     db.delete(request)
     db.commit()
@@ -497,9 +503,7 @@ def delete_friend(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user),
 ):
-    target_user = db.query(models.User).filter(models.User.id == friend_id).first()
-    if not target_user:
-        raise HTTPException(status_code=404, detail=ERR_USER_NOT_FOUND)
+    target_user = _get_user_or_404(db, friend_id)
 
     friendships = (
         db.query(models.Friendship)
@@ -546,16 +550,7 @@ def send_message(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user),
 ):
-    membership = (
-        db.query(models.ConversationMember)
-        .filter(
-            models.ConversationMember.conversation_id == payload.conversation_id,
-            models.ConversationMember.user_id == current_user.id,
-        )
-        .first()
-    )
-    if not membership:
-        raise HTTPException(status_code=403, detail=ERR_NOT_MEMBER_CONVERSATION)
+    _ensure_conversation_membership(db, payload.conversation_id, current_user.id)
 
     content = payload.content.strip()
     if not content:
@@ -614,20 +609,8 @@ def rename_group(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user),
 ):
-    conversation = db.query(models.Conversation).filter(models.Conversation.id == conversation_id).first()
-    if not conversation or not conversation.is_group:
-        raise HTTPException(status_code=404, detail=ERR_GROUP_NOT_FOUND)
-
-    membership = (
-        db.query(models.ConversationMember)
-        .filter(
-            models.ConversationMember.conversation_id == conversation_id,
-            models.ConversationMember.user_id == current_user.id,
-        )
-        .first()
-    )
-    if not membership:
-        raise HTTPException(status_code=403, detail=ERR_NOT_MEMBER_GROUP)
+    conversation = _get_group_or_404(db, conversation_id)
+    _ensure_group_membership(db, conversation_id, current_user.id)
 
     owner_membership = (
         db.query(models.ConversationMember)
@@ -658,20 +641,8 @@ def read_group_members(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user),
 ):
-    conversation = db.query(models.Conversation).filter(models.Conversation.id == conversation_id).first()
-    if not conversation or not conversation.is_group:
-        raise HTTPException(status_code=404, detail=ERR_GROUP_NOT_FOUND)
-
-    membership = (
-        db.query(models.ConversationMember)
-        .filter(
-            models.ConversationMember.conversation_id == conversation_id,
-            models.ConversationMember.user_id == current_user.id,
-        )
-        .first()
-    )
-    if not membership:
-        raise HTTPException(status_code=403, detail=ERR_NOT_MEMBER_GROUP)
+    _get_group_or_404(db, conversation_id)
+    _ensure_group_membership(db, conversation_id, current_user.id)
 
     members = (
         db.query(models.ConversationMember)
