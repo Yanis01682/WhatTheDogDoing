@@ -10,6 +10,17 @@ from .database import get_db
 
 router = APIRouter()
 
+ERR_CANNOT_ADD_SELF = "Cannot add yourself as a friend"
+ERR_USER_NOT_FOUND = "User not found"
+ERR_NOT_MEMBER_CONVERSATION = "Not a member of this conversation"
+ERR_FRIEND_REQUEST_NOT_FOUND = "Friend request not found"
+ERR_FRIENDSHIP_NOT_FOUND = "Friendship not found"
+ERR_MESSAGE_CONTENT_EMPTY = "Message content cannot be empty"
+ERR_GROUP_NAME_EMPTY = "Group name cannot be empty"
+ERR_GROUP_NOT_FOUND = "Group not found"
+ERR_NOT_MEMBER_GROUP = "Not a member of this group"
+ERR_ONLY_OWNER_CAN_RENAME = "Only group owner can rename group"
+
 
 class FriendAddPayload(BaseModel):
     friend_id: int
@@ -260,11 +271,11 @@ def send_friend_request(
 ):
     friend_id = payload.friend_id
     if friend_id == current_user.id:
-        raise HTTPException(status_code=400, detail="Cannot add yourself as a friend")
+        raise HTTPException(status_code=400, detail=ERR_CANNOT_ADD_SELF)
 
     target_user = db.query(models.User).filter(models.User.id == friend_id).first()
     if not target_user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail=ERR_USER_NOT_FOUND)
 
     accepted_friendship = (
         db.query(models.Friendship)
@@ -344,7 +355,7 @@ def read_messages(
         .first()
     )
     if not membership:
-        raise HTTPException(status_code=403, detail="Not a member of this conversation")
+        raise HTTPException(status_code=403, detail=ERR_NOT_MEMBER_CONVERSATION)
 
     messages = (
         db.query(models.Message)
@@ -366,11 +377,11 @@ def add_friend(
 ):
     friend_id = payload.friend_id
     if friend_id == current_user.id:
-        raise HTTPException(status_code=400, detail="Cannot add yourself as a friend")
+        raise HTTPException(status_code=400, detail=ERR_CANNOT_ADD_SELF)
 
     target_user = db.query(models.User).filter(models.User.id == friend_id).first()
     if not target_user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail=ERR_USER_NOT_FOUND)
 
     existing = (
         db.query(models.Friendship)
@@ -428,11 +439,11 @@ def accept_friend_request(
         .first()
     )
     if not request:
-        raise HTTPException(status_code=404, detail="Friend request not found")
+        raise HTTPException(status_code=404, detail=ERR_FRIEND_REQUEST_NOT_FOUND)
 
     target_user = db.query(models.User).filter(models.User.id == request.user_id).first()
     if not target_user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail=ERR_USER_NOT_FOUND)
 
     request.status = "accepted"
     _ensure_private_friendship(db, current_user.id, request.user_id)
@@ -473,7 +484,7 @@ def reject_friend_request(
         .first()
     )
     if not request:
-        raise HTTPException(status_code=404, detail="Friend request not found")
+        raise HTTPException(status_code=404, detail=ERR_FRIEND_REQUEST_NOT_FOUND)
 
     db.delete(request)
     db.commit()
@@ -488,7 +499,7 @@ def delete_friend(
 ):
     target_user = db.query(models.User).filter(models.User.id == friend_id).first()
     if not target_user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail=ERR_USER_NOT_FOUND)
 
     friendships = (
         db.query(models.Friendship)
@@ -501,7 +512,7 @@ def delete_friend(
         .all()
     )
     if not friendships:
-        raise HTTPException(status_code=404, detail="Friendship not found")
+        raise HTTPException(status_code=404, detail=ERR_FRIENDSHIP_NOT_FOUND)
 
     conversation = _get_private_conversation_between(db, current_user.id, friend_id)
 
@@ -544,11 +555,11 @@ def send_message(
         .first()
     )
     if not membership:
-        raise HTTPException(status_code=403, detail="Not a member of this conversation")
+        raise HTTPException(status_code=403, detail=ERR_NOT_MEMBER_CONVERSATION)
 
     content = payload.content.strip()
     if not content:
-        raise HTTPException(status_code=400, detail="Message content cannot be empty")
+        raise HTTPException(status_code=400, detail=ERR_MESSAGE_CONTENT_EMPTY)
 
     new_message = models.Message(
         conversation_id=payload.conversation_id,
@@ -572,7 +583,7 @@ def create_group(
 ):
     group_name = payload.name.strip()
     if not group_name:
-        raise HTTPException(status_code=400, detail="Group name cannot be empty")
+        raise HTTPException(status_code=400, detail=ERR_GROUP_NAME_EMPTY)
 
     member_ids = list(dict.fromkeys([current_user.id, *payload.member_ids]))
     if len(member_ids) < 2:
@@ -605,7 +616,7 @@ def rename_group(
 ):
     conversation = db.query(models.Conversation).filter(models.Conversation.id == conversation_id).first()
     if not conversation or not conversation.is_group:
-        raise HTTPException(status_code=404, detail="Group not found")
+        raise HTTPException(status_code=404, detail=ERR_GROUP_NOT_FOUND)
 
     membership = (
         db.query(models.ConversationMember)
@@ -616,7 +627,7 @@ def rename_group(
         .first()
     )
     if not membership:
-        raise HTTPException(status_code=403, detail="Not a member of this group")
+        raise HTTPException(status_code=403, detail=ERR_NOT_MEMBER_GROUP)
 
     owner_membership = (
         db.query(models.ConversationMember)
@@ -625,11 +636,11 @@ def rename_group(
         .first()
     )
     if not owner_membership or owner_membership.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Only group owner can rename group")
+        raise HTTPException(status_code=403, detail=ERR_ONLY_OWNER_CAN_RENAME)
 
     group_name = payload.name.strip()
     if not group_name:
-        raise HTTPException(status_code=400, detail="Group name cannot be empty")
+        raise HTTPException(status_code=400, detail=ERR_GROUP_NAME_EMPTY)
 
     conversation.name = group_name
     db.commit()
@@ -649,7 +660,7 @@ def read_group_members(
 ):
     conversation = db.query(models.Conversation).filter(models.Conversation.id == conversation_id).first()
     if not conversation or not conversation.is_group:
-        raise HTTPException(status_code=404, detail="Group not found")
+        raise HTTPException(status_code=404, detail=ERR_GROUP_NOT_FOUND)
 
     membership = (
         db.query(models.ConversationMember)
@@ -660,7 +671,7 @@ def read_group_members(
         .first()
     )
     if not membership:
-        raise HTTPException(status_code=403, detail="Not a member of this group")
+        raise HTTPException(status_code=403, detail=ERR_NOT_MEMBER_GROUP)
 
     members = (
         db.query(models.ConversationMember)
