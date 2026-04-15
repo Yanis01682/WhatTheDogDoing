@@ -4,7 +4,7 @@ import time
 
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import text
+from sqlalchemy import or_, text
 from sqlalchemy.exc import SQLAlchemyError
 from .auth import UserStatus, router as auth_router, get_current_user
 from .chat import router as chat_router
@@ -33,6 +33,13 @@ def read_root():
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+def _delete_conversation_with_related_data(db: Session, conversation_id: int):
+    db.query(models.ConversationPin).filter(models.ConversationPin.conversation_id == conversation_id).delete()
+    db.query(models.Message).filter(models.Message.conversation_id == conversation_id).delete()
+    db.query(models.ConversationMember).filter(models.ConversationMember.conversation_id == conversation_id).delete()
+    db.query(models.Conversation).filter(models.Conversation.id == conversation_id).delete()
 
 
 @app.on_event("startup")
@@ -65,6 +72,13 @@ def initialize_database():
                         connection.execute(text(f"ALTER TABLE users ADD COLUMN {col} {definition}"))
                         connection.commit()
                         logger.info("Migrated: added users.%s column", col)
+            with engine.connect() as connection:
+                try:
+                    connection.execute(text("SELECT reply_to_id FROM messages LIMIT 1"))
+                except Exception:
+                    connection.execute(text("ALTER TABLE messages ADD COLUMN reply_to_id INTEGER"))
+                    connection.commit()
+                    logger.info("Migrated: added messages.reply_to_id column")
             logger.info("Database initialized successfully on attempt %s", attempt)
             return
         except SQLAlchemyError as exc:
@@ -76,6 +90,50 @@ def initialize_database():
 
 @app.delete("/api/users/me")
 def delete_account(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    memberships = (
+        db.query(models.ConversationMember)
+        .filter(models.ConversationMember.user_id == current_user.id)
+        .all()
+    )
+
+    private_conversation_ids = []
+    group_conversation_ids = []
+    for membership in memberships:
+        conversation = (
+            db.query(models.Conversation)
+            .filter(models.Conversation.id == membership.conversation_id)
+            .first()
+        )
+        if not conversation:
+            continue
+        if conversation.is_group:
+            group_conversation_ids.append(conversation.id)
+        else:
+            private_conversation_ids.append(conversation.id)
+
+    for conversation_id in set(private_conversation_ids):
+        _delete_conversation_with_related_data(db, conversation_id)
+
+    db.query(models.Friendship).filter(
+        or_(
+            models.Friendship.user_id == current_user.id,
+            models.Friendship.friend_id == current_user.id,
+        )
+    ).delete()
+
+    db.query(models.ConversationPin).filter(models.ConversationPin.user_id == current_user.id).delete()
+    db.query(models.Message).filter(models.Message.sender_id == current_user.id).delete()
+    db.query(models.ConversationMember).filter(models.ConversationMember.user_id == current_user.id).delete()
+
+    for conversation_id in set(group_conversation_ids):
+        remaining_member_count = (
+            db.query(models.ConversationMember)
+            .filter(models.ConversationMember.conversation_id == conversation_id)
+            .count()
+        )
+        if remaining_member_count == 0:
+            _delete_conversation_with_related_data(db, conversation_id)
+
     db.delete(current_user)
     db.commit()
     return {"message": "Account deleted successfully"}

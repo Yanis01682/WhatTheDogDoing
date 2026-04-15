@@ -75,6 +75,10 @@ def get_user_by_username(db: Session, username: str):
     return user
 
 
+def get_user_by_email(db: Session, email: str):
+    return db.query(models.User).filter(models.User.email == email).first()
+
+
 def authenticate_user(db: Session, username: str, password: str):
     user = get_user_by_username(db, username)
     if not user or not verify_password(password, user.hashed_password):
@@ -87,6 +91,8 @@ def register(user_data: UserAuth, db: Session = Depends(get_db)):
     db_user = get_user_by_username(db, username=user_data.username)
     if db_user:
         raise HTTPException(status_code=400, detail="Username already taken")
+    if user_data.email and get_user_by_email(db, user_data.email):
+        raise HTTPException(status_code=400, detail="Email already taken")
     new_user = models.User(
         username=user_data.username,
         email=user_data.email if user_data.email else None,

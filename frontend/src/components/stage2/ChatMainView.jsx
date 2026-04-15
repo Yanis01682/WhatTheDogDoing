@@ -170,7 +170,7 @@ function ChatMainView({
           <div
             key={msg.id}
             data-message-index={index}
-            className={`message ${msg.sender === 'me' ? 'outgoing' : msg.sender === 'system' ? 'system-message' : 'incoming'} ${msg.replyTo ? 'has-reply' : ''}`}
+            className={`message ${msg.sender === 'me' ? 'outgoing' : msg.sender === 'system' ? 'system-message' : 'incoming'} ${msg.replyTo || msg.replyToId ? 'has-reply' : ''}`}
             onContextMenu={(e) => handleMessageContextMenu(e, msg)}
           >
             {msg.sender !== 'system' && (

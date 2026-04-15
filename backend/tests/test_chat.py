@@ -50,8 +50,9 @@ def test_search_users_excludes_current_user():
 
     assert response.status_code == 200
     data = response.json()
-    assert len(data) == 1
-    assert data[0]["name"] == "bob"
+    names = [item["name"] for item in data]
+    assert "bob" in names
+    assert "alice" not in names
 
 
 def test_friend_request_flow_creates_private_chat_after_accept():
@@ -183,6 +184,227 @@ def test_send_and_read_messages():
     assert messages[0]["text"] == "hello frank"
     assert messages[0]["sender"] == "other"
     assert messages[0]["senderName"] == "eve"
+    assert len(messages[0]["time"]) == 17
+    assert messages[0]["time"][4] == "年"
+    assert messages[0]["time"][7] == "月"
+    assert messages[0]["time"][10] == "日"
+    assert messages[0]["time"][14] == ":"
+
+    alice_sessions = client.get("/api/chat/sessions", headers=headers_alice)
+    assert alice_sessions.status_code == 200
+    assert len(alice_sessions.json()[0]["time"]) == 17
+    assert alice_sessions.json()[0]["time"][4] == "年"
+    assert alice_sessions.json()[0]["time"][7] == "月"
+    assert alice_sessions.json()[0]["time"][10] == "日"
+    assert alice_sessions.json()[0]["time"][14] == ":"
+    assert alice_sessions.json()[0]["lastMessage"] == "hello frank"
+
+
+def test_send_message_response_time_matches_messages_list():
+    headers_alice, _ = register_and_login("time_alice", "time_alice@example.com")
+    headers_bob, bob_user = register_and_login("time_bob", "time_bob@example.com")
+
+    add_friend_res = client.post(
+        "/api/chat/friends/add",
+        json={"friend_id": bob_user["id"]},
+        headers=headers_alice,
+    )
+    conversation_id = add_friend_res.json()["conversation_id"]
+
+    send_response = client.post(
+        "/api/chat/messages/send",
+        json={"conversation_id": conversation_id, "content": "time sync"},
+        headers=headers_alice,
+    )
+    assert send_response.status_code == 200
+    sent_time = send_response.json()["message"]["time"]
+
+    read_response = client.get(f"/api/chat/sessions/{conversation_id}/messages", headers=headers_alice)
+    assert read_response.status_code == 200
+    assert len(read_response.json()) == 1
+    assert read_response.json()[0]["time"] == sent_time
+
+    sessions_response = client.get("/api/chat/sessions", headers=headers_alice)
+    assert sessions_response.status_code == 200
+    assert sessions_response.json()[0]["time"] == sent_time
+    assert sessions_response.json()[0]["lastMessage"] == "time sync"
+
+
+def test_sender_can_revoke_own_message():
+    headers_alice, _ = register_and_login("revoke_alice", "revoke_alice@example.com")
+    headers_bob, bob_user = register_and_login("revoke_bob", "revoke_bob@example.com")
+
+    add_friend_res = client.post(
+        "/api/chat/friends/add",
+        json={"friend_id": bob_user["id"]},
+        headers=headers_alice,
+    )
+    conversation_id = add_friend_res.json()["conversation_id"]
+
+    send_response = client.post(
+        "/api/chat/messages/send",
+        json={"conversation_id": conversation_id, "content": "revoke me"},
+        headers=headers_alice,
+    )
+    assert send_response.status_code == 200
+    message_id = send_response.json()["message"]["id"]
+
+    revoke_response = client.delete(f"/api/chat/messages/{message_id}", headers=headers_alice)
+    assert revoke_response.status_code == 200
+    assert revoke_response.json()["message_id"] == message_id
+
+    read_response = client.get(f"/api/chat/sessions/{conversation_id}/messages", headers=headers_bob)
+    assert read_response.status_code == 200
+    assert read_response.json() == []
+
+
+def test_non_sender_cannot_revoke_other_users_message():
+    headers_alice, _ = register_and_login("revoke_guard_alice", "revoke_guard_alice@example.com")
+    headers_bob, bob_user = register_and_login("revoke_guard_bob", "revoke_guard_bob@example.com")
+
+    add_friend_res = client.post(
+        "/api/chat/friends/add",
+        json={"friend_id": bob_user["id"]},
+        headers=headers_alice,
+    )
+    conversation_id = add_friend_res.json()["conversation_id"]
+
+    send_response = client.post(
+        "/api/chat/messages/send",
+        json={"conversation_id": conversation_id, "content": "hands off"},
+        headers=headers_alice,
+    )
+    assert send_response.status_code == 200
+    message_id = send_response.json()["message"]["id"]
+
+    revoke_response = client.delete(f"/api/chat/messages/{message_id}", headers=headers_bob)
+    assert revoke_response.status_code == 403
+    assert revoke_response.json()["detail"] == "Only the sender can revoke this message"
+
+    read_response = client.get(f"/api/chat/sessions/{conversation_id}/messages", headers=headers_alice)
+    assert read_response.status_code == 200
+    assert len(read_response.json()) == 1
+    assert read_response.json()[0]["id"] == message_id
+
+
+
+def test_send_message_persists_reply_metadata():
+    headers_alice, _ = register_and_login("reply_alice", "reply_alice@example.com")
+    headers_bob, bob_user = register_and_login("reply_bob", "reply_bob@example.com")
+
+    add_friend_res = client.post(
+        "/api/chat/friends/add",
+        json={"friend_id": bob_user["id"]},
+        headers=headers_alice,
+    )
+    conversation_id = add_friend_res.json()["conversation_id"]
+
+    original_response = client.post(
+        "/api/chat/messages/send",
+        json={"conversation_id": conversation_id, "content": "first message"},
+        headers=headers_alice,
+    )
+    assert original_response.status_code == 200
+    original_message = original_response.json()["message"]
+
+    reply_response = client.post(
+        "/api/chat/messages/send",
+        json={"conversation_id": conversation_id, "content": "reply message", "reply_to_id": original_message["id"]},
+        headers=headers_bob,
+    )
+    assert reply_response.status_code == 200
+    reply_message = reply_response.json()["message"]
+    assert reply_message["replyToId"] == original_message["id"]
+    assert reply_message["replyTo"]["id"] == original_message["id"]
+    assert reply_message["replyTo"]["text"] == "first message"
+    assert reply_message["replyTo"]["sender"] == "other"
+    assert reply_message["replyTo"]["senderName"] == "reply_alice"
+
+    read_response = client.get(f"/api/chat/sessions/{conversation_id}/messages", headers=headers_bob)
+    assert read_response.status_code == 200
+    messages = read_response.json()
+    assert len(messages) == 2
+    assert messages[1]["replyToId"] == original_message["id"]
+    assert messages[1]["replyTo"]["text"] == "first message"
+    assert messages[1]["replyTo"]["senderName"] == "reply_alice"
+
+
+
+def test_reply_message_must_belong_to_same_conversation():
+    headers_alice, _ = register_and_login("reply_guard_alice", "reply_guard_alice@example.com")
+    headers_bob, bob_user = register_and_login("reply_guard_bob", "reply_guard_bob@example.com")
+    headers_cathy, cathy_user = register_and_login("reply_guard_cathy", "reply_guard_cathy@example.com")
+
+    first_conversation = client.post(
+        "/api/chat/friends/add",
+        json={"friend_id": bob_user["id"]},
+        headers=headers_alice,
+    )
+    second_conversation = client.post(
+        "/api/chat/friends/add",
+        json={"friend_id": cathy_user["id"]},
+        headers=headers_alice,
+    )
+    first_conversation_id = first_conversation.json()["conversation_id"]
+    second_conversation_id = second_conversation.json()["conversation_id"]
+
+    original_response = client.post(
+        "/api/chat/messages/send",
+        json={"conversation_id": first_conversation_id, "content": "source message"},
+        headers=headers_alice,
+    )
+    assert original_response.status_code == 200
+    original_message_id = original_response.json()["message"]["id"]
+
+    reply_response = client.post(
+        "/api/chat/messages/send",
+        json={"conversation_id": second_conversation_id, "content": "bad reply", "reply_to_id": original_message_id},
+        headers=headers_alice,
+    )
+    assert reply_response.status_code == 400
+    assert reply_response.json()["detail"] == "Reply message must belong to the same conversation"
+
+
+
+def test_pin_session_only_affects_current_user_order():
+    headers_alice, _ = register_and_login("pin_alice", "pin_alice@example.com")
+    headers_bob, bob_user = register_and_login("pin_bob", "pin_bob@example.com")
+    headers_cathy, cathy_user = register_and_login("pin_cathy", "pin_cathy@example.com")
+
+    first_res = client.post(
+        "/api/chat/friends/add",
+        json={"friend_id": bob_user["id"]},
+        headers=headers_alice,
+    )
+    second_res = client.post(
+        "/api/chat/friends/add",
+        json={"friend_id": cathy_user["id"]},
+        headers=headers_alice,
+    )
+    first_conversation_id = first_res.json()["conversation_id"]
+    second_conversation_id = second_res.json()["conversation_id"]
+
+    pin_res = client.post(f"/api/chat/sessions/{first_conversation_id}/pin", headers=headers_alice)
+    assert pin_res.status_code == 200
+    assert pin_res.json()["isPinned"] is True
+
+    alice_sessions = client.get("/api/chat/sessions", headers=headers_alice)
+    bob_sessions = client.get("/api/chat/sessions", headers=headers_bob)
+
+    assert alice_sessions.status_code == 200
+    assert alice_sessions.json()[0]["id"] == first_conversation_id
+    assert alice_sessions.json()[0]["isPinned"] is True
+    assert any(session["id"] == second_conversation_id and session["isPinned"] is False for session in alice_sessions.json())
+
+    assert bob_sessions.status_code == 200
+    assert bob_sessions.json()[0]["isPinned"] is False
+
+    unpin_res = client.delete(f"/api/chat/sessions/{first_conversation_id}/pin", headers=headers_alice)
+    assert unpin_res.status_code == 200
+    assert unpin_res.json()["isPinned"] is False
+
+    alice_sessions_after_unpin = client.get("/api/chat/sessions", headers=headers_alice)
+    assert all(session["isPinned"] is False for session in alice_sessions_after_unpin.json())
 
 
 def test_delete_friend_removes_friendship_and_private_session():

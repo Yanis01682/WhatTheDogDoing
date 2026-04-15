@@ -76,6 +76,11 @@ export async function changePassword(oldPassword, newPassword) {
   return res.data
 }
 
+export async function deleteMyAccount() {
+  const res = await apiClient.delete('/api/users/me')
+  return res.data
+}
+
 export async function updateStatus(status) {
   const res = await apiClient.put('/auth/status', {
     status: status,
@@ -138,6 +143,16 @@ export async function getSessions() {
 
 export async function getMessages(conversationId) {
   const res = await apiClient.get(`/api/chat/sessions/${conversationId}/messages`)
+  return res.data
+}
+
+export async function pinChatSession(conversationId) {
+  const res = await apiClient.post(`/api/chat/sessions/${conversationId}/pin`)
+  return res.data
+}
+
+export async function unpinChatSession(conversationId) {
+  const res = await apiClient.delete(`/api/chat/sessions/${conversationId}/pin`)
   return res.data
 }
 

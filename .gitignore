@@ -13,5 +13,10 @@ dist/
 即时通讯系统 消息系统示例.pdf
 大作业过程分细则.pdf
 
+# local Claude files
+.claude/
+
 # coverage artifacts
 .coverage
+coverage.xml
+backend/coverage.xml

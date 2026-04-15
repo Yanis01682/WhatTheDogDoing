@@ -251,7 +251,7 @@ function Overlays({
         <div className="modal-overlay" onClick={closeMemberModal}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>{sessions[currentChat].title} - 群成员</h3>
+              <h3>{(sessions.find((session) => session.id === currentChat)?.title || '当前群聊')} - 群成员</h3>
               <button className="modal-close" onClick={closeMemberModal}>×</button>
             </div>
             <div className="group-info-card">

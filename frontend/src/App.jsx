@@ -8,6 +8,7 @@ import {
   addFriend,
   changePassword,
   deleteFriend,
+  deleteMyAccount,
   createGroup,
   renameGroup,
   getFriendRequests,
@@ -16,6 +17,7 @@ import {
   getFriends,
   getMessages,
   getSessions,
+  pinChatSession,
   login,
   logout,
   register,
@@ -23,6 +25,7 @@ import {
   rejectFriendRequest,
   searchUsers,
   sendChatMessage,
+  unpinChatSession,
   revokeMessage,
   updateStatus,
   getProfile,
@@ -44,6 +47,15 @@ const EMPTY_SESSION = {
   online: 0,
   isGroup: false,
   realName: '暂无会话'
+}
+
+const formatLocalMessageTime = (date = new Date()) => {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  return `${year}年${month}月${day}日 ${hours}:${minutes}`
 }
 
 function App() {
@@ -155,6 +167,11 @@ function App() {
       }))
     )
     setSessions(fetchedSessions)
+    setPinnedChatIds((prev) => {
+      const localPinnedDynamicIds = prev.filter((id) => dynamicSessions.some((session) => session.id === id))
+      const serverPinnedIds = fetchedSessions.filter((session) => session.isPinned).map((session) => session.id)
+      return [...localPinnedDynamicIds, ...serverPinnedIds.filter((id) => !localPinnedDynamicIds.includes(id))]
+    })
 
     setCurrentChat((prev) => {
       const nextChatId = preferredChatId ?? prev
@@ -296,19 +313,6 @@ function App() {
       }
     }
 
-    // 加载保存的置顶聊天
-    const savedPinnedChats = localStorage.getItem('pinnedChatIds')
-    if (savedPinnedChats) {
-      try {
-        const parsed = JSON.parse(savedPinnedChats)
-        if (Array.isArray(parsed)) {
-          setPinnedChatIds(parsed)
-        }
-      } catch (err) {
-        console.warn('解析 pinnedChatIds 失败，使用默认值', err)
-      }
-    }
-
     // 加载保存的黑名单
     const savedBlacklist = localStorage.getItem('blacklist')
     if (savedBlacklist) {
@@ -420,27 +424,42 @@ function App() {
     localStorage.setItem('archivedGroupIds', JSON.stringify(archivedGroupIds))
   }, [archivedGroupIds])
 
-  // 持久化置顶聊天状态
-  useEffect(() => {
-    localStorage.setItem('pinnedChatIds', JSON.stringify(pinnedChatIds))
-  }, [pinnedChatIds])
-
   // 切换聊天置顶状态
-  const handleTogglePinChat = (chatId) => {
-    setPinnedChatIds(prev => {
-      if (prev.includes(chatId)) {
-        // 取消置顶
-        return prev.filter(id => id !== chatId)
+  const handleTogglePinChat = async (chatId) => {
+    const isDynamicSession = dynamicSessions.some((session) => session.id === chatId)
+    if (isDynamicSession) {
+      setPinnedChatIds((prev) => (
+        prev.includes(chatId) ? prev.filter((id) => id !== chatId) : [chatId, ...prev]
+      ))
+      return
+    }
+
+    const targetSession = sessions.find((session) => session.id === chatId)
+    if (!targetSession) return
+
+    try {
+      if (targetSession.isPinned) {
+        await unpinChatSession(chatId)
       } else {
-        // 添加置顶
-        return [chatId, ...prev]
+        await pinChatSession(chatId)
       }
-    })
+
+      setSessions((prev) => prev.map((session) => (
+        session.id === chatId ? { ...session, isPinned: !session.isPinned } : session
+      )))
+      setPinnedChatIds((prev) => (
+        targetSession.isPinned
+          ? prev.filter((id) => id !== chatId)
+          : [chatId, ...prev.filter((id) => id !== chatId)]
+      ))
+    } catch (err) {
+      alert(err.response?.data?.detail || '更新置顶状态失败')
+    }
   }
 
   // 检查聊天是否置顶
   const isChatPinned = (chatId) => {
-    return pinnedChatIds.includes(chatId)
+    return pinnedChatIds.includes(chatId) || sessions.some((session) => session.id === chatId && session.isPinned)
   }
 
   // 持久化黑名单状态
@@ -482,7 +501,7 @@ function App() {
         title: blacklistUser.name,
         avatar: blacklistUser.avatar,
         lastMessage: '黑名单用户',
-        time: '刚刚',
+        time: formatLocalMessageTime(),
         badge: 0,
         online: 0,
         isGroup: false,
@@ -1461,7 +1480,7 @@ function App() {
       id: editingMessageId || Date.now(),
       text: messageInput,
       sender: 'me',
-      time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+      time: formatLocalMessageTime(),
       replyTo: replyToMessage ? {
         id: replyToMessage.id,
         text: replyToMessage.text,
@@ -1499,7 +1518,7 @@ function App() {
         mediaUrl: reader.result,
         mediaName: file.name,
         sender: 'me',
-        time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+        time: formatLocalMessageTime(),
         replyTo: replyToMessage ? {
           id: replyToMessage.id,
           text: replyToMessage.text,
@@ -1535,7 +1554,7 @@ function App() {
       mediaUrl: URL.createObjectURL(file),
       mediaName: file.name,
       sender: 'me',
-      time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+      time: formatLocalMessageTime(),
       replyTo: replyToMessage ? {
         id: replyToMessage.id,
         text: replyToMessage.text,
@@ -1587,24 +1606,34 @@ function App() {
   }
 
   // 确认注销账户
-  const confirmDeleteAccount = () => {
-    // 仅前端实现：清除登录状态和本地数据
-    setIsLoggedIn(false)
-    setCurrentChat(null)
-    setSessions([])
-    setMessages({})
-    setMyFriends([])
-    setShowUserPanel(false)
-    setShowDeleteConfirm(false)
-    
-    // 清除 localStorage 中的 token
+  const confirmDeleteAccount = async () => {
     try {
-      localStorage.removeItem('auth_token')
-    } catch {
-      // ignore
+      await deleteMyAccount()
+      logout()
+      setIsLoggedIn(false)
+      setCurrentChat(null)
+      setSessions([])
+      setMessages({})
+      setMyFriends([])
+      setDynamicSessions([])
+      setPinnedChatIds([])
+      setBlacklist([])
+      setShowUserPanel(false)
+      setShowDeleteConfirm(false)
+
+      try {
+        localStorage.removeItem('archivedGroupIds')
+        localStorage.removeItem('blacklist')
+        localStorage.removeItem('userStatus')
+        localStorage.removeItem('userAvatar')
+      } catch {
+        // ignore
+      }
+
+      alert('账户已成功注销')
+    } catch (err) {
+      alert(err.response?.data?.detail || '注销账户失败')
     }
-    
-    alert('账户已成功注销')
   }
 
   // 取消注销账户
@@ -1849,7 +1878,7 @@ function App() {
         title: peerProfile.name,
         avatar: peerProfile.avatar,
         lastMessage: peerProfile.signature || '开始聊天吧',
-        time: '刚刚',
+        time: formatLocalMessageTime(),
         badge: 0,
         online: peerProfile.status === 'online' ? 1 : 0,
         isGroup: false,
@@ -1962,6 +1991,7 @@ function App() {
           onOpenFriendChat={handleOpenFriendChat}
           chatlistWidth={chatlistWidth}
           pinnedChatIds={pinnedChatIds}
+          onTogglePinChat={handleTogglePinChat}
           onRemoveFromBlacklist={handleRemoveFromBlacklist}
           onOpenBlacklistChat={handleOpenBlacklistChat}
         />

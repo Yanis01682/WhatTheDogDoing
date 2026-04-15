@@ -1,3 +1,4 @@
+from datetime import timezone, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
@@ -21,6 +22,8 @@ ERR_GROUP_NOT_FOUND = "Group not found"
 ERR_NOT_MEMBER_GROUP = "Not a member of this group"
 ERR_ONLY_OWNER_CAN_RENAME = "Only group owner can rename group"
 
+CHINA_TZ = timezone(timedelta(hours=8))
+
 
 class FriendAddPayload(BaseModel):
     friend_id: int
@@ -29,6 +32,7 @@ class FriendAddPayload(BaseModel):
 class MessageSendPayload(BaseModel):
     conversation_id: int
     content: str
+    reply_to_id: Optional[int] = None
 
 
 class FriendRequestPayload(BaseModel):
@@ -160,6 +164,27 @@ def _get_or_create_private_conversation(db: Session, user_a_id: int, user_b_id: 
     return _create_private_conversation(db, user_a_id, user_b_id)
 
 
+def _format_message_time(timestamp):
+    if not timestamp:
+        return ""
+    if timestamp.tzinfo is None:
+        timestamp = timestamp.replace(tzinfo=timezone.utc)
+    timestamp = timestamp.astimezone(CHINA_TZ)
+    return timestamp.strftime("%Y年%m月%d日 %H:%M")
+
+
+def _is_session_pinned(db: Session, conversation_id: int, user_id: int):
+    return (
+        db.query(models.ConversationPin)
+        .filter(
+            models.ConversationPin.conversation_id == conversation_id,
+            models.ConversationPin.user_id == user_id,
+        )
+        .first()
+        is not None
+    )
+
+
 def _serialize_user(user: models.User):
     display_name = user.username
     # 隐身状态在对方视角显示为离线
@@ -180,17 +205,84 @@ def _serialize_user(user: models.User):
     }
 
 
-def _serialize_message(message: models.Message, current_user_id: int, sender: Optional[models.User]):
+def _serialize_reply_reference(reply_message: models.Message, current_user_id: int, sender: Optional[models.User]):
     sender_name = sender.username if sender else "系统"
     return {
+        "id": reply_message.id,
+        "text": reply_message.content,
+        "sender": "me" if reply_message.sender_id == current_user_id else "other",
+        "senderId": reply_message.sender_id,
+        "senderName": sender_name,
+    }
+
+
+def _serialize_message(
+    message: models.Message,
+    current_user_id: int,
+    sender: Optional[models.User],
+    reply_message: Optional[models.Message] = None,
+    reply_sender: Optional[models.User] = None,
+):
+    sender_name = sender.username if sender else "系统"
+    payload = {
         "id": message.id,
         "text": message.content,
         "sender": "me" if message.sender_id == current_user_id else "other",
         "senderId": message.sender_id,
         "senderName": sender_name,
-        "time": message.timestamp.strftime("%H:%M") if message.timestamp else "",
+        "time": _format_message_time(message.timestamp),
         "timestamp": message.timestamp.isoformat() if message.timestamp else None,
+        "replyToId": message.reply_to_id,
     }
+    if reply_message:
+        payload["replyTo"] = _serialize_reply_reference(reply_message, current_user_id, reply_sender)
+    return payload
+
+
+def _get_reply_message_or_400(db: Session, conversation_id: int, reply_to_id: Optional[int]):
+    if reply_to_id is None:
+        return None
+
+    reply_message = db.query(models.Message).filter(models.Message.id == reply_to_id).first()
+    if not reply_message:
+        raise HTTPException(status_code=404, detail="Reply message not found")
+    if reply_message.conversation_id != conversation_id:
+        raise HTTPException(status_code=400, detail="Reply message must belong to the same conversation")
+    return reply_message
+
+
+
+def _serialize_messages(
+    db: Session,
+    messages: list[models.Message],
+    current_user_id: int,
+    users_by_id: dict[int, models.User],
+):
+    reply_ids = {message.reply_to_id for message in messages if message.reply_to_id is not None}
+    reply_messages = (
+        db.query(models.Message).filter(models.Message.id.in_(reply_ids)).all()
+        if reply_ids
+        else []
+    )
+    reply_map = {message.id: message for message in reply_messages}
+
+    reply_sender_ids = {message.sender_id for message in reply_messages if message.sender_id is not None}
+    missing_reply_sender_ids = [sender_id for sender_id in reply_sender_ids if sender_id not in users_by_id]
+    if missing_reply_sender_ids:
+        reply_senders = db.query(models.User).filter(models.User.id.in_(missing_reply_sender_ids)).all()
+        for user in reply_senders:
+            users_by_id[user.id] = user
+
+    return [
+        _serialize_message(
+            message,
+            current_user_id,
+            users_by_id.get(message.sender_id),
+            reply_map.get(message.reply_to_id),
+            users_by_id.get(reply_map[message.reply_to_id].sender_id) if message.reply_to_id in reply_map else None,
+        )
+        for message in messages
+    ]
 
 
 def _serialize_session(db: Session, conversation: models.Conversation, current_user: models.User):
@@ -233,11 +325,13 @@ def _serialize_session(db: Session, conversation: models.Conversation, current_u
         "title": title,
         "avatar": avatar,
         "lastMessage": latest_message.content if latest_message else "暂无消息",
-        "time": latest_message.timestamp.strftime("%H:%M") if latest_message and latest_message.timestamp else "",
+        "time": _format_message_time(latest_message.timestamp) if latest_message else "",
+        "timestamp": latest_message.timestamp.isoformat() if latest_message and latest_message.timestamp else None,
         "badge": 0,
         "online": online_count,
         "isGroup": conversation.is_group,
         "realName": real_name,
+        "isPinned": _is_session_pinned(db, conversation.id, current_user.id),
     }
 
 
@@ -414,8 +508,54 @@ def read_sessions(
 
     conversations = db.query(models.Conversation).filter(models.Conversation.id.in_(conversation_ids)).all()
     serialized = [_serialize_session(db, conversation, current_user) for conversation in conversations]
-    serialized.sort(key=lambda item: (item["time"], item["id"]), reverse=True)
+    serialized.sort(key=lambda item: (item["isPinned"], item["timestamp"] or "", item["id"]), reverse=True)
     return serialized
+
+
+@router.post("/sessions/{conversation_id}/pin")
+def pin_session(
+    conversation_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    _ensure_conversation_membership(db, conversation_id, current_user.id)
+
+    pin = (
+        db.query(models.ConversationPin)
+        .filter(
+            models.ConversationPin.conversation_id == conversation_id,
+            models.ConversationPin.user_id == current_user.id,
+        )
+        .first()
+    )
+    if not pin:
+        db.add(models.ConversationPin(conversation_id=conversation_id, user_id=current_user.id))
+        db.commit()
+
+    return {"message": "Session pinned successfully", "conversation_id": conversation_id, "isPinned": True}
+
+
+@router.delete("/sessions/{conversation_id}/pin")
+def unpin_session(
+    conversation_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    _ensure_conversation_membership(db, conversation_id, current_user.id)
+
+    pin = (
+        db.query(models.ConversationPin)
+        .filter(
+            models.ConversationPin.conversation_id == conversation_id,
+            models.ConversationPin.user_id == current_user.id,
+        )
+        .first()
+    )
+    if pin:
+        db.delete(pin)
+        db.commit()
+
+    return {"message": "Session unpinned successfully", "conversation_id": conversation_id, "isPinned": False}
 
 
 @router.get("/sessions/{conversation_id}/messages")
@@ -435,7 +575,7 @@ def read_messages(
     sender_ids = {message.sender_id for message in messages if message.sender_id is not None}
     users = db.query(models.User).filter(models.User.id.in_(sender_ids)).all() if sender_ids else []
     user_map = {user.id: user for user in users}
-    return [_serialize_message(message, current_user.id, user_map.get(message.sender_id)) for message in messages]
+    return _serialize_messages(db, messages, current_user.id, user_map)
 
 
 @router.post("/friends/add")
@@ -556,9 +696,15 @@ def send_message(
     if not content:
         raise HTTPException(status_code=400, detail=ERR_MESSAGE_CONTENT_EMPTY)
 
+    reply_message = _get_reply_message_or_400(db, payload.conversation_id, payload.reply_to_id)
+    reply_sender = None
+    if reply_message and reply_message.sender_id is not None:
+        reply_sender = db.query(models.User).filter(models.User.id == reply_message.sender_id).first()
+
     new_message = models.Message(
         conversation_id=payload.conversation_id,
         sender_id=current_user.id,
+        reply_to_id=payload.reply_to_id,
         content=content,
     )
     db.add(new_message)
@@ -566,8 +712,28 @@ def send_message(
     db.refresh(new_message)
     return {
         "status": "sent",
-        "message": _serialize_message(new_message, current_user.id, current_user),
+        "message": _serialize_message(new_message, current_user.id, current_user, reply_message, reply_sender),
     }
+
+
+@router.delete("/messages/{message_id}")
+def revoke_message(
+    message_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    message = db.query(models.Message).filter(models.Message.id == message_id).first()
+    if not message:
+        raise HTTPException(status_code=404, detail="Message not found")
+
+    _ensure_conversation_membership(db, message.conversation_id, current_user.id)
+
+    if message.sender_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Only the sender can revoke this message")
+
+    db.delete(message)
+    db.commit()
+    return {"message": "Message revoked successfully", "message_id": message_id}
 
 
 @router.post("/groups")

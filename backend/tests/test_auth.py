@@ -52,7 +52,24 @@ def test_register_duplicate():
     )
     assert response.status_code == 400
     # 修复了断言 Bug，对齐了 auth.py 里的英文报错
-    assert response.json()["detail"] == "Username already taken" 
+    assert response.json()["detail"] == "Username already taken"
+
+
+def test_register_duplicate_email():
+    """测试重复邮箱返回 400 而不是数据库错误"""
+    first = client.post(
+        "/auth/register",
+        json={"username": "email_user_one", "password": "pw123456", "email": "dup@example.com"}
+    )
+    assert first.status_code == 200
+
+    response = client.post(
+        "/auth/register",
+        json={"username": "email_user_two", "password": "pw123456", "email": "dup@example.com"}
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Email already taken"
+
 
 def test_login_success():
     """测试正常登录"""
@@ -257,5 +274,94 @@ def test_delete_account_endpoint():
     relogin = client.post(
         "/auth/login",
         data={"username": "delete_me_user", "password": "deletepass"},
+    )
+    assert relogin.status_code == 401
+
+
+def test_delete_account_cleans_friendships_private_messages_and_group_membership():
+    alice_register = client.post(
+        "/auth/register",
+        json={"username": "cleanup_alice", "password": "deletepass", "email": "cleanup_alice@example.com"},
+    )
+    bob_register = client.post(
+        "/auth/register",
+        json={"username": "cleanup_bob", "password": "deletepass", "email": "cleanup_bob@example.com"},
+    )
+    carol_register = client.post(
+        "/auth/register",
+        json={"username": "cleanup_carol", "password": "deletepass", "email": "cleanup_carol@example.com"},
+    )
+    assert alice_register.status_code == 200
+    assert bob_register.status_code == 200
+    assert carol_register.status_code == 200
+
+    alice_id = alice_register.json()["id"]
+    bob_id = bob_register.json()["id"]
+    carol_id = carol_register.json()["id"]
+
+    alice_login = client.post("/auth/login", data={"username": "cleanup_alice", "password": "deletepass"})
+    bob_login = client.post("/auth/login", data={"username": "cleanup_bob", "password": "deletepass"})
+    assert alice_login.status_code == 200
+    assert bob_login.status_code == 200
+
+    alice_headers = {"Authorization": f"Bearer {alice_login.json()['access_token']}"}
+    bob_headers = {"Authorization": f"Bearer {bob_login.json()['access_token']}"}
+
+    private_res = client.post(
+        "/api/chat/friends/add",
+        json={"friend_id": bob_id},
+        headers=alice_headers,
+    )
+    assert private_res.status_code == 200
+    private_conversation_id = private_res.json()["conversation_id"]
+
+    private_message_res = client.post(
+        "/api/chat/messages/send",
+        json={"conversation_id": private_conversation_id, "content": "private cleanup"},
+        headers=alice_headers,
+    )
+    assert private_message_res.status_code == 200
+
+    group_res = client.post(
+        "/api/chat/groups",
+        json={"name": "cleanup-group", "member_ids": [bob_id, carol_id]},
+        headers=alice_headers,
+    )
+    assert group_res.status_code == 200
+    group_conversation_id = group_res.json()["conversation_id"]
+
+    group_message_res = client.post(
+        "/api/chat/messages/send",
+        json={"conversation_id": group_conversation_id, "content": "group cleanup"},
+        headers=alice_headers,
+    )
+    assert group_message_res.status_code == 200
+
+    delete_res = client.delete("/api/users/me", headers=alice_headers)
+    assert delete_res.status_code == 200
+
+    bob_friends = client.get("/api/chat/friends", headers=bob_headers)
+    bob_sessions = client.get("/api/chat/sessions", headers=bob_headers)
+    group_members = client.get(f"/api/chat/groups/{group_conversation_id}/members", headers=bob_headers)
+    group_messages = client.get(f"/api/chat/sessions/{group_conversation_id}/messages", headers=bob_headers)
+    private_messages = client.get(f"/api/chat/sessions/{private_conversation_id}/messages", headers=bob_headers)
+
+    assert bob_friends.status_code == 200
+    assert bob_friends.json() == []
+    assert bob_sessions.status_code == 200
+    assert all(session["id"] != private_conversation_id for session in bob_sessions.json())
+    assert any(session["id"] == group_conversation_id for session in bob_sessions.json())
+
+    assert group_members.status_code == 200
+    assert all(member["name"] != "cleanup_alice" for member in group_members.json())
+
+    assert group_messages.status_code == 200
+    assert group_messages.json() == []
+
+    assert private_messages.status_code == 403
+
+    relogin = client.post(
+        "/auth/login",
+        data={"username": "cleanup_alice", "password": "deletepass"},
     )
     assert relogin.status_code == 401
