@@ -10,6 +10,9 @@ import {
   deleteFriend,
   deleteMyAccount,
   createGroup,
+  exitGroup,
+  dismissGroup,
+  inviteGroupMembers,
   renameGroup,
   getFriendRequests,
   getGroupMembers,
@@ -25,11 +28,14 @@ import {
   rejectFriendRequest,
   searchUsers,
   sendChatMessage,
+  sendImageMessage,
+  sendVideoMessage,
   unpinChatSession,
   revokeMessage,
   updateStatus,
   getProfile,
-  updateProfile
+  updateProfile,
+  updateSensitiveInfo
 } from './services/api'
 import AuthView from './components/stage2/AuthView'
 import TopBar from './components/stage2/TopBar'
@@ -87,6 +93,14 @@ function App() {
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false) // 修改密码模态框
   const [changePasswordForm, setChangePasswordForm] = useState({ oldPassword: '', newPassword: '', confirmPassword: '' }) // 修改密码表单
   const [isEditingProfile, setIsEditingProfile] = useState(false) // 是否正在编辑个人信息
+  const [showSensitiveInfoModal, setShowSensitiveInfoModal] = useState(false) // 敏感信息修改模态框
+  const [sensitiveInfoForm, setSensitiveInfoForm] = useState({ 
+    password: '', 
+    newEmail: '', 
+    newPhone: '', 
+    newPassword: '',
+    confirmPassword: ''
+  }) // 敏感信息修改表单
   const [userStatus, setUserStatus] = useState('online') // 在线状态：online-在线，offline-离线，busy-忙碌，away-离开，invisible-隐身
   const [showStatusMenu, setShowStatusMenu] = useState(false) // 状态选择菜单
   const [showChatDetail, setShowChatDetail] = useState(false) // 聊天详情模态框
@@ -110,6 +124,7 @@ function App() {
   const [groupOwnerNameMap, setGroupOwnerNameMap] = useState({})
   const [showMemberListModal, setShowMemberListModal] = useState(false) // 成员列表模态框
   const [showInviteMemberModal, setShowInviteMemberModal] = useState(false) // 邀请成员模态框
+  const [selectedInviteFriends, setSelectedInviteFriends] = useState([]) // 已选择邀请的好友
   const [showCreateGroupModal, setShowCreateGroupModal] = useState(false) // 创建群聊模态框
   const [selectedFriends, setSelectedFriends] = useState([]) // 已选择的好友
   const [groupName, setGroupName] = useState('') // 群聊名称
@@ -194,6 +209,12 @@ function App() {
     }
 
     const fetchedMessages = await getMessages(conversationId)
+    console.log('[刷新消息] 获取到的消息数量:', fetchedMessages.length)
+    if (fetchedMessages.length > 0) {
+      const lastMsg = fetchedMessages[fetchedMessages.length - 1]
+      console.log('[刷新消息] 最后一条消息:', { id: lastMsg.id, type: lastMsg.type, text: lastMsg.text?.substring(0, 20), mediaUrl: lastMsg.mediaUrl })
+    }
+    
     const locallyDeleted = getLocallyDeleted(conversationId)
     // 1. 过滤掉本地删除的消息
     const filtered = locallyDeleted.size > 0 ? fetchedMessages.filter(m => !locallyDeleted.has(m.id)) : fetchedMessages
@@ -598,17 +619,20 @@ function App() {
         members.find((m) => m.name !== '我') ||
         members[0]
 
+      // 使用真实用户 ID
+      const userId = candidate?.id || null
+      const friendById = userId ? myFriends.find((f) => String(f.accountId) === String(userId)) : null
       const friendByName = myFriends.find((f) => f.name === candidate?.name)
-      const userId = friendByName?.accountId || `group_${candidate?.name || 'member'}`
-      const email = friendByName?.email || `${candidate?.name || 'member'}@example.com`
+      const friend = friendById || friendByName
+      const email = friend?.email || `${candidate?.name || 'member'}@example.com`
 
       return {
         name: candidate?.name || '群成员',
-        userId,
+        userId: userId ? String(userId) : `group_${candidate?.name || 'member'}`,
         avatar: candidate?.avatar || currentSession.avatar,
         status: candidate?.online ? 'online' : 'offline',
         email: email,
-        wechatId: userId,
+        wechatId: userId ? String(userId) : `group_${candidate?.name || 'member'}`,
         source: 'group'
       }
     }
@@ -654,17 +678,20 @@ function App() {
     const owner = members.find(m => m.role === 'owner')
     if (!owner) return
 
+    // 使用真实用户 ID
+    const userId = owner.id || null
+    const friendById = userId ? myFriends.find((f) => String(f.accountId) === String(userId)) : null
     const friendByName = myFriends.find((f) => f.name === owner.name)
-    const userId = friendByName?.accountId || `group_${owner.name}`
-    const email = friendByName?.email || `${owner.name}@example.com`
+    const friend = friendById || friendByName
+    const email = friend?.email || `${owner.name}@example.com`
 
     const profile = {
       name: owner.name,
-      userId,
+      userId: userId ? String(userId) : `group_${owner.name}`,
       avatar: owner.avatar,
       status: owner.online ? 'online' : 'offline',
       email: email,
-      wechatId: userId,
+      wechatId: userId ? String(userId) : `group_${owner.name}`,
       source: 'group'
     }
     setPeerProfile(profile)
@@ -675,17 +702,20 @@ function App() {
   const handleOpenMemberProfile = (member) => {
     if (!member) return
 
+    // member.id 就是真实的用户 ID
+    const userId = member.id || `group_${member.name}`
+    const friendById = myFriends.find((f) => String(f.accountId) === String(userId))
     const friendByName = myFriends.find((f) => f.name === member.name)
-    const userId = friendByName?.accountId || `group_${member.name}`
-    const email = friendByName?.email || `${member.name}@example.com`
+    const friend = friendById || friendByName
+    const email = friend?.email || `${member.name}@example.com`
 
     const profile = {
       name: member.name,
-      userId,
+      userId: String(userId),
       avatar: member.avatar,
       status: member.online ? 'online' : 'offline',
       email: email,
-      wechatId: userId,
+      wechatId: String(userId),
       source: 'group'
     }
     setPeerProfile(profile)
@@ -1005,12 +1035,46 @@ function App() {
 
   // 打开邀请成员模态框
   const handleOpenInviteMember = () => {
+    setSelectedInviteFriends([])
     setShowInviteMemberModal(true)
   }
 
   // 关闭邀请成员模态框
   const handleCloseInviteMember = () => {
     setShowInviteMemberModal(false)
+    setSelectedInviteFriends([])
+  }
+
+  // 选择/取消选择邀请好友
+  const handleToggleInviteFriend = (friendId) => {
+    setSelectedInviteFriends(prev =>
+      prev.includes(friendId)
+        ? prev.filter(id => id !== friendId)
+        : [...prev, friendId]
+    )
+  }
+
+  // 发送群聊邀请
+  const handleSendInvite = async () => {
+    if (selectedInviteFriends.length === 0) {
+      alert('请至少选择一位好友')
+      return
+    }
+
+    try {
+      await inviteGroupMembers(currentChat, selectedInviteFriends)
+      await refreshGroupConversationMembers(currentChat)
+      alert(`已成功邀请 ${selectedInviteFriends.length} 位好友`)
+      handleCloseInviteMember()
+    } catch (err) {
+      alert(err.response?.data?.detail || '邀请失败')
+    }
+  }
+
+  // 获取当前群成员 ID 列表
+  const getCurrentGroupMemberIds = () => {
+    const members = groupMembers[currentChat] || []
+    return new Set(members.map(m => m.id))
   }
 
   // 打开创建群聊模态框
@@ -1144,18 +1208,49 @@ function App() {
   }
 
   // 退出群聊
-  const handleExitGroup = () => {
-    if (window.confirm('确定要退出该群吗？')) {
-      alert('您已退出群聊')
+  const handleExitGroup = async () => {
+    if (!window.confirm('确定要退出该群吗？退出后将无法查看群聊历史消息。')) {
+      return
+    }
+
+    const currentSession = getCurrentSession()
+    if (!currentSession?.isGroup) return
+
+    try {
+      await exitGroup(currentSession.id)
+
+      // 从会话列表中移除该群聊
+      setSessions((prev) => prev.filter((s) => s.id !== currentSession.id))
+      setDynamicSessions((prev) => prev.filter((s) => s.id !== currentSession.id))
+
+      // 如果当前正在查看该群聊，则切换回去
+      if (currentChat === currentSession.id) {
+        setCurrentChat(null)
+      }
+
       handleCloseChatDetail()
+      alert('已成功退出群聊')
+    } catch (err) {
+      const errorMsg = err.response?.data?.detail || '退出群聊失败'
+      alert(errorMsg)
     }
   }
 
   // 解散群聊
-  const handleDismissGroup = () => {
-    if (window.confirm('确定要解散该群吗？此操作不可恢复！')) {
-      alert('群已解散')
+  const handleDismissGroup = async () => {
+    if (!window.confirm('确定要解散该群吗？此操作不可恢复！\n\n解散后：\n- 所有聊天记录将被删除\n- 所有群成员将被移除\n- 群聊将不复存在')) {
+      return
+    }
+    
+    try {
+      await dismissGroup(currentChat)
+      alert('群聊已解散')
       handleCloseChatDetail()
+      // 刷新会话列表
+      await refreshRealtimeChatData()
+    } catch (err) {
+      const errorMsg = err.response?.data?.detail || '解散群聊失败'
+      alert(errorMsg)
     }
   }
   // 登录处理
@@ -1377,15 +1472,111 @@ function App() {
       await updateProfile({
         nickname: profileData.nickname || null,
         gender: profileData.gender || null,
-        phone: profileData.phone || null,
         bio: profileData.bio || null,
-        email: profileData.email || null,
+        avatar: profileData.avatar || null,
       })
       localStorage.setItem('userProfile', JSON.stringify(profileData))
       setIsEditingProfile(false)
       alert('个人信息保存成功！')
     } catch (err) {
       alert(err.response?.data?.detail || '保存失败，请重试')
+    }
+  }
+
+  // 打开敏感信息修改模态框
+  const handleOpenSensitiveInfoModal = () => {
+    setSensitiveInfoForm({
+      password: '',
+      newEmail: profileData.email || '',
+      newPhone: profileData.phone || '',
+      newPassword: '',
+      confirmPassword: ''
+    })
+    setShowSensitiveInfoModal(true)
+  }
+
+  // 关闭敏感信息修改模态框
+  const handleCloseSensitiveInfoModal = () => {
+    setShowSensitiveInfoModal(false)
+    setSensitiveInfoForm({
+      password: '',
+      newEmail: '',
+      newPhone: '',
+      newPassword: '',
+      confirmPassword: ''
+    })
+  }
+
+  // 处理敏感信息表单输入
+  const handleSensitiveInfoChange = (field, value) => {
+    setSensitiveInfoForm(prev => ({
+      ...prev,
+      [field]: value
+    }))
+  }
+
+  // 保存敏感信息
+  const handleSaveSensitiveInfo = async () => {
+    // 验证密码
+    if (!sensitiveInfoForm.password) {
+      alert('请输入当前密码进行身份验证')
+      return
+    }
+
+    // 验证是否有需要更新的字段
+    if (!sensitiveInfoForm.newEmail && !sensitiveInfoForm.newPhone && !sensitiveInfoForm.newPassword) {
+      alert('请至少填写一项需要修改的信息')
+      return
+    }
+
+    // 如果修改密码，验证新密码
+    if (sensitiveInfoForm.newPassword) {
+      if (sensitiveInfoForm.newPassword.length < 6) {
+        alert('新密码长度不能少于6位')
+        return
+      }
+      if (sensitiveInfoForm.newPassword !== sensitiveInfoForm.confirmPassword) {
+        alert('两次输入的新密码不一致')
+        return
+      }
+    }
+
+    try {
+      const payload = {
+        password: sensitiveInfoForm.password,
+      }
+      
+      // 只有当值发生变化时才包含在请求中
+      if (sensitiveInfoForm.newEmail && sensitiveInfoForm.newEmail !== profileData.email) {
+        payload.new_email = sensitiveInfoForm.newEmail
+      }
+      if (sensitiveInfoForm.newPhone && sensitiveInfoForm.newPhone !== profileData.phone) {
+        payload.new_phone = sensitiveInfoForm.newPhone
+      }
+      if (sensitiveInfoForm.newPassword) {
+        payload.new_password = sensitiveInfoForm.newPassword
+      }
+
+      const result = await updateSensitiveInfo(payload)
+      alert(result.message || '敏感信息更新成功！')
+      
+      // 更新本地状态
+      if (sensitiveInfoForm.newEmail) {
+        setProfileData(prev => ({ ...prev, email: sensitiveInfoForm.newEmail }))
+      }
+      if (sensitiveInfoForm.newPhone) {
+        setProfileData(prev => ({ ...prev, phone: sensitiveInfoForm.newPhone }))
+      }
+      
+      handleCloseSensitiveInfoModal()
+      
+      // 如果修改了密码，提示重新登录
+      if (sensitiveInfoForm.newPassword) {
+        alert('密码已修改，请使用新密码重新登录')
+        handleLogout()
+      }
+    } catch (err) {
+      alert(err.response?.data?.detail || '更新失败，请重试')
     }
   }
 
@@ -1498,76 +1689,102 @@ function App() {
     setEditingMessageId(null)
   }
 
-  // 发送图片消息（本地预览模式）
-  const handleSendImage = (e) => {
+  // 发送图片消息（调用后端上传API）
+  const handleSendImage = async (e) => {
     const file = e.target.files?.[0]
     if (!file) return
 
+    // 验证文件类型
     if (!file.type.startsWith('image/')) {
       alert('请选择图片文件')
       e.target.value = ''
       return
     }
 
-    const reader = new FileReader()
-    reader.onload = () => {
-      const newMessage = {
-        id: Date.now(),
-        type: 'image',
-        text: `[图片] ${file.name}`,
-        mediaUrl: reader.result,
-        mediaName: file.name,
-        sender: 'me',
-        time: formatLocalMessageTime(),
-        replyTo: replyToMessage ? {
-          id: replyToMessage.id,
-          text: replyToMessage.text,
-          sender: replyToMessage.sender
-        } : null
+    // 验证文件大小（限制 5MB，与后端一致）
+    if (file.size > 5 * 1024 * 1024) {
+      alert('图片大小不能超过 5MB')
+      e.target.value = ''
+      return
+    }
+
+    try {
+      const activeSession = getCurrentSession()
+      if (!activeSession?.id) {
+        alert('请先选择一个会话')
+        e.target.value = ''
+        return
       }
 
+      const replyToId = replyToMessage?.id || null
+      console.log('[发送图片] 开始上传图片:', file.name, '大小:', (file.size / 1024).toFixed(2), 'KB')
+      const res = await sendImageMessage(activeSession.id, file, replyToId)
+      const messageData = res.message
+      console.log('[发送图片] 后端返回的消息数据:', { id: messageData.id, type: messageData.type, text: messageData.text, mediaUrl: messageData.mediaUrl, mediaName: messageData.mediaName })
+
+      // 更新消息列表（使用后端返回的消息数据）
       setMessages((prev) => ({
         ...prev,
-        [currentChat]: [...(prev[currentChat] || []), newMessage]
+        [currentChat]: [...(prev[currentChat] || []), messageData]
       }))
+      console.log('[发送图片] 消息已添加到本地状态')
+
       setReplyToMessage(null)
+    } catch (err) {
+      console.error('[发送图片] 错误:', err)
+      alert(err.response?.data?.detail || '图片发送失败，请重试')
+    } finally {
       e.target.value = ''
     }
-    reader.readAsDataURL(file)
   }
 
-  // 发送视频消息（本地预览模式）
-  const handleSendVideo = (e) => {
+  // 发送视频消息（调用后端上传API）
+  const handleSendVideo = async (e) => {
     const file = e.target.files?.[0]
     if (!file) return
 
+    // 验证文件类型
     if (!file.type.startsWith('video/')) {
       alert('请选择视频文件')
       e.target.value = ''
       return
     }
 
-    const newMessage = {
-      id: Date.now(),
-      type: 'video',
-      text: `[视频] ${file.name}`,
-      mediaUrl: URL.createObjectURL(file),
-      mediaName: file.name,
-      sender: 'me',
-      time: formatLocalMessageTime(),
-      replyTo: replyToMessage ? {
-        id: replyToMessage.id,
-        text: replyToMessage.text,
-        sender: replyToMessage.sender
-      } : null
+    // 验证文件大小（限制 50MB，与后端一致）
+    if (file.size > 50 * 1024 * 1024) {
+      alert('视频大小不能超过 50MB')
+      e.target.value = ''
+      return
     }
 
-    setMessages((prev) => ({
-      ...prev,
-      [currentChat]: [...(prev[currentChat] || []), newMessage]
-    }))
-    setReplyToMessage(null)
-    e.target.value = ''
+    try {
+      const activeSession = getCurrentSession()
+      if (!activeSession?.id) {
+        alert('请先选择一个会话')
+        e.target.value = ''
+        return
+      }
+
+      const replyToId = replyToMessage?.id || null
+      console.log('[发送视频] 开始上传视频:', file.name, '大小:', (file.size / 1024 / 1024).toFixed(2), 'MB')
+      const res = await sendVideoMessage(activeSession.id, file, replyToId)
+      const messageData = res.message
+      console.log('[发送视频] 后端返回的消息数据:', { id: messageData.id, type: messageData.type, text: messageData.text, mediaUrl: messageData.mediaUrl, mediaName: messageData.mediaName })
+
+      // 更新消息列表（使用后端返回的消息数据）
+      setMessages((prev) => ({
+        ...prev,
+        [currentChat]: [...(prev[currentChat] || []), messageData]
+      }))
+      console.log('[发送视频] 消息已添加到本地状态')
+
+      setReplyToMessage(null)
+    } catch (err) {
+      console.error('[发送视频] 错误:', err)
+      alert(err.response?.data?.detail || '视频发送失败，请重试')
+    } finally {
+      e.target.value = ''
+    }
   }
 
   // 按 Enter 发送消息
@@ -2088,6 +2305,12 @@ function App() {
         handleCancelProfile={handleCancelProfile}
         handleSaveProfile={handleSaveProfile}
         handleChangeAvatar={handleChangeAvatar}
+        handleOpenSensitiveInfoModal={handleOpenSensitiveInfoModal}
+        showSensitiveInfoModal={showSensitiveInfoModal}
+        handleCloseSensitiveInfoModal={handleCloseSensitiveInfoModal}
+        sensitiveInfoForm={sensitiveInfoForm}
+        handleSensitiveInfoChange={handleSensitiveInfoChange}
+        handleSaveSensitiveInfo={handleSaveSensitiveInfo}
         showChatDetail={showChatDetail}
         handleCloseChatDetail={handleCloseChatDetail}
         getCurrentSession={getCurrentSession}
@@ -2113,6 +2336,11 @@ function App() {
         handleCancelEditAnnouncement={handleCancelEditAnnouncement}
         handleOpenMemberList={handleOpenMemberList}
         handleOpenInviteMember={handleOpenInviteMember}
+        handleCloseInviteMember={handleCloseInviteMember}
+        selectedInviteFriends={selectedInviteFriends}
+        handleToggleInviteFriend={handleToggleInviteFriend}
+        handleSendInvite={handleSendInvite}
+        getCurrentGroupMemberIds={getCurrentGroupMemberIds}
         handleTogglePinChat={handleTogglePinChat}
         isChatPinned={isChatPinned}
         handleToggleBlacklist={handleToggleBlacklist}
@@ -2156,7 +2384,6 @@ function App() {
         showMemberListModal={showMemberListModal}
         handleCloseMemberList={handleCloseMemberList}
         showInviteMemberModal={showInviteMemberModal}
-        handleCloseInviteMember={handleCloseInviteMember}
         showCreateGroupModal={showCreateGroupModal}
         handleCloseCreateGroup={handleCloseCreateGroup}
         groupName={groupName}

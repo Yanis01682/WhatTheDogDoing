@@ -1,9 +1,11 @@
 # backend/app/main.py
 import logging
 import time
+import os
 
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import or_, text
 from sqlalchemy.exc import SQLAlchemyError
 from .auth import UserStatus, router as auth_router, get_current_user
@@ -18,6 +20,11 @@ logger = logging.getLogger(__name__)
 app = FastAPI(title="WhatTheDogDoing API")
 
 # backend/app/main.py
+
+# 挂载静态文件目录（用于上传的图片）
+UPLOAD_DIR = os.path.join(os.path.dirname(__file__), '..', 'uploads')
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 app.add_middleware(
     CORSMiddleware,

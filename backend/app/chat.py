@@ -1,7 +1,9 @@
 from datetime import timezone, timedelta
+import os
+import uuid
 from typing import Optional
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Query
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, UploadFile, File
 from pydantic import BaseModel
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
@@ -21,6 +23,8 @@ ERR_GROUP_NAME_EMPTY = "Group name cannot be empty"
 ERR_GROUP_NOT_FOUND = "Group not found"
 ERR_NOT_MEMBER_GROUP = "Not a member of this group"
 ERR_ONLY_OWNER_CAN_RENAME = "Only group owner can rename group"
+ERR_OWNER_CANNOT_LEAVE = "Owner cannot leave the group, please transfer ownership first"
+ERR_ONLY_OWNER_CAN_DISMISS = "Only group owner can dismiss the group"
 
 CHINA_TZ = timezone(timedelta(hours=8))
 
@@ -46,6 +50,14 @@ class GroupCreatePayload(BaseModel):
 
 class GroupRenamePayload(BaseModel):
     name: str
+
+
+class GroupInvitePayload(BaseModel):
+    member_ids: list[int]
+
+
+class GroupInvitePayload(BaseModel):
+    member_ids: list[int]
 
 
 def _get_private_conversation_between(db: Session, user_a_id: int, user_b_id: int):
@@ -224,9 +236,12 @@ def _serialize_message(
     reply_sender: Optional[models.User] = None,
 ):
     sender_name = sender.username if sender else "系统"
+    # 确保 message_type 有默认值
+    msg_type = message.message_type if message.message_type else "text"
     payload = {
         "id": message.id,
         "text": message.content,
+        "type": msg_type,
         "sender": "me" if message.sender_id == current_user_id else "other",
         "senderId": message.sender_id,
         "senderName": sender_name,
@@ -234,6 +249,14 @@ def _serialize_message(
         "timestamp": message.timestamp.isoformat() if message.timestamp else None,
         "replyToId": message.reply_to_id,
     }
+    # 添加图片消息的媒体信息
+    if msg_type == "image" and message.media_url:
+        payload["mediaUrl"] = message.media_url
+        payload["mediaName"] = message.media_name
+    # 添加视频消息的媒体信息
+    if msg_type == "video" and message.media_url:
+        payload["mediaUrl"] = message.media_url
+        payload["mediaName"] = message.media_name
     if reply_message:
         payload["replyTo"] = _serialize_reply_reference(reply_message, current_user_id, reply_sender)
     return payload
@@ -716,6 +739,167 @@ def send_message(
     }
 
 
+@router.post("/messages/send-image")
+async def send_image_message(
+    file: UploadFile = File(...),
+    conversation_id: int = Query(...),
+    reply_to_id: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    """发送图片消息
+    
+    支持的图片格式：PNG, JPEG, JPG, GIF, WEBP, BMP
+    最大文件大小：5MB
+    """
+    # 验证文件类型
+    ALLOWED_IMAGE_TYPES = {
+        'image/png': 'png',
+        'image/jpeg': 'jpg',
+        'image/jpg': 'jpg',
+        'image/gif': 'gif',
+        'image/webp': 'webp',
+        'image/bmp': 'bmp',
+    }
+    
+    if file.content_type not in ALLOWED_IMAGE_TYPES:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"不支持的图片格式。支持的格式：{', '.join(ALLOWED_IMAGE_TYPES.keys())}"
+        )
+    
+    # 验证文件大小（5MB）
+    MAX_FILE_SIZE = 5 * 1024 * 1024
+    content = await file.read()
+    if len(content) > MAX_FILE_SIZE:
+        raise HTTPException(status_code=400, detail="图片大小不能超过 5MB")
+    
+    # 验证是否为会话成员
+    _ensure_conversation_membership(db, conversation_id, current_user.id)
+    
+    # 生成唯一的文件名
+    ext = ALLOWED_IMAGE_TYPES[file.content_type]
+    unique_filename = f"{uuid.uuid4().hex}.{ext}"
+    
+    # 确保上传目录存在
+    upload_dir = os.path.join(os.path.dirname(__file__), '..', 'uploads')
+    os.makedirs(upload_dir, exist_ok=True)
+    
+    # 保存文件
+    file_path = os.path.join(upload_dir, unique_filename)
+    with open(file_path, 'wb') as f:
+        f.write(content)
+    
+    # 获取回复消息（如果有）
+    reply_message = _get_reply_message_or_400(db, conversation_id, reply_to_id)
+    reply_sender = None
+    if reply_message and reply_message.sender_id is not None:
+        reply_sender = db.query(models.User).filter(models.User.id == reply_message.sender_id).first()
+    
+    # 创建图片消息
+    media_url = f"/uploads/{unique_filename}"
+    new_message = models.Message(
+        conversation_id=conversation_id,
+        sender_id=current_user.id,
+        reply_to_id=reply_to_id,
+        message_type="image",
+        content="[图片]",
+        media_url=media_url,
+        media_name=file.filename,
+    )
+    db.add(new_message)
+    db.commit()
+    db.refresh(new_message)
+    
+    return {
+        "status": "sent",
+        "message": _serialize_message(new_message, current_user.id, current_user, reply_message, reply_sender),
+    }
+
+
+@router.post("/messages/send-video")
+async def send_video_message(
+    file: UploadFile = File(...),
+    conversation_id: int = Query(...),
+    reply_to_id: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    """发送视频消息
+    
+    支持的视频格式：MP4, WebM, AVI, MOV, MKV, FLV, WMV, M4V, 3GP, OGG
+    最大文件大小：50MB
+    """
+    # 验证文件类型
+    ALLOWED_VIDEO_TYPES = {
+        'video/mp4': 'mp4',
+        'video/webm': 'webm',
+        'video/x-msvideo': 'avi',
+        'video/avi': 'avi',
+        'video/quicktime': 'mov',
+        'video/x-matroska': 'mkv',
+        'video/x-flv': 'flv',
+        'video/x-ms-wmv': 'wmv',
+        'video/x-m4v': 'm4v',
+        'video/3gpp': '3gp',
+        'video/ogg': 'ogg',
+    }
+    
+    if file.content_type not in ALLOWED_VIDEO_TYPES:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"不支持的视频格式。支持的格式：{', '.join(ALLOWED_VIDEO_TYPES.keys())}"
+        )
+    
+    # 验证文件大小（50MB）
+    MAX_FILE_SIZE = 50 * 1024 * 1024
+    content = await file.read()
+    if len(content) > MAX_FILE_SIZE:
+        raise HTTPException(status_code=400, detail="视频大小不能超过 50MB")
+    
+    # 验证是否为会话成员
+    _ensure_conversation_membership(db, conversation_id, current_user.id)
+    
+    # 生成唯一的文件名
+    ext = ALLOWED_VIDEO_TYPES[file.content_type]
+    unique_filename = f"{uuid.uuid4().hex}.{ext}"
+    
+    # 确保上传目录存在
+    upload_dir = os.path.join(os.path.dirname(__file__), '..', 'uploads')
+    os.makedirs(upload_dir, exist_ok=True)
+    
+    # 保存文件
+    file_path = os.path.join(upload_dir, unique_filename)
+    with open(file_path, 'wb') as f:
+        f.write(content)
+    
+    # 获取回复消息（如果有）
+    reply_message = _get_reply_message_or_400(db, conversation_id, reply_to_id)
+    reply_sender = None
+    if reply_message and reply_message.sender_id is not None:
+        reply_sender = db.query(models.User).filter(models.User.id == reply_message.sender_id).first()
+    
+    # 创建视频消息
+    media_url = f"/uploads/{unique_filename}"
+    new_message = models.Message(
+        conversation_id=conversation_id,
+        sender_id=current_user.id,
+        reply_to_id=reply_to_id,
+        message_type="video",
+        content="[视频]",
+        media_url=media_url,
+        media_name=file.filename,
+    )
+    db.add(new_message)
+    db.commit()
+    db.refresh(new_message)
+    
+    return {
+        "status": "sent",
+        "message": _serialize_message(new_message, current_user.id, current_user, reply_message, reply_sender),
+    }
+
+
 @router.delete("/messages/{message_id}")
 def revoke_message(
     message_id: int,
@@ -801,6 +985,51 @@ def rename_group(
     }
 
 
+@router.post("/groups/{conversation_id}/invite")
+def invite_group_members(
+    conversation_id: int,
+    payload: GroupInvitePayload,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    """邀请成员加入群聊"""
+    _get_group_or_404(db, conversation_id)
+    _ensure_group_membership(db, conversation_id, current_user.id)
+
+    if not payload.member_ids:
+        raise HTTPException(status_code=400, detail="No members to invite")
+
+    # 获取当前群成员 ID 列表
+    existing_members = (
+        db.query(models.ConversationMember)
+        .filter(models.ConversationMember.conversation_id == conversation_id)
+        .all()
+    )
+    existing_member_ids = {member.user_id for member in existing_members}
+
+    # 验证要邀请的用户都存在
+    users = db.query(models.User).filter(models.User.id.in_(payload.member_ids)).all()
+    if len(users) != len(payload.member_ids):
+        raise HTTPException(status_code=404, detail="One or more users do not exist")
+
+    # 过滤掉已经在群里的成员
+    new_member_ids = [uid for uid in payload.member_ids if uid not in existing_member_ids]
+
+    if not new_member_ids:
+        raise HTTPException(status_code=400, detail="All selected users are already in the group")
+
+    # 添加新成员
+    for member_id in new_member_ids:
+        db.add(models.ConversationMember(conversation_id=conversation_id, user_id=member_id))
+
+    db.commit()
+    return {
+        "message": "Members invited successfully",
+        "conversation_id": conversation_id,
+        "invited_count": len(new_member_ids),
+    }
+
+
 @router.get("/groups/{conversation_id}/members")
 def read_group_members(
     conversation_id: int,
@@ -836,3 +1065,109 @@ def read_group_members(
         )
 
     return payload
+
+
+@router.post("/groups/{conversation_id}/exit")
+def exit_group(
+    conversation_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    conversation = _get_group_or_404(db, conversation_id)
+    membership = _ensure_group_membership(db, conversation_id, current_user.id)
+
+    # 群主不能直接退出，必须先转让群主
+    owner_membership = (
+        db.query(models.ConversationMember)
+        .filter(models.ConversationMember.conversation_id == conversation_id)
+        .order_by(models.ConversationMember.id.asc())
+        .first()
+    )
+    if owner_membership and owner_membership.user_id == current_user.id:
+        raise HTTPException(status_code=403, detail=ERR_OWNER_CANNOT_LEAVE)
+
+    # 删除群成员记录
+    db.delete(membership)
+
+    # 检查群内是否还有其他成员
+    remaining_members = (
+        db.query(models.ConversationMember)
+        .filter(models.ConversationMember.conversation_id == conversation_id)
+        .all()
+    )
+
+    # 如果群内没有其他成员了，解散群聊（删除群消息和会话）
+    if not remaining_members:
+        messages = (
+            db.query(models.Message)
+            .filter(models.Message.conversation_id == conversation_id)
+            .all()
+        )
+        for message in messages:
+            db.delete(message)
+        db.delete(conversation)
+
+    db.commit()
+    return {
+        "message": "Successfully left the group",
+        "conversation_id": conversation_id,
+    }
+
+
+@router.delete("/groups/{conversation_id}")
+def dismiss_group(
+    conversation_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    """解散群聊 - 只有群主可以执行
+    
+    解散后会：
+    1. 删除所有群消息
+    2. 删除所有群成员记录
+    3. 删除所有置顶记录
+    4. 删除群聊会话
+    """
+    conversation = _get_group_or_404(db, conversation_id)
+    
+    # 验证当前用户是群成员
+    _ensure_group_membership(db, conversation_id, current_user.id)
+    
+    # 验证当前用户是群主（第一个加入的成员）
+    owner_membership = (
+        db.query(models.ConversationMember)
+        .filter(models.ConversationMember.conversation_id == conversation_id)
+        .order_by(models.ConversationMember.id.asc())
+        .first()
+    )
+    
+    if not owner_membership or owner_membership.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail=ERR_ONLY_OWNER_CAN_DISMISS)
+    
+    # 1. 删除所有群消息
+    messages = (
+        db.query(models.Message)
+        .filter(models.Message.conversation_id == conversation_id)
+        .all()
+    )
+    for message in messages:
+        db.delete(message)
+    
+    # 2. 删除所有群成员记录（包括置顶记录会通过 CASCADE 自动删除）
+    members = (
+        db.query(models.ConversationMember)
+        .filter(models.ConversationMember.conversation_id == conversation_id)
+        .all()
+    )
+    for member in members:
+        db.delete(member)
+    
+    # 3. 删除群聊会话
+    db.delete(conversation)
+    
+    db.commit()
+    
+    return {
+        "message": "Group dismissed successfully",
+        "conversation_id": conversation_id,
+    }

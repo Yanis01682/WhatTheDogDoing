@@ -2,7 +2,7 @@ import axios from 'axios'
 
 // frontend/src/services/api.js
 const apiClient = axios.create({
-  baseURL: '',
+  baseURL: 'http://localhost:8000',
   timeout: 10000,
   headers: { 'Content-Type': 'application/json' },
 })
@@ -174,10 +174,55 @@ export async function renameGroup(conversationId, name) {
   return res.data
 }
 
+export async function exitGroup(conversationId) {
+  const res = await apiClient.post(`/api/chat/groups/${conversationId}/exit`)
+  return res.data
+}
+
+export async function dismissGroup(conversationId) {
+  const res = await apiClient.delete(`/api/chat/groups/${conversationId}`)
+  return res.data
+}
+
+export async function inviteGroupMembers(conversationId, memberIds) {
+  const res = await apiClient.post(`/api/chat/groups/${conversationId}/invite`, {
+    member_ids: memberIds,
+  })
+  return res.data
+}
+
 export async function sendChatMessage(conversationId, content, replyToId) {
   const payload = { conversation_id: conversationId, content }
   if (replyToId) payload.reply_to_id = replyToId
   const res = await apiClient.post('/api/chat/messages/send', payload)
+  return res.data
+}
+
+export async function sendImageMessage(conversationId, file, replyToId = null) {
+  const formData = new FormData()
+  formData.append('file', file)
+  
+  const params = { conversation_id: conversationId }
+  if (replyToId) params.reply_to_id = replyToId
+  
+  const res = await apiClient.post('/api/chat/messages/send-image', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    params,
+  })
+  return res.data
+}
+
+export async function sendVideoMessage(conversationId, file, replyToId = null) {
+  const formData = new FormData()
+  formData.append('file', file)
+  
+  const params = { conversation_id: conversationId }
+  if (replyToId) params.reply_to_id = replyToId
+  
+  const res = await apiClient.post('/api/chat/messages/send-video', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    params,
+  })
   return res.data
 }
 
@@ -207,5 +252,10 @@ export async function getProfile() {
 
 export async function updateProfile(payload) {
   const res = await apiClient.put('/auth/profile', payload)
+  return res.data
+}
+
+export async function updateSensitiveInfo(payload) {
+  const res = await apiClient.post('/auth/profile/sensitive', payload)
   return res.data
 }

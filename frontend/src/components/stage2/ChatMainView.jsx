@@ -182,11 +182,20 @@ function ChatMainView({
               <div className="bubble">
                 {msg.type === 'image' && msg.mediaUrl ? (
                   <div className="message-media-wrap">
-                    <img className="message-media-image" src={msg.mediaUrl} alt={msg.mediaName || '图片消息'} />
+                    <img 
+                      className="message-media-image" 
+                      src={msg.mediaUrl.startsWith('http') ? msg.mediaUrl : `http://localhost:8000${msg.mediaUrl}`}
+                      alt={msg.mediaName || '图片消息'} 
+                    />
                   </div>
                 ) : msg.type === 'video' && msg.mediaUrl ? (
                   <div className="message-media-wrap">
-                    <video className="message-media-video" src={msg.mediaUrl} controls preload="metadata" />
+                    <video 
+                      className="message-media-video" 
+                      src={msg.mediaUrl.startsWith('http') ? msg.mediaUrl : `http://localhost:8000${msg.mediaUrl}`}
+                      controls 
+                      preload="metadata" 
+                    />
                   </div>
                 ) : (
                   msg.text
