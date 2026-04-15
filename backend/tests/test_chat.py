@@ -230,6 +230,63 @@ def test_send_message_response_time_matches_messages_list():
     assert sessions_response.json()[0]["lastMessage"] == "time sync"
 
 
+def test_sender_can_revoke_own_message():
+    headers_alice, _ = register_and_login("revoke_alice", "revoke_alice@example.com")
+    headers_bob, bob_user = register_and_login("revoke_bob", "revoke_bob@example.com")
+
+    add_friend_res = client.post(
+        "/api/chat/friends/add",
+        json={"friend_id": bob_user["id"]},
+        headers=headers_alice,
+    )
+    conversation_id = add_friend_res.json()["conversation_id"]
+
+    send_response = client.post(
+        "/api/chat/messages/send",
+        json={"conversation_id": conversation_id, "content": "revoke me"},
+        headers=headers_alice,
+    )
+    assert send_response.status_code == 200
+    message_id = send_response.json()["message"]["id"]
+
+    revoke_response = client.delete(f"/api/chat/messages/{message_id}", headers=headers_alice)
+    assert revoke_response.status_code == 200
+    assert revoke_response.json()["message_id"] == message_id
+
+    read_response = client.get(f"/api/chat/sessions/{conversation_id}/messages", headers=headers_bob)
+    assert read_response.status_code == 200
+    assert read_response.json() == []
+
+
+def test_non_sender_cannot_revoke_other_users_message():
+    headers_alice, _ = register_and_login("revoke_guard_alice", "revoke_guard_alice@example.com")
+    headers_bob, bob_user = register_and_login("revoke_guard_bob", "revoke_guard_bob@example.com")
+
+    add_friend_res = client.post(
+        "/api/chat/friends/add",
+        json={"friend_id": bob_user["id"]},
+        headers=headers_alice,
+    )
+    conversation_id = add_friend_res.json()["conversation_id"]
+
+    send_response = client.post(
+        "/api/chat/messages/send",
+        json={"conversation_id": conversation_id, "content": "hands off"},
+        headers=headers_alice,
+    )
+    assert send_response.status_code == 200
+    message_id = send_response.json()["message"]["id"]
+
+    revoke_response = client.delete(f"/api/chat/messages/{message_id}", headers=headers_bob)
+    assert revoke_response.status_code == 403
+    assert revoke_response.json()["detail"] == "Only the sender can revoke this message"
+
+    read_response = client.get(f"/api/chat/sessions/{conversation_id}/messages", headers=headers_alice)
+    assert read_response.status_code == 200
+    assert len(read_response.json()) == 1
+    assert read_response.json()[0]["id"] == message_id
+
+
 def test_pin_session_only_affects_current_user_order():
     headers_alice, _ = register_and_login("pin_alice", "pin_alice@example.com")
     headers_bob, bob_user = register_and_login("pin_bob", "pin_bob@example.com")

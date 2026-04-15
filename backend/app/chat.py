@@ -642,6 +642,26 @@ def send_message(
     }
 
 
+@router.delete("/messages/{message_id}")
+def revoke_message(
+    message_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    message = db.query(models.Message).filter(models.Message.id == message_id).first()
+    if not message:
+        raise HTTPException(status_code=404, detail="Message not found")
+
+    _ensure_conversation_membership(db, message.conversation_id, current_user.id)
+
+    if message.sender_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Only the sender can revoke this message")
+
+    db.delete(message)
+    db.commit()
+    return {"message": "Message revoked successfully", "message_id": message_id}
+
+
 @router.post("/groups")
 def create_group(
     payload: GroupCreatePayload,
