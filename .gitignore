@@ -15,3 +15,5 @@ dist/
 
 # coverage artifacts
 .coverage
+coverage.xml
+backend/coverage.xml
