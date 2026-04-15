@@ -796,26 +796,61 @@ function Overlays({
         </div>
       )}
 
-      {showInviteMemberModal && (
-        <div className="invite-member-overlay" onClick={handleCloseInviteMember}>
-          <div className="invite-member-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="invite-member-header"><h3>邀请好友</h3><button className="close-btn" onClick={handleCloseInviteMember}>✕</button></div>
-            <div className="invite-member-body">
-              <p className="invite-hint">选择要邀请的好友（需群主或管理员审核）</p>
-              <div className="friend-select-list">
-                {myFriends.map((friend) => (
-                  <label key={friend.id} className="friend-checkbox">
-                    <input type="checkbox" />
-                    <div className="friend-avatar-small">{friend.avatar}</div>
-                    <span className="friend-name">{friend.remark || friend.name}</span>
-                  </label>
-                ))}
+
+      {showInviteMemberModal && (() => {
+        const existingMemberIds = getCurrentGroupMemberIds()
+        // Only show friends who are NOT already in the group
+        const invitableFriends = myFriends.filter(
+          (f) => !existingMemberIds.has(Number(f.accountId))
+        )
+        return (
+          <div className="invite-member-overlay" onClick={handleCloseInviteMember}>
+            <div className="invite-member-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="invite-member-header">
+                <h3>邀请好友</h3>
+                <button className="close-btn" onClick={handleCloseInviteMember}>✕</button>
               </div>
-              <button className="send-invite-btn" onClick={() => { alert('邀请已发送，等待群主或管理员审核'); handleCloseInviteMember() }}>发送邀请</button>
+              <div className="invite-member-body">
+                <p className="invite-hint">
+                  选择要邀请加入群聊的好友（已在群中的好友不显示）
+                </p>
+                <div className="friend-select-list">
+                  {invitableFriends.length > 0 ? (
+                    invitableFriends.map((friend) => {
+                      const friendId = Number(friend.accountId)
+                      const isSelected = selectedInviteFriends.includes(friendId)
+                      return (
+                        <label
+                          key={friend.id}
+                          className={`friend-checkbox ${isSelected ? 'selected' : ''}`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => handleToggleInviteFriend(friendId)}
+                          />
+                          <div className="friend-avatar-small">{friend.avatar}</div>
+                          <span className="friend-name">{friend.remark || friend.name}</span>
+                        </label>
+                      )
+                    })
+                  ) : (
+                    <p className="invite-empty">所有好友均已在该群聊中</p>
+                  )}
+                </div>
+                <button
+                  className="send-invite-btn"
+                  onClick={handleSendInvite}
+                  disabled={selectedInviteFriends.length === 0}
+                >
+                  邀请 {selectedInviteFriends.length > 0 ? `(${selectedInviteFriends.length})` : ''}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
+
 
       {showCreateGroupModal && (
         <div className="create-group-overlay" onClick={handleCloseCreateGroup}>
