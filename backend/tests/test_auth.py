@@ -52,7 +52,24 @@ def test_register_duplicate():
     )
     assert response.status_code == 400
     # 修复了断言 Bug，对齐了 auth.py 里的英文报错
-    assert response.json()["detail"] == "Username already taken" 
+    assert response.json()["detail"] == "Username already taken"
+
+
+def test_register_duplicate_email():
+    """测试重复邮箱返回 400 而不是数据库错误"""
+    first = client.post(
+        "/auth/register",
+        json={"username": "email_user_one", "password": "pw123456", "email": "dup@example.com"}
+    )
+    assert first.status_code == 200
+
+    response = client.post(
+        "/auth/register",
+        json={"username": "email_user_two", "password": "pw123456", "email": "dup@example.com"}
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Email already taken"
+
 
 def test_login_success():
     """测试正常登录"""
