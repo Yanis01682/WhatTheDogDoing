@@ -74,7 +74,7 @@ deploy-database:
     - export BUILD_IMAGE_USERNAME=$CI_REGISTRY_USER
     - export BUILD_IMAGE_PASSWORD=$CI_REGISTRY_PASSWORD
     - deployer build
-    - deployer dyno replace mysql-db "$BUILD_IMAGE_NAME:$BUILD_IMAGE_TAG" "$REGISTRY_USER" "$REGISTRY_PWD"
+    - deployer dyno replace mysql-db "$BUILD_IMAGE_NAME:$BUILD_IMAGE_TAG" "$BUILD_IMAGE_USERNAME" "$BUILD_IMAGE_PASSWORD"
   only:
     refs:
       - main
@@ -97,7 +97,7 @@ deploy-frontend:
     - export BUILD_IMAGE_USERNAME=$CI_REGISTRY_USER
     - export BUILD_IMAGE_PASSWORD=$CI_REGISTRY_PASSWORD
     - deployer build
-    - deployer dyno replace frontend-dyno "$BUILD_IMAGE_NAME:$BUILD_IMAGE_TAG" "$REGISTRY_USER" "$REGISTRY_PWD"
+    - deployer dyno replace frontend-dyno "$BUILD_IMAGE_NAME:$BUILD_IMAGE_TAG" "$BUILD_IMAGE_USERNAME" "$BUILD_IMAGE_PASSWORD"
   only:
     - main
 
@@ -116,6 +116,6 @@ deploy-backend:
     - export BUILD_IMAGE_USERNAME=$CI_REGISTRY_USER
     - export BUILD_IMAGE_PASSWORD=$CI_REGISTRY_PASSWORD
     - deployer build
-    - deployer dyno replace backend-dyno "$BUILD_IMAGE_NAME:$BUILD_IMAGE_TAG" "$REGISTRY_USER" "$REGISTRY_PWD"
+    - deployer dyno replace backend-dyno "$BUILD_IMAGE_NAME:$BUILD_IMAGE_TAG" "$BUILD_IMAGE_USERNAME" "$BUILD_IMAGE_PASSWORD"
   only:
     - main
