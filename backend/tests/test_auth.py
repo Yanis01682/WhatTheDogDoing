@@ -322,6 +322,9 @@ def test_delete_account_cleans_friendships_private_messages_and_group_membership
     )
     assert private_message_res.status_code == 200
 
+    # Carol must also be a friend to be in a group
+    client.post("/api/chat/friends/add", json={"friend_id": carol_id}, headers=alice_headers)
+
     group_res = client.post(
         "/api/chat/groups",
         json={"name": "cleanup-group", "member_ids": [bob_id, carol_id]},

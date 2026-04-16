@@ -440,6 +440,9 @@ def test_create_group_and_read_members():
     headers_alice, _ = register_and_login("mona", "mona@example.com")
     headers_bob, bob_user = register_and_login("nick", "nick@example.com")
 
+    # MUST be friends to create group
+    client.post("/api/chat/friends/add", json={"friend_id": bob_user["id"]}, headers=headers_alice)
+
     group_res = client.post(
         "/api/chat/groups",
         json={"name": "项目组", "member_ids": [bob_user["id"]]},
@@ -462,6 +465,9 @@ def test_create_group_and_read_members():
 def test_group_owner_can_rename_group():
     headers_owner, _ = register_and_login("owner_rename", "owner_rename@example.com")
     headers_member, member_user = register_and_login("member_rename", "member_rename@example.com")
+
+    # MUST be friends to create group
+    client.post("/api/chat/friends/add", json={"friend_id": member_user["id"]}, headers=headers_owner)
 
     group_res = client.post(
         "/api/chat/groups",
@@ -489,6 +495,9 @@ def test_non_owner_cannot_rename_group():
     headers_owner, _ = register_and_login("owner_no_rename", "owner_no_rename@example.com")
     headers_member, member_user = register_and_login("member_no_rename", "member_no_rename@example.com")
 
+    # MUST be friends to create group
+    client.post("/api/chat/friends/add", json={"friend_id": member_user["id"]}, headers=headers_owner)
+
     group_res = client.post(
         "/api/chat/groups",
         json={"name": "不可改名群", "member_ids": [member_user["id"]]},
@@ -509,6 +518,9 @@ def test_non_owner_cannot_rename_group():
 def test_rename_group_rejects_empty_name():
     headers_owner, _ = register_and_login("owner_empty_name", "owner_empty_name@example.com")
     headers_member, member_user = register_and_login("member_empty_name", "member_empty_name@example.com")
+
+    # MUST be friends to create group
+    client.post("/api/chat/friends/add", json={"friend_id": member_user["id"]}, headers=headers_owner)
 
     group_res = client.post(
         "/api/chat/groups",
