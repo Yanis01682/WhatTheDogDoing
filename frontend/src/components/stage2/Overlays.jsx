@@ -458,7 +458,7 @@ function Overlays({
                     onClick={handleAddPeerAsFriend}
                     disabled={peerRequestPending}
                   >
-                    {peerRequestPending ? '已发送申请' : '添加好友'}
+                    {peerRequestPending ? '已发送申请' : '发送申请'}
                   </button>
                 )}
               </div>
@@ -631,7 +631,7 @@ function Overlays({
                             onClick={() => handleSendFriendRequest(user.userId)}
                             disabled={alreadyFriend}
                           >
-                            {alreadyFriend ? '已是好友' : '直接添加'}
+                            {alreadyFriend ? '已是好友' : '发送申请'}
                           </button>
                         </div>
                       )
