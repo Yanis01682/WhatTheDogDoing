@@ -1,8 +1,9 @@
 import axios from 'axios'
 
-// frontend/src/services/api.js
+// Use relative base URL so requests go through nginx in production
+// and through vite proxy in development
 const apiClient = axios.create({
-  baseURL: 'http://localhost:8000',
+  baseURL: '',
   timeout: 10000,
   headers: { 'Content-Type': 'application/json' },
 })
