@@ -25,6 +25,7 @@ ERR_NOT_MEMBER_GROUP = "Not a member of this group"
 ERR_ONLY_OWNER_CAN_RENAME = "Only group owner can rename group"
 ERR_OWNER_CANNOT_LEAVE = "Owner cannot leave the group, please transfer ownership first"
 ERR_ONLY_OWNER_CAN_DISMISS = "Only group owner can dismiss the group"
+ERR_INVITE_NON_FRIEND = "You can only invite your friends to a group"
 
 CHINA_TZ = timezone(timedelta(hours=8))
 
@@ -1011,6 +1012,21 @@ def invite_group_members(
     users = db.query(models.User).filter(models.User.id.in_(payload.member_ids)).all()
     if len(users) != len(payload.member_ids):
         raise HTTPException(status_code=404, detail="One or more users do not exist")
+
+    # 验证所有被邀请者都是当前用户的好友（accepted 状态）
+    accepted_friend_ids = {
+        fs.friend_id
+        for fs in db.query(models.Friendship)
+        .filter(
+            models.Friendship.user_id == current_user.id,
+            models.Friendship.friend_id.in_(payload.member_ids),
+            models.Friendship.status == "accepted",
+        )
+        .all()
+    }
+    non_friend_ids = [uid for uid in payload.member_ids if uid not in accepted_friend_ids]
+    if non_friend_ids:
+        raise HTTPException(status_code=403, detail=ERR_INVITE_NON_FRIEND)
 
     # 过滤掉已经在群里的成员
     new_member_ids = [uid for uid in payload.member_ids if uid not in existing_member_ids]
