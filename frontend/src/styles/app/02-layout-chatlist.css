@@ -459,6 +459,18 @@
   border: none;
 }
 
+.session-item.pinned {
+  background-color: #ededed;
+}
+
+.session-item.pinned:hover {
+  background-color: #e3e3e3;
+}
+
+.session-item.pinned.active {
+  background-color: #e5f1ff;
+}
+
 .avatar {
   width: 56px;
   height: 56px;
@@ -650,7 +662,19 @@
 }
 
 .night-mode .session-item.active {
-  background: #3d3d3d !important;
+  background: #4d4d4d !important;
+}
+
+.night-mode .session-item.pinned {
+  background: #2a2a2a !important;
+}
+
+.night-mode .session-item.pinned:hover {
+  background: #333333 !important;
+}
+
+.night-mode .session-item.pinned.active {
+  background: #4d4d4d !important;
 }
 
 .night-mode .session-title {

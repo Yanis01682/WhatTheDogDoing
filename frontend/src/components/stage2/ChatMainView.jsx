@@ -95,6 +95,16 @@ function ChatMainView({
     )
   }
 
+  if (!hasActiveConversation) {
+    return (
+      <section className="panel chat-panel empty-wechat-panel">
+        <svg viewBox="0 0 24 24" width="160" height="160" fill="#eaeaea">
+          <path d="M12 21a9.92 9.92 0 01-3.64-.68L4.67 22l1.09-3.23A9.87 9.87 0 012 12C2 6.48 6.48 2 12 2s10 4.48 10 10-4.48 10-10 9zm-2.5-11a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm5 0a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" />
+        </svg>
+      </section>
+    )
+  }
+
   return (
     <section className="panel chat-panel">
       <header className="chat-topbar">
@@ -140,12 +150,6 @@ function ChatMainView({
       </header>
 
       <div className="chat-messages" onClick={handleMessagesClick}>
-        {!hasActiveConversation && (
-          <div className="empty-chat-state">
-            <p>还没有真实会话</p>
-            <p>去好友面板添加一个真实账号开始聊天吧。</p>
-          </div>
-        )}
         {messages[currentChat]?.map((msg, index) => {
           // 在群聊中，根据消息发送者 ID 获取真实的成员头像和名称
           let peerAvatar = currentSession.avatar

@@ -1,4 +1,4 @@
-﻿/* ========================================
+/* ========================================
    5. 鍙充晶鑱婂ぉ闈㈡澘 - 涓昏亰澶╁尯鍩?
    浣嶇疆锛氬彸渚т富瑕佸唴瀹瑰尯锛屾樉绀哄綋鍓嶄細璇濈殑鑱婂ぉ绐楀彛
    ======================================== */
@@ -8,6 +8,12 @@
   flex-direction: column;
   flex: 1;
   min-width: 0;
+}
+
+.empty-wechat-panel {
+  background: #f5f5f5 !important;
+  align-items: center;
+  justify-content: center;
 }
 
 .chat-topbar {

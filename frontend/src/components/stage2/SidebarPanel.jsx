@@ -167,7 +167,7 @@ function SidebarPanel({
     return (
       <li
         key={session.id}
-        className={`session-item ${currentChat === session.id ? 'active' : ''}`}
+        className={`session-item ${currentChat === session.id ? 'active' : ''} ${pinnedChatIds?.includes(session.id) ? 'pinned' : ''}`}
         onClick={() => setCurrentChat(session.id)}
         onContextMenu={(e) => handleSessionContextMenu(e, session)}
       >
