@@ -191,7 +191,7 @@ function App() {
       if (nextChatId && fetchedSessions.some((session) => session.id === nextChatId)) {
         return nextChatId
       }
-      return fetchedSessions[0]?.id ?? null
+      return null
     })
   }
 

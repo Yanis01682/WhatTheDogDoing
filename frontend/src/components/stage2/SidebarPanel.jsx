@@ -157,7 +157,7 @@ function SidebarPanel({
       <li
         key={session.id}
         className={`session-item ${currentChat === session.id ? 'active' : ''} ${pinnedChatIds?.includes(session.id) ? 'pinned' : ''}`}
-        onClick={() => setCurrentChat(session.id)}
+        onClick={() => setCurrentChat(currentChat === session.id ? null : session.id)}
         onContextMenu={(e) => handleSessionContextMenu(e, session)}
       >
         <div className="avatar-wrapper">
@@ -324,7 +324,7 @@ function SidebarPanel({
                           >
                             <div className="qq-friend-avatar">
                               {friend.avatar}
-                              <span className={`qq-status-dot ${friend.status}`}></span>
+
                             </div>
                             <div className="qq-friend-info">
                               <div className="qq-friend-main">
@@ -332,9 +332,7 @@ function SidebarPanel({
                                   {friend.remark || friend.name}
                                   {friend.remark && <span className="friend-real-name">({friend.name})</span>}
                                 </p>
-                                <span className={`qq-status-icon ${friend.status}`}>
-                                  {friend.status === 'online' ? '●' : friend.status === 'busy' ? '●' : friend.status === 'away' ? '●' : friend.status === 'invisible' ? '●' : '○'}
-                                </span>
+
                               </div>
                               <p className="qq-friend-signature">{friend.signature || '这个人很懒，什么都没写~'}</p>
                             </div>
