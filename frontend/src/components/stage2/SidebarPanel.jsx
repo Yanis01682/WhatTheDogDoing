@@ -180,7 +180,7 @@ function SidebarPanel({
   return (
     <aside
       className="panel chatlist-panel"
-      style={{ width: `${chatlistWidth}px`, flex: 'none', '--chatlist-width': `${chatlistWidth}px` }}
+      style={{ width: `${chatlistWidth}px`, minWidth: '200px', flex: 'none', overflow: 'hidden', '--chatlist-width': `${chatlistWidth}px` }}
     >
       <div className="panel-header wechat-panel-header">
         <div className="wechat-search-wrapper">

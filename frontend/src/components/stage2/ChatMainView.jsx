@@ -145,7 +145,7 @@ function ChatMainView({
                   <div className="message-media-wrap">
                     <img 
                       className="message-media-image" 
-                      src={msg.mediaUrl.startsWith('http') ? msg.mediaUrl : `http://localhost:8000${msg.mediaUrl}`}
+                      src={msg.mediaUrl.startsWith('http') ? msg.mediaUrl : msg.mediaUrl}
                       alt={msg.mediaName || '图片消息'} 
                     />
                   </div>
@@ -153,7 +153,7 @@ function ChatMainView({
                   <div className="message-media-wrap">
                     <video 
                       className="message-media-video" 
-                      src={msg.mediaUrl.startsWith('http') ? msg.mediaUrl : `http://localhost:8000${msg.mediaUrl}`}
+                      src={msg.mediaUrl.startsWith('http') ? msg.mediaUrl : msg.mediaUrl}
                       controls 
                       preload="metadata" 
                     />
