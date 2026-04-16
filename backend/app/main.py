@@ -82,12 +82,18 @@ def initialize_database():
                         connection.commit()
                         logger.info("Migrated: added users.%s column", col)
             with engine.connect() as connection:
-                try:
-                    connection.execute(text("SELECT reply_to_id FROM messages LIMIT 1"))
-                except Exception:
-                    connection.execute(text("ALTER TABLE messages ADD COLUMN reply_to_id INTEGER"))
-                    connection.commit()
-                    logger.info("Migrated: added messages.reply_to_id column")
+                for col, definition in [
+                    ("reply_to_id", "INTEGER"),
+                    ("message_type", "VARCHAR(20) NOT NULL DEFAULT 'text'"),
+                    ("media_url", "VARCHAR(500)"),
+                    ("media_name", "VARCHAR(200)"),
+                ]:
+                    try:
+                        connection.execute(text(f"SELECT {col} FROM messages LIMIT 1"))
+                    except Exception:
+                        connection.execute(text(f"ALTER TABLE messages ADD COLUMN {col} {definition}"))
+                        connection.commit()
+                        logger.info("Migrated: added messages.%s column", col)
 
             with engine.connect() as connection:
                 try:
