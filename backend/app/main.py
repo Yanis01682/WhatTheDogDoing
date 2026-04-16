@@ -72,6 +72,8 @@ def initialize_database():
                     ("gender", "VARCHAR(16)"),
                     ("phone", "VARCHAR(32)"),
                     ("bio", "VARCHAR(500)"),
+                    ("last_status", "VARCHAR(32) DEFAULT 'online'"),
+                    ("avatar", "VARCHAR(500)"),
                 ]:
                     try:
                         connection.execute(text(f"SELECT {col} FROM users LIMIT 1"))
