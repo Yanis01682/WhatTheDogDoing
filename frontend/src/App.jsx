@@ -1113,7 +1113,7 @@ function App() {
     try {
       await handleSaveGroupNickname(tempGroupNickname)
       setIsEditingGroupNickname(false)
-    } catch (err) {
+    } catch {
       // 错误已由 handleSaveGroupNickname 处理
     }
   }
