@@ -8,7 +8,7 @@ function LeftNav({
   toggleUserPanel,
   activeTab,
   setActiveTab,
-  friendRequestCount = 0,
+  pendingRequestCount = 0,
 }) {
   return (
     <nav className="left-nav">
@@ -33,18 +33,28 @@ function LeftNav({
           </svg>
         </button>
 
+        <button 
+          className={`nav-tab-btn ${activeTab === 'friends' ? 'active' : ''}`}
+          onClick={() => setActiveTab('friends')}
+          aria-label="通讯录"
+        >
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+          </svg>
+        </button>
+
         <div style={{ position: 'relative', width: '100%' }}>
           <button 
-            className={`nav-tab-btn ${activeTab === 'friends' ? 'active' : ''}`}
-            onClick={() => setActiveTab('friends')}
-            aria-label="通讯录"
+            className={`nav-tab-btn ${activeTab === 'requests' ? 'active' : ''}`}
+            onClick={() => setActiveTab('requests')}
+            aria-label="待处理申请"
           >
             <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
-              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+              <path d="M19 3H5c-1.1 0-2 .9-2 2v14l4-3h12c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 8H7v-2h10v2zm0-3H7V6h10v2z"/>
             </svg>
           </button>
-          {friendRequestCount > 0 && (
-            <span className="nav-tab-badge">{friendRequestCount > 99 ? '99+' : friendRequestCount}</span>
+          {pendingRequestCount > 0 && (
+            <span className="nav-tab-badge">{pendingRequestCount > 99 ? '99+' : pendingRequestCount}</span>
           )}
         </div>
 

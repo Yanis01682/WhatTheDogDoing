@@ -232,6 +232,40 @@ def test_send_message_response_time_matches_messages_list():
     assert sessions_response.json()[0]["lastMessage"] == "time sync"
 
 
+def test_sessions_badge_reflects_unread_messages_and_clears_after_read():
+    headers_alice, _ = register_and_login("badge_alice", "badge_alice@example.com")
+    headers_bob, bob_user = register_and_login("badge_bob", "badge_bob@example.com")
+
+    add_friend_res = client.post(
+        "/api/chat/friends/add",
+        json={"friend_id": bob_user["id"]},
+        headers=headers_alice,
+    )
+    conversation_id = add_friend_res.json()["conversation_id"]
+
+    initial_bob_sessions = client.get("/api/chat/sessions", headers=headers_bob)
+    assert initial_bob_sessions.status_code == 200
+    assert initial_bob_sessions.json()[0]["badge"] == 0
+
+    send_response = client.post(
+        "/api/chat/messages/send",
+        json={"conversation_id": conversation_id, "content": "unread check"},
+        headers=headers_alice,
+    )
+    assert send_response.status_code == 200
+
+    unread_bob_sessions = client.get("/api/chat/sessions", headers=headers_bob)
+    assert unread_bob_sessions.status_code == 200
+    assert unread_bob_sessions.json()[0]["badge"] == 1
+
+    read_response = client.get(f"/api/chat/sessions/{conversation_id}/messages", headers=headers_bob)
+    assert read_response.status_code == 200
+
+    cleared_bob_sessions = client.get("/api/chat/sessions", headers=headers_bob)
+    assert cleared_bob_sessions.status_code == 200
+    assert cleared_bob_sessions.json()[0]["badge"] == 0
+
+
 def test_sender_can_revoke_own_message():
     headers_alice, _ = register_and_login("revoke_alice", "revoke_alice@example.com")
     headers_bob, bob_user = register_and_login("revoke_bob", "revoke_bob@example.com")

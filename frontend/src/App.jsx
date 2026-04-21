@@ -2281,7 +2281,7 @@ function App() {
           toggleUserPanel={toggleUserPanel}
           activeTab={activeTab}
           setActiveTab={setActiveTab}
-          friendRequestCount={friendRequestList.length + groupInviteRequests.length}
+          pendingRequestCount={friendRequestList.length + groupInviteRequests.length}
         />
 
       <main className="im-layout">
@@ -2317,8 +2317,11 @@ function App() {
           onRemoveFromBlacklist={handleRemoveFromBlacklist}
           onOpenBlacklistChat={handleOpenBlacklistChat}
           friendRequestList={friendRequestList}
+          groupInviteRequests={groupInviteRequests}
           handleAcceptRequest={handleAcceptRequest}
           handleRejectRequest={handleRejectRequest}
+          handleApproveGroupInviteRequest={handleApproveGroupInviteRequest}
+          handleRejectGroupInviteRequest={handleRejectGroupInviteRequest}
         />
 
         {/* 侧边栏与聊天窗口的固定分隔线 */}

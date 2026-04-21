@@ -339,6 +339,7 @@ def _serialize_session(db: Session, conversation: models.Conversation, current_u
         .filter(models.ConversationMember.conversation_id == conversation.id)
         .all()
     )
+    current_membership = next((member for member in members if member.user_id == current_user.id), None)
     member_ids = [member.user_id for member in members]
     latest_message = (
         db.query(models.Message)
@@ -346,6 +347,17 @@ def _serialize_session(db: Session, conversation: models.Conversation, current_u
         .order_by(models.Message.timestamp.desc(), models.Message.id.desc())
         .first()
     )
+    unread_count = 0
+    if current_membership is not None:
+        unread_count = (
+            db.query(models.Message)
+            .filter(
+                models.Message.conversation_id == conversation.id,
+                models.Message.id > (current_membership.read_index or 0),
+                models.Message.sender_id != current_user.id,
+            )
+            .count()
+        )
 
     title = conversation.name or "未命名会话"
     avatar = title[:1] if title else "会"
@@ -366,7 +378,7 @@ def _serialize_session(db: Session, conversation: models.Conversation, current_u
         "lastMessage": latest_message.content if latest_message else "暂无消息",
         "time": _format_message_time(latest_message.timestamp) if latest_message else "",
         "timestamp": latest_message.timestamp.isoformat() if latest_message and latest_message.timestamp else None,
-        "badge": 0,
+        "badge": unread_count,
         "isGroup": conversation.is_group,
         "realName": real_name,
         "isPinned": _is_session_pinned(db, conversation.id, current_user.id),
@@ -637,6 +649,12 @@ def read_messages(
         .order_by(models.Message.timestamp.asc(), models.Message.id.asc())
         .all()
     )
+    membership = _get_member_or_403(db, conversation_id, current_user.id)
+    if messages:
+        latest_message_id = messages[-1].id
+        if (membership.read_index or 0) < latest_message_id:
+            membership.read_index = latest_message_id
+            db.commit()
     sender_ids = {message.sender_id for message in messages if message.sender_id is not None}
     users = db.query(models.User).filter(models.User.id.in_(sender_ids)).all() if sender_ids else []
     user_map = {user.id: user for user in users}
