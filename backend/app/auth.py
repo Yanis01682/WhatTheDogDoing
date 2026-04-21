@@ -113,9 +113,6 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
             detail="用户名或密码错误",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    # 登录后恢复上次登出前的在线状态（默认为 online）
-    user.status = user.last_status if user.last_status else "online"
-    db.commit()
     access_token = create_access_token(data={"sub": user.username})
     user_response = UserResponse.model_validate(user)
     return TokenResponse(access_token=access_token, user=user_response)
@@ -153,13 +150,8 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
 
 @router.post("/logout")
 def logout(current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
-    # 先保存当前状态为 last_status（下次登录恢复）
-    if current_user.status not in ("offline", "invisible"):
-        current_user.last_status = current_user.status
-    # 然后设置为离线
-    current_user.status = "offline"
-    db.commit()
     return {"message": "Successfully logged out"}
+
 
 
 @router.put("/change-password")
@@ -177,23 +169,6 @@ def change_password(
     current_user.hashed_password = get_password_hash(request.new_password)
     db.commit()
     return {"message": "密码修改成功"}
-
-
-@router.put("/status")
-def update_status(
-    request: dict,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """更新用户在线状态（不允许手动设置为 offline）"""
-    new_status = request.get("status")
-    valid_statuses = ["online", "busy", "away", "invisible"]
-    if new_status not in valid_statuses:
-        raise HTTPException(status_code=400, detail=f"无效的状态值，必须是: {', '.join(valid_statuses)}（离线状态仅由系统自动设置）")
-
-    current_user.status = new_status
-    db.commit()
-    return {"message": "状态更新成功", "status": new_status}
 
 
 class UserProfileUpdate(BaseModel):

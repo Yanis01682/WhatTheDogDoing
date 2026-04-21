@@ -158,8 +158,8 @@ def test_get_current_user_user_not_found():
     assert response.status_code == 404
 
 
-def test_logout_and_status_and_change_password_flow():
-    """覆盖 logout/status/change-password 的关键分支"""
+def test_logout_and_change_password_flow():
+    """覆盖 logout/change-password 的关键分支"""
     client.post(
         "/auth/register",
         json={"username": "state_user", "password": "oldpass123", "email": "state_user@example.com"},
@@ -170,13 +170,6 @@ def test_logout_and_status_and_change_password_flow():
     )
     token = login_res.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
-
-    bad_status = client.put("/auth/status", json={"status": "sleeping"}, headers=headers)
-    assert bad_status.status_code == 400
-
-    ok_status = client.put("/auth/status", json={"status": "away"}, headers=headers)
-    assert ok_status.status_code == 200
-    assert ok_status.json()["status"] == "away"
 
     wrong_old = client.put(
         "/auth/change-password",

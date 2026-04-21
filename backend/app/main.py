@@ -12,7 +12,7 @@ from . import models
 from .chat import manager
 from sqlalchemy import or_, text
 from sqlalchemy.exc import SQLAlchemyError
-from .auth import UserStatus, router as auth_router, get_current_user
+from .auth import router as auth_router, get_current_user
 from .chat import router as chat_router
 from .database import engine, get_db
 from . import models
@@ -247,17 +247,6 @@ def delete_account(db: Session = Depends(get_db), current_user: models.User = De
     db.commit()
     return {"message": "Account deleted successfully"}
 
-@app.put("/api/users/me/status")
-def update_status(
-    new_status: UserStatus, 
-    current_user: models.User = Depends(get_current_user), 
-    db: Session = Depends(get_db)
-):
-    # 更新状态
-    current_user.status = new_status
-    db.commit()
-    db.refresh(current_user)
-    return {"status": current_user.status}
 
 app.include_router(auth_router)
 app.include_router(chat_router, prefix="/api/chat", tags=["chat"])
