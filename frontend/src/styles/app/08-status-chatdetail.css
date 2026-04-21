@@ -357,6 +357,12 @@
 .owner-avatar,
 .group-avatar-large,
 .personal-avatar-large {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background-size: cover;
   background-position: center;
 }
