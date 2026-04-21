@@ -3,7 +3,7 @@ import os
 import uuid
 from typing import Optional
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Query, UploadFile, File
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, UploadFile, File, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
@@ -64,6 +64,26 @@ class GroupInvitePayload(BaseModel):
 class GroupInvitePayload(BaseModel):
     member_ids: list[int]
 
+
+class ConnectionManager:
+    def __init__(self):
+        # 存储 active 链接: {user_id: [websocket1, websocket2]}
+        self.active_connections: dict[int, list[WebSocket]] = {}
+
+    async def connect(self, websocket: WebSocket, user_id: int):
+        await websocket.accept()
+        if user_id not in self.active_connections:
+            self.active_connections[user_id] = []
+        self.active_connections[user_id].append(websocket)
+
+    def disconnect(self, websocket: WebSocket, user_id: int):
+        if user_id in self.active_connections:
+            if websocket in self.active_connections[user_id]:
+                self.active_connections[user_id].remove(websocket)
+            if not self.active_connections[user_id]:
+                del self.active_connections[user_id]
+
+manager = ConnectionManager()
 
 def _get_private_conversation_between(db: Session, user_a_id: int, user_b_id: int):
     conversations = (
@@ -1329,3 +1349,31 @@ def update_group_nickname(
     db.commit()
     return {"message": "Group nickname updated", "group_nickname": my_member.group_nickname or ""}
 
+@router.websocket("/ws/{user_id}")
+async def websocket_endpoint(websocket: WebSocket, user_id: int, db: Session = Depends(get_db)):
+    await manager.connect(websocket, user_id)
+    
+    # 建立连接时，如果是 offline，则自动转 online
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if user and user.status == "offline":
+        user.status = "online"
+        db.commit()
+
+    try:
+        while True:
+            # 维持长连接，等待接收消息或心跳
+            data = await websocket.receive_text() 
+    except WebSocketDisconnect:
+        # --- 核心逻辑：用户关闭网页会触发这里 ---
+        manager.disconnect(websocket, user_id)
+        
+        # 重新获取 user 实例防止 session 异常
+        user = db.query(models.User).filter(models.User.id == user_id).first()
+        if user:
+            # 只有当用户不是“隐身”时，才自动设为离线
+            # 这样隐身用户关了网页，在别人眼里依然是离线（符合逻辑）
+            if user.status != "invisible":
+                user.status = "offline"
+                db.commit()
+    finally:
+        db.close()
