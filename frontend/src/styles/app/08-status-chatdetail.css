@@ -353,6 +353,14 @@
   box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
 }
 
+.member-avatar-small-inner,
+.owner-avatar,
+.group-avatar-large,
+.personal-avatar-large {
+  background-size: cover;
+  background-position: center;
+}
+
 .group-name-row {
   display: flex;
   align-items: center;
