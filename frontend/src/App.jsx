@@ -155,6 +155,8 @@ function App() {
     // (status removed)
     try {
       const profile = await getProfile()
+      const resolvedAvatar =
+        profile.avatar || (profile.nickname || user.username || '我').slice(0, 1).toUpperCase()
       setProfileData({
         username: user.username || '',
         nickname: profile.nickname || '',
@@ -164,17 +166,16 @@ function App() {
         gender: profile.gender || 'male',
         avatar: profile.avatar || '',
       })
-      if (profile.avatar) {
-        setUserAvatar(profile.avatar)
-        localStorage.setItem('userAvatar', profile.avatar)
-      }
+      setUserAvatar(resolvedAvatar)
     } catch {
+      const fallbackAvatar = (user.username || '我').slice(0, 1).toUpperCase()
       setProfileData((prev) => ({
         ...prev,
         username: user.username || '',
         nickname: prev.nickname || '',
         email: user.email ?? prev.email ?? '',
       }))
+      setUserAvatar(fallbackAvatar)
     }
   }
 
@@ -309,7 +310,7 @@ function App() {
       try {
         const user = await getCurrentUser()
         if (user) {
-          syncProfileFromUser(user)
+          await syncProfileFromUser(user)
           setIsLoggedIn(true)
           await refreshRealtimeChatData()
           await refreshFriendRequests()
@@ -324,19 +325,7 @@ function App() {
     checkAuth()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // 加载保存的头像（仅作初始值，登录后会被 syncProfileFromUser 覆盖）
   useEffect(() => {
-    const savedAvatar = localStorage.getItem('userAvatar')
-    if (savedAvatar) {
-      setUserAvatar(savedAvatar)
-    }
-    // 加载保存的个人信息（登录后会被后端数据覆盖）
-    const savedProfile = localStorage.getItem('userProfile')
-    if (savedProfile) {
-      setProfileData(JSON.parse(savedProfile))
-    }
-    // (status removed)
-
     const savedArchivedGroupIds = localStorage.getItem('archivedGroupIds')
     if (savedArchivedGroupIds) {
       try {
@@ -1281,19 +1270,17 @@ function App() {
     if (account && password) {
       try {
         await login({ username: account, password })
-      const user = await getCurrentUser()
-      if (user) {
-        // 先清除旧头像，避免上一个账号的头像短暂显示
-        setUserAvatar('我')
-        localStorage.removeItem('userAvatar')
-        localStorage.removeItem('userProfile')
-        syncProfileFromUser(user)
-        setIsLoggedIn(true)
-        await refreshRealtimeChatData()
-        await refreshFriendRequests()
-        // 清除 localStorage 中的 lastStatus（后端已恢复）
-        localStorage.removeItem('lastStatus')
-      }
+        const user = await getCurrentUser()
+        if (user) {
+          // 先重置展示态，避免上一个账号的头像短暂闪现
+          setUserAvatar('我')
+          await syncProfileFromUser(user)
+          setIsLoggedIn(true)
+          await refreshRealtimeChatData()
+          await refreshFriendRequests()
+          // 清除 localStorage 中的 lastStatus（后端已恢复）
+          localStorage.removeItem('lastStatus')
+        }
       } catch (err) {
         alert(err.message || '登录失败')
       }
@@ -1371,7 +1358,7 @@ function App() {
       await login({ username: data.username, password: data.password })
       const user = await getCurrentUser()
       if (user) {
-        syncProfileFromUser(user)
+        await syncProfileFromUser(user)
         setIsLoggedIn(true)
         setShowRegisterForm(false)
         await refreshRealtimeChatData()
@@ -1500,7 +1487,6 @@ function App() {
         bio: profileData.bio || null,
         avatar: profileData.avatar || null,
       })
-      localStorage.setItem('userProfile', JSON.stringify(profileData))
       setIsEditingProfile(false)
       alert('个人信息保存成功！')
     } catch (err) {
@@ -1606,11 +1592,12 @@ function App() {
   }
 
   // 取消编辑个人信息
-  const handleCancelProfile = () => {
-    // 重新加载保存的数据
-    const savedProfile = localStorage.getItem('userProfile')
-    if (savedProfile) {
-      setProfileData(JSON.parse(savedProfile))
+  const handleCancelProfile = async () => {
+    try {
+      const user = await getCurrentUser()
+      await syncProfileFromUser(user)
+    } catch {
+      // ignore and keep current draft when refresh fails
     }
     setIsEditingProfile(false)
   }
@@ -1646,7 +1633,6 @@ function App() {
         await updateProfile({ avatar: base64String })
         setUserAvatar(base64String)
         setProfileData(prev => ({ ...prev, avatar: base64String }))
-        localStorage.setItem('userAvatar', base64String)
         alert('头像更换成功！')
       } catch (err) {
         alert(err.response?.data?.detail || '头像保存失败，请重试！')
@@ -1843,10 +1829,6 @@ function App() {
     setShowLogoutConfirm(false)
     // 清理头像和个人信息，避免下一个账号沿用
     setUserAvatar('我')
-    try {
-      localStorage.removeItem('userAvatar')
-      localStorage.removeItem('userProfile')
-    } catch { /* ignore */ }
   }
 
   // 取消退出登录
@@ -1879,7 +1861,6 @@ function App() {
         localStorage.removeItem('archivedGroupIds')
         localStorage.removeItem('blacklist')
         // userStatus removed
-        localStorage.removeItem('userAvatar')
       } catch {
         // ignore
       }

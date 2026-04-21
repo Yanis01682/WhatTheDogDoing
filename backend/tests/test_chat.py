@@ -1,3 +1,5 @@
+import io
+
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -328,6 +330,41 @@ def test_send_message_persists_reply_metadata():
     assert messages[1]["replyTo"]["text"] == "first message"
     assert messages[1]["replyTo"]["senderName"] == "reply_alice"
 
+
+def test_send_image_message_persists_inline_media_data():
+    headers_alice, _ = register_and_login("image_alice", "image_alice@example.com")
+    headers_bob, bob_user = register_and_login("image_bob", "image_bob@example.com")
+
+    add_friend_res = client.post(
+        "/api/chat/friends/add",
+        json={"friend_id": bob_user["id"]},
+        headers=headers_alice,
+    )
+    conversation_id = add_friend_res.json()["conversation_id"]
+
+    png_bytes = (
+        b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
+        b"\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDAT\x08\x99c\xf8\xcf"
+        b"\xc0\x00\x00\x03\x01\x01\x00\xc9\xfe\x92\xef\x00\x00\x00\x00IEND\xaeB`\x82"
+    )
+    response = client.post(
+        "/api/chat/messages/send-image",
+        params={"conversation_id": conversation_id},
+        files={"file": ("pixel.png", io.BytesIO(png_bytes), "image/png")},
+        headers=headers_alice,
+    )
+
+    assert response.status_code == 200
+    sent_message = response.json()["message"]
+    assert sent_message["type"] == "image"
+    assert sent_message["mediaName"] == "pixel.png"
+    assert sent_message["mediaUrl"].startswith("data:image/png;base64,")
+
+    read_response = client.get(f"/api/chat/sessions/{conversation_id}/messages", headers=headers_bob)
+    assert read_response.status_code == 200
+    messages = read_response.json()
+    assert len(messages) == 1
+    assert messages[0]["mediaUrl"] == sent_message["mediaUrl"]
 
 
 def test_reply_message_must_belong_to_same_conversation():

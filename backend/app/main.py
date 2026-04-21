@@ -100,6 +100,7 @@ def initialize_database():
                     ("reply_to_id", "INTEGER"),
                     ("message_type", "VARCHAR(20) NOT NULL DEFAULT 'text'"),
                     ("media_url", "VARCHAR(500)"),
+                    ("media_data", "TEXT"),
                     ("media_name", "VARCHAR(200)"),
                 ]:
                 try:
@@ -110,6 +111,14 @@ def initialize_database():
                         connection.execute(text(f"ALTER TABLE messages ADD COLUMN {col} {definition}"))
                         connection.commit()
                     logger.info("Migrated: added messages.%s column", col)
+            if engine.dialect.name == "mysql":
+                with engine.connect() as connection:
+                    try:
+                        connection.execute(text("ALTER TABLE messages MODIFY COLUMN media_data MEDIUMTEXT"))
+                        connection.commit()
+                        logger.info("Migrated: messages.media_data → MEDIUMTEXT")
+                    except Exception:
+                        pass
 
             try:
                 with engine.connect() as connection:

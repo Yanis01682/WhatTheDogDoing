@@ -59,6 +59,7 @@ class Message(Base):
     message_type = Column(String(20), nullable=False, default="text")  # text, image
     content = Column(String(2000), nullable=True)  # 文本内容，图片消息时可为空
     media_url = Column(String(500), nullable=True)  # 图片URL路径
+    media_data = Column(Text().with_variant(_MySQLMEDIUMTEXT(), 'mysql'), nullable=True)  # 持久化图片内容
     media_name = Column(String(200), nullable=True)  # 原始文件名
     timestamp = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 

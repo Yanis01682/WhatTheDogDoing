@@ -28,7 +28,7 @@ function Overlays({
   handleEmojiSelect,
   // 消息右键菜单状态与动作。
   contextMenu,
-  closeContextMenu,
+  closeContextMenu: _closeContextMenu,
   handleReplyMessage,
   handleRevokeMessage,
   handleDeleteMessage,
@@ -234,6 +234,30 @@ function Overlays({
               ))}
             </div>
           </div>
+        </div>
+      )}
+
+      {contextMenu && (
+        <div
+          className="session-context-menu"
+          style={{ top: contextMenu.y, left: contextMenu.x }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {contextMenu.canReply && (
+            <button type="button" className="session-context-item" onClick={handleReplyMessage}>
+              回复消息
+            </button>
+          )}
+          {contextMenu.canRevoke && (
+            <button type="button" className="session-context-item" onClick={handleRevokeMessage}>
+              撤回消息
+            </button>
+          )}
+          {contextMenu.canDelete && (
+            <button type="button" className="session-context-item" onClick={handleDeleteMessage}>
+              删除消息
+            </button>
+          )}
         </div>
       )}
 
@@ -970,6 +994,7 @@ function Overlays({
 
       {showChangePasswordModal && (
         <ChangePasswordModal
+          username={profileData?.username || ''}
           handleCloseChangePassword={handleCloseChangePassword}
           changePasswordForm={changePasswordForm}
           handleChangePasswordInput={handleChangePasswordInput}
@@ -1006,6 +1031,7 @@ function EyeIcon({ visible }) {
  * 修改密码弹窗子组件，自管理三个密码框的显示/隐藏状态。
  */
 function ChangePasswordModal({
+  username,
   handleCloseChangePassword,
   changePasswordForm,
   handleChangePasswordInput,
@@ -1023,6 +1049,14 @@ function ChangePasswordModal({
           <button className="change-password-close" onClick={handleCloseChangePassword}>×</button>
         </div>
         <div className="change-password-body">
+          <input
+            type="text"
+            value={username}
+            autoComplete="username"
+            readOnly
+            tabIndex={-1}
+            style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', height: 0 }}
+          />
           <div className="form-group">
             <label htmlFor="oldPassword">原密码</label>
             <div className="password-input-wrapper">
@@ -1032,6 +1066,7 @@ function ChangePasswordModal({
                 value={changePasswordForm.oldPassword}
                 onChange={(e) => handleChangePasswordInput('oldPassword', e.target.value)}
                 placeholder="请输入原密码"
+                autoComplete="current-password"
               />
               <button type="button" className="password-toggle-btn" onClick={() => setShowOld(!showOld)} aria-label={showOld ? '隐藏密码' : '显示密码'}>
                 <EyeIcon visible={showOld} />
@@ -1047,6 +1082,7 @@ function ChangePasswordModal({
                 value={changePasswordForm.newPassword}
                 onChange={(e) => handleChangePasswordInput('newPassword', e.target.value)}
                 placeholder="请输入新密码（至少 6 位）"
+                autoComplete="new-password"
               />
               <button type="button" className="password-toggle-btn" onClick={() => setShowNew(!showNew)} aria-label={showNew ? '隐藏密码' : '显示密码'}>
                 <EyeIcon visible={showNew} />
@@ -1062,6 +1098,7 @@ function ChangePasswordModal({
                 value={changePasswordForm.confirmPassword}
                 onChange={(e) => handleChangePasswordInput('confirmPassword', e.target.value)}
                 placeholder="请再次输入新密码"
+                autoComplete="new-password"
               />
               <button type="button" className="password-toggle-btn" onClick={() => setShowConfirm(!showConfirm)} aria-label={showConfirm ? '隐藏密码' : '显示密码'}>
                 <EyeIcon visible={showConfirm} />

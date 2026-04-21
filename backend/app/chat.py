@@ -1,4 +1,5 @@
 from datetime import timezone, timedelta
+import base64
 import os
 import uuid
 from typing import Optional
@@ -266,8 +267,8 @@ def _serialize_message(
         "replyToId": message.reply_to_id,
     }
     # 添加图片消息的媒体信息
-    if msg_type == "image" and message.media_url:
-        payload["mediaUrl"] = message.media_url
+    if msg_type == "image" and (message.media_data or message.media_url):
+        payload["mediaUrl"] = message.media_data or message.media_url
         payload["mediaName"] = message.media_name
     # 添加视频消息的媒体信息
     if msg_type == "video" and message.media_url:
@@ -807,19 +808,6 @@ async def send_image_message(
     # 验证是否为会话成员
     _ensure_conversation_membership(db, conversation_id, current_user.id)
     
-    # 生成唯一的文件名
-    ext = ALLOWED_IMAGE_TYPES[file.content_type]
-    unique_filename = f"{uuid.uuid4().hex}.{ext}"
-    
-    # 确保上传目录存在
-    upload_dir = os.path.join(os.path.dirname(__file__), '..', 'uploads')
-    os.makedirs(upload_dir, exist_ok=True)
-    
-    # 保存文件
-    file_path = os.path.join(upload_dir, unique_filename)
-    with open(file_path, 'wb') as f:
-        f.write(content)
-    
     # 获取回复消息（如果有）
     reply_message = _get_reply_message_or_400(db, conversation_id, reply_to_id)
     reply_sender = None
@@ -827,14 +815,14 @@ async def send_image_message(
         reply_sender = db.query(models.User).filter(models.User.id == reply_message.sender_id).first()
     
     # 创建图片消息
-    media_url = f"/uploads/{unique_filename}"
+    media_data = f"data:{file.content_type};base64,{base64.b64encode(content).decode('ascii')}"
     new_message = models.Message(
         conversation_id=conversation_id,
         sender_id=current_user.id,
         reply_to_id=reply_to_id,
         message_type="image",
         content="[图片]",
-        media_url=media_url,
+        media_data=media_data,
         media_name=file.filename,
     )
     db.add(new_message)

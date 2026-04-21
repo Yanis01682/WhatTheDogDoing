@@ -209,6 +209,7 @@ function SidebarPanel({
             type="text"
             className="wechat-search-input"
             placeholder="搜索"
+            autoComplete="off"
             value={activeTab === 'friends' ? friendSearchQuery : searchQuery}
             onChange={(e) => {
               if (activeTab === 'friends') {
