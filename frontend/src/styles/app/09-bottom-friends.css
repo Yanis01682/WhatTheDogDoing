@@ -243,6 +243,16 @@
   box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
 }
 
+.qq-friend-avatar-img,
+.result-avatar-img,
+.friend-avatar-img {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background-size: cover;
+  background-position: center;
+}
+
 .qq-status-dot {
   position: absolute;
   bottom: 0;
@@ -674,6 +684,11 @@
   font-weight: 600;
   color: #ffffff;
   flex-shrink: 0;
+}
+
+.friend-checkbox-avatar,
+.selected-avatar {
+  overflow: hidden;
 }
 
 .friend-list-info {

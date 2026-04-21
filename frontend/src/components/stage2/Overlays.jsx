@@ -565,7 +565,7 @@ function Overlays({
                       <div className="view-all-members invite-action" onClick={handleOpenInviteMember} title="邀请好友">+</div>
                     </div>
                   </div>
-                  <div className="detail-section"><div className="section-title">我在本群的昵称</div><div className="section-content">{!isEditingGroupNickname ? (<div className="my-nickname">{(groupMembers[currentChat] || []).find((member) => member.name === profileData.username)?.groupNickname || '未设置'}<button className="edit-nickname-btn" onClick={handleStartEditGroupNickname}>编辑</button></div>) : (<div className="remark-edit-form"><input type="text" value={tempGroupNickname} onChange={(e) => setTempGroupNickname(e.target.value)} placeholder="请输入我在本群的昵称" autoFocus /><div className="remark-actions"><button className="save-remark-btn" onClick={handleSaveGroupNickname}>保存</button><button className="cancel-remark-btn" onClick={handleCancelEditGroupNickname}>取消</button></div></div>)}</div></div>
+                  <div className="detail-section"><div className="section-title">我在本群的昵称</div><div className="section-content">{!isEditingGroupNickname ? (<div className="my-nickname">{(groupMembers[currentChat] || []).find((member) => member.name === profileData.username)?.groupNickname || '未设置'}<button type="button" className="edit-nickname-btn" onClick={handleStartEditGroupNickname}>编辑</button></div>) : (<div className="remark-edit-form"><input type="text" value={tempGroupNickname} onChange={(e) => setTempGroupNickname(e.target.value)} placeholder="请输入我在本群的昵称" autoFocus /><div className="remark-actions"><button type="button" className="save-remark-btn" onClick={handleSaveGroupNickname}>保存</button><button type="button" className="cancel-remark-btn" onClick={handleCancelEditGroupNickname}>取消</button></div></div>)}</div></div>
                   <div className="detail-section"><div className="section-title">置顶聊天</div><div className="section-content"><label className="toggle-switch-label"><input type="checkbox" className="toggle-checkbox" checked={isChatPinned(currentChat)} onChange={() => handleTogglePinChat(currentChat)} /><span className="toggle-slider"></span></label></div></div>
                   <div className="detail-section clickable" onClick={handleOpenSearchMessage}>
                     <div className="section-content">
@@ -581,16 +581,16 @@ function Overlays({
                         <div className="announcement-display">
                           <p className="announcement-text">{groupAnnouncement || '暂无公告'}</p>
                           <div className="remark-actions">
-                            <button className="edit-remark-btn" onClick={handleOpenAnnouncementHistory}>历史公告</button>
-                            {(userRole === 'owner' || userRole === 'admin') && <button className="edit-announcement-btn" onClick={handleStartEditAnnouncement}>编辑</button>}
+                            <button type="button" className="edit-remark-btn" onClick={handleOpenAnnouncementHistory}>历史公告</button>
+                            {(userRole === 'owner' || userRole === 'admin') && <button type="button" className="edit-announcement-btn" onClick={handleStartEditAnnouncement}>编辑</button>}
                           </div>
                         </div>
                       ) : (
                         <div className="announcement-edit-form">
                           <textarea value={tempAnnouncement} onChange={(e) => setTempAnnouncement(e.target.value)} placeholder="请输入群公告内容" rows="3" />
                           <div className="announcement-actions">
-                            <button className="save-announcement-btn" onClick={handleSaveAnnouncement}>保存</button>
-                            <button className="cancel-announcement-btn" onClick={handleCancelEditAnnouncement}>取消</button>
+                            <button type="button" className="save-announcement-btn" onClick={handleSaveAnnouncement}>保存</button>
+                            <button type="button" className="cancel-announcement-btn" onClick={handleCancelEditAnnouncement}>取消</button>
                           </div>
                         </div>
                       )}
@@ -629,14 +629,14 @@ function Overlays({
                       {!isEditingRemark ? (
                         <div className="remark-input">
                           {currentPrivateFriend?.remark || '未设置'}
-                          <button className="edit-remark-btn" onClick={handleStartEditRemark}>编辑</button>
+                          <button type="button" className="edit-remark-btn" onClick={handleStartEditRemark}>编辑</button>
                         </div>
                       ) : (
                         <div className="remark-edit-form">
                           <input type="text" value={tempRemark} onChange={(e) => setTempRemark(e.target.value)} placeholder="请输入备注" autoFocus />
                           <div className="remark-actions">
-                            <button className="save-remark-btn" onClick={handleSaveRemark}>保存</button>
-                            <button className="cancel-remark-btn" onClick={handleCancelEditRemark}>取消</button>
+                            <button type="button" className="save-remark-btn" onClick={handleSaveRemark}>保存</button>
+                            <button type="button" className="cancel-remark-btn" onClick={handleCancelEditRemark}>取消</button>
                           </div>
                         </div>
                       )}
