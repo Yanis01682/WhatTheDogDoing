@@ -1,4 +1,4 @@
-from datetime import timezone, timedelta
+from datetime import datetime, timezone, timedelta
 import base64
 import os
 import uuid
@@ -60,6 +60,14 @@ class GroupRenamePayload(BaseModel):
 
 class GroupInvitePayload(BaseModel):
     member_ids: list[int]
+
+
+class GroupInviteRequestPayload(BaseModel):
+    invitee_id: int
+
+
+class GroupAnnouncementPayload(BaseModel):
+    content: str
 
 
 class ConnectionManager:
@@ -379,6 +387,27 @@ def _serialize_friend_request(friendship: models.Friendship, user: models.User, 
         }
     )
     return payload
+
+
+def _serialize_group_invite_request(
+    invite_request: models.GroupInviteRequest,
+    requester: models.User,
+    invitee: models.User,
+    conversation: models.Conversation,
+):
+    return {
+        "id": invite_request.id,
+        "conversationId": invite_request.conversation_id,
+        "groupName": conversation.name or f"群聊 {conversation.id}",
+        "requesterId": invite_request.requester_id,
+        "requesterName": requester.nickname or requester.username,
+        "requesterAvatar": requester.avatar or (requester.nickname or requester.username or "群")[:1].upper(),
+        "inviteeId": invite_request.invitee_id,
+        "inviteeName": invitee.nickname or invitee.username,
+        "inviteeAvatar": invitee.avatar or (invitee.nickname or invitee.username or "群")[:1].upper(),
+        "status": invite_request.status,
+        "createdAt": invite_request.created_at.isoformat() if invite_request.created_at else None,
+    }
 
 
 @router.get("/users/search")
@@ -1002,6 +1031,11 @@ def _get_member_or_403(db: Session, conversation_id: int, user_id: int) -> model
     return m
 
 
+def _ensure_group_manager(member: models.ConversationMember):
+    if member.role not in ("owner", "admin"):
+        raise HTTPException(status_code=403, detail="Only owner or admin can perform this action")
+
+
 @router.put("/groups/{conversation_id}")
 def rename_group(
     conversation_id: int,
@@ -1026,6 +1060,72 @@ def rename_group(
         "message": "Group renamed successfully",
         "conversation_id": conversation.id,
         "title": conversation.name,
+    }
+
+
+@router.get("/groups/{conversation_id}/announcements")
+def read_group_announcements(
+    conversation_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    _get_group_or_404(db, conversation_id)
+    _get_member_or_403(db, conversation_id, current_user.id)
+
+    announcements = (
+        db.query(models.GroupAnnouncement)
+        .filter(models.GroupAnnouncement.conversation_id == conversation_id)
+        .order_by(models.GroupAnnouncement.created_at.desc(), models.GroupAnnouncement.id.desc())
+        .all()
+    )
+    publisher_ids = {item.publisher_id for item in announcements if item.publisher_id is not None}
+    publishers = db.query(models.User).filter(models.User.id.in_(publisher_ids)).all() if publisher_ids else []
+    publisher_map = {user.id: user for user in publishers}
+
+    return [
+        {
+            "id": item.id,
+            "content": item.content,
+            "publisherName": (publisher_map[item.publisher_id].nickname or publisher_map[item.publisher_id].username)
+            if item.publisher_id in publisher_map
+            else "系统",
+            "createdAt": item.created_at.isoformat() if item.created_at else None,
+        }
+        for item in announcements
+    ]
+
+
+@router.post("/groups/{conversation_id}/announcements")
+def create_group_announcement(
+    conversation_id: int,
+    payload: GroupAnnouncementPayload,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    _get_group_or_404(db, conversation_id)
+    my_member = _get_member_or_403(db, conversation_id, current_user.id)
+    _ensure_group_manager(my_member)
+
+    content = payload.content.strip()
+    if not content:
+        raise HTTPException(status_code=400, detail="Announcement content cannot be empty")
+
+    announcement = models.GroupAnnouncement(
+        conversation_id=conversation_id,
+        publisher_id=current_user.id,
+        content=content,
+    )
+    db.add(announcement)
+    db.commit()
+    db.refresh(announcement)
+    return {
+        "message": "Announcement published successfully",
+        "announcement": {
+            "id": announcement.id,
+            "content": announcement.content,
+            "publisherName": current_user.nickname or current_user.username,
+            "createdAt": announcement.created_at.isoformat() if announcement.created_at else None,
+        },
     }
 
 
@@ -1087,6 +1187,168 @@ def invite_group_members(
         "conversation_id": conversation_id,
         "invited_count": len(new_member_ids),
     }
+
+
+@router.post("/groups/{conversation_id}/invite-requests")
+def create_group_invite_request(
+    conversation_id: int,
+    payload: GroupInviteRequestPayload,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    conversation = _get_group_or_404(db, conversation_id)
+    _get_member_or_403(db, conversation_id, current_user.id)
+
+    invitee_id = payload.invitee_id
+    _ensure_not_self_friend(current_user.id, invitee_id)
+    invitee = _get_user_or_404(db, invitee_id)
+
+    existing_member_ids = {
+        item.user_id
+        for item in db.query(models.ConversationMember)
+        .filter(models.ConversationMember.conversation_id == conversation_id)
+        .all()
+    }
+    if invitee_id in existing_member_ids:
+        raise HTTPException(status_code=400, detail="Target user is already in the group")
+
+    accepted_friend = (
+        db.query(models.Friendship)
+        .filter(
+            models.Friendship.user_id == current_user.id,
+            models.Friendship.friend_id == invitee_id,
+            models.Friendship.status == "accepted",
+        )
+        .first()
+    )
+    if not accepted_friend:
+        raise HTTPException(status_code=403, detail=ERR_INVITE_NON_FRIEND)
+
+    existing_request = (
+        db.query(models.GroupInviteRequest)
+        .filter(
+            models.GroupInviteRequest.conversation_id == conversation_id,
+            models.GroupInviteRequest.invitee_id == invitee_id,
+            models.GroupInviteRequest.status == "pending",
+        )
+        .first()
+    )
+    if existing_request:
+        raise HTTPException(status_code=400, detail="An invite request for this user is already pending")
+
+    invite_request = models.GroupInviteRequest(
+        conversation_id=conversation_id,
+        requester_id=current_user.id,
+        invitee_id=invitee_id,
+    )
+    db.add(invite_request)
+    db.commit()
+    db.refresh(invite_request)
+    return {
+        "message": "Invite request submitted successfully",
+        "request": _serialize_group_invite_request(invite_request, current_user, invitee, conversation),
+    }
+
+
+@router.get("/groups/invite-requests")
+def read_group_invite_requests(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    memberships = (
+        db.query(models.ConversationMember)
+        .filter(models.ConversationMember.user_id == current_user.id)
+        .all()
+    )
+    manageable_group_ids = [
+        item.conversation_id
+        for item in memberships
+        if item.role in ("owner", "admin")
+    ]
+    if not manageable_group_ids:
+        return []
+
+    requests = (
+        db.query(models.GroupInviteRequest)
+        .filter(
+            models.GroupInviteRequest.conversation_id.in_(manageable_group_ids),
+            models.GroupInviteRequest.status == "pending",
+        )
+        .order_by(models.GroupInviteRequest.created_at.desc(), models.GroupInviteRequest.id.desc())
+        .all()
+    )
+    if not requests:
+        return []
+
+    requester_ids = {item.requester_id for item in requests}
+    invitee_ids = {item.invitee_id for item in requests}
+    conversation_ids = {item.conversation_id for item in requests}
+    users = db.query(models.User).filter(models.User.id.in_(requester_ids | invitee_ids)).all()
+    user_map = {user.id: user for user in users}
+    conversations = db.query(models.Conversation).filter(models.Conversation.id.in_(conversation_ids)).all()
+    conversation_map = {conversation.id: conversation for conversation in conversations}
+
+    return [
+        _serialize_group_invite_request(
+            item,
+            user_map[item.requester_id],
+            user_map[item.invitee_id],
+            conversation_map[item.conversation_id],
+        )
+        for item in requests
+        if item.requester_id in user_map and item.invitee_id in user_map and item.conversation_id in conversation_map
+    ]
+
+
+@router.post("/groups/invite-requests/{request_id}/approve")
+def approve_group_invite_request(
+    request_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    invite_request = db.query(models.GroupInviteRequest).filter(models.GroupInviteRequest.id == request_id).first()
+    if not invite_request or invite_request.status != "pending":
+        raise HTTPException(status_code=404, detail="Invite request not found")
+
+    my_member = _get_member_or_403(db, invite_request.conversation_id, current_user.id)
+    _ensure_group_manager(my_member)
+
+    existing_member = (
+        db.query(models.ConversationMember)
+        .filter(
+            models.ConversationMember.conversation_id == invite_request.conversation_id,
+            models.ConversationMember.user_id == invite_request.invitee_id,
+        )
+        .first()
+    )
+    if not existing_member:
+        db.add(models.ConversationMember(conversation_id=invite_request.conversation_id, user_id=invite_request.invitee_id))
+
+    invite_request.status = "approved"
+    invite_request.reviewer_id = current_user.id
+    invite_request.reviewed_at = datetime.now(timezone.utc)
+    db.commit()
+    return {"message": "Invite request approved successfully"}
+
+
+@router.post("/groups/invite-requests/{request_id}/reject")
+def reject_group_invite_request(
+    request_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    invite_request = db.query(models.GroupInviteRequest).filter(models.GroupInviteRequest.id == request_id).first()
+    if not invite_request or invite_request.status != "pending":
+        raise HTTPException(status_code=404, detail="Invite request not found")
+
+    my_member = _get_member_or_403(db, invite_request.conversation_id, current_user.id)
+    _ensure_group_manager(my_member)
+
+    invite_request.status = "rejected"
+    invite_request.reviewer_id = current_user.id
+    invite_request.reviewed_at = datetime.now(timezone.utc)
+    db.commit()
+    return {"message": "Invite request rejected successfully"}
 
 
 @router.get("/groups/{conversation_id}/members")

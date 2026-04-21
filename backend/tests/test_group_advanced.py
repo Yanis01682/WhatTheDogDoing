@@ -270,3 +270,67 @@ def test_nickname_appears_in_member_list():
     member_data = next(m for m in members.json() if m["id"] == member["id"])
     assert member_data["groupNickname"] == "Visible Nick"
     assert member_data["displayName"] == "Visible Nick"
+
+
+def test_owner_can_publish_and_read_group_announcements():
+    h_owner, owner, h_member, member, gid = make_group_with_two_users("announce")
+    create_res = client.post(
+        f"/api/chat/groups/{gid}/announcements",
+        json={"content": "First announcement"},
+        headers=h_owner,
+    )
+    assert create_res.status_code == 200
+
+    history_res = client.get(f"/api/chat/groups/{gid}/announcements", headers=h_member)
+    assert history_res.status_code == 200
+    assert history_res.json()[0]["content"] == "First announcement"
+    assert history_res.json()[0]["publisherName"] == owner["username"]
+
+
+def test_member_invite_request_can_be_approved_by_owner():
+    h_owner, owner, h_member, member, gid = make_group_with_two_users("invite_req")
+    _, friend_email = unique("invitee")
+    friend_name = friend_email.split("@")[0]
+    h_friend, friend = register_and_login(friend_name, friend_email)
+    make_friends(h_member, h_friend, friend["id"])
+
+    create_res = client.post(
+        f"/api/chat/groups/{gid}/invite-requests",
+        json={"invitee_id": friend["id"]},
+        headers=h_member,
+    )
+    assert create_res.status_code == 200
+    request_id = create_res.json()["request"]["id"]
+
+    pending_res = client.get("/api/chat/groups/invite-requests", headers=h_owner)
+    assert pending_res.status_code == 200
+    assert any(item["id"] == request_id for item in pending_res.json())
+
+    approve_res = client.post(f"/api/chat/groups/invite-requests/{request_id}/approve", headers=h_owner)
+    assert approve_res.status_code == 200
+
+    members_res = client.get(f"/api/chat/groups/{gid}/members", headers=h_owner)
+    assert any(item["id"] == friend["id"] for item in members_res.json())
+
+
+def test_admin_can_reject_group_invite_request():
+    h_owner, owner, h_member, member, gid = make_group_with_two_users("invite_reject")
+    client.put(f"/api/chat/groups/{gid}/admin", json={"user_id": member["id"], "is_admin": True}, headers=h_owner)
+    _, friend_email = unique("invitee_reject")
+    friend_name = friend_email.split("@")[0]
+    h_friend, friend = register_and_login(friend_name, friend_email)
+    make_friends(h_owner, h_friend, friend["id"])
+
+    create_res = client.post(
+        f"/api/chat/groups/{gid}/invite-requests",
+        json={"invitee_id": friend["id"]},
+        headers=h_owner,
+    )
+    assert create_res.status_code == 200
+    request_id = create_res.json()["request"]["id"]
+
+    reject_res = client.post(f"/api/chat/groups/invite-requests/{request_id}/reject", headers=h_member)
+    assert reject_res.status_code == 200
+
+    pending_res = client.get("/api/chat/groups/invite-requests", headers=h_member)
+    assert all(item["id"] != request_id for item in pending_res.json())
