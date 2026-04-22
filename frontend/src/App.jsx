@@ -72,7 +72,8 @@ const DEFAULT_FRIEND_GROUP = '我的好友'
 const createHistoryFilters = () => ({
   sender: 'all',
   type: 'all',
-  dateRange: 'all',
+  startAt: '',
+  endAt: '',
 })
 
 const formatLocalMessageTime = (date = new Date()) => {
@@ -90,19 +91,25 @@ const parseMessageDate = (value) => {
   return Number.isNaN(parsed.getTime()) ? null : parsed
 }
 
-const matchesDateRange = (message, dateRange) => {
-  if (dateRange === 'all') return true
+const matchesDateRange = (message, startAt, endAt) => {
   const date = parseMessageDate(message.timestamp)
   if (!date) return false
 
-  const now = new Date()
-  if (dateRange === 'today') {
-    return date.toDateString() === now.toDateString()
+  if (startAt) {
+    const startDate = parseMessageDate(startAt)
+    if (startDate && date < startDate) {
+      return false
+    }
   }
 
-  const days = dateRange === '7d' ? 7 : 30
-  const diff = now.getTime() - date.getTime()
-  return diff >= 0 && diff <= days * 24 * 60 * 60 * 1000
+  if (endAt) {
+    const endDate = parseMessageDate(endAt)
+    if (endDate && date > endDate) {
+      return false
+    }
+  }
+
+  return true
 }
 
 const normalizeMessageText = (message) => (
@@ -203,6 +210,7 @@ function App() {
   const [messages, setMessages] = useState({})
   const [friendSearchResults, setFriendSearchResults] = useState([])
   const [currentUserId, setCurrentUserId] = useState(null)
+  const [jumpToMessageId, setJumpToMessageId] = useState(null)
 
   const mergeFriendGroups = (groups = []) => {
     const merged = [DEFAULT_FRIEND_GROUP, ...INITIAL_CUSTOM_GROUPS.filter((group) => group !== DEFAULT_FRIEND_GROUP)]
@@ -282,6 +290,7 @@ function App() {
     setMyFriends(mappedFriends)
     
     const mappedSessions = fetchedSessions.map(session => {
+      let nextSession = session
       if (!session.isGroup) {
         const friend = mappedFriends.find(
           (f) =>
@@ -291,10 +300,10 @@ function App() {
             f.id?.toString() === session.title
         )
         if (friend && friend.remark) {
-          return { ...session, title: friend.remark }
+          nextSession = { ...session, title: friend.remark }
         }
       }
-      return session
+      return applyLocalSessionPreview(nextSession)
     })
     setSessions(mappedSessions)
     setPinnedChatIds((prev) => {
@@ -394,6 +403,38 @@ function App() {
     const data = getLocalHistoryStore('wtdd_cleared_conversations')
     data[String(convId)] = Number(messageId || 0)
     setLocalHistoryStore('wtdd_cleared_conversations', data)
+  }
+  const getSessionPreviewText = (message) => {
+    if (!message) return '暂无消息'
+    if (message.type === 'image') return '[图片]'
+    if (message.type === 'video') return '[视频]'
+    return message.text || '暂无消息'
+  }
+  const applyLocalSessionPreview = (session) => {
+    const cachedMessages = messages[session.id]
+    if (!cachedMessages) {
+      return session
+    }
+    if (cachedMessages.length === 0 && getLocalClearBeforeId(session.id) > 0) {
+      return {
+        ...session,
+        lastMessage: '暂无消息',
+        time: '',
+        badge: 0,
+      }
+    }
+
+    const latestVisibleMessage = cachedMessages[cachedMessages.length - 1]
+    if (!latestVisibleMessage) {
+      return session
+    }
+
+    return {
+      ...session,
+      lastMessage: getSessionPreviewText(latestVisibleMessage),
+      time: latestVisibleMessage.time || session.time,
+      timestamp: latestVisibleMessage.timestamp || session.timestamp,
+    }
   }
   const applyLocalMessageFilters = (convId, rawMessages) => {
     const locallyDeleted = getLocallyDeleted(convId)
@@ -1080,6 +1121,11 @@ function App() {
       ...prev,
       [currentSession.id]: [],
     }))
+    setSessions((prev) => prev.map((session) => (
+      session.id === currentSession.id
+        ? { ...session, lastMessage: '暂无消息', time: '', badge: 0 }
+        : session
+    )))
     setSearchResults([])
     setCurrentResultIndex(0)
     alert('已清空当前设备上的聊天记录')
@@ -1169,8 +1215,16 @@ function App() {
 
     return currentMessages
       .filter((message) => {
-        if (filters.sender !== 'all' && String(message.senderId) !== String(filters.sender)) {
-          return false
+        if (filters.sender !== 'all') {
+          if (filters.sender === 'me' && message.sender !== 'me') {
+            return false
+          }
+          if (filters.sender === 'other' && message.sender !== 'other') {
+            return false
+          }
+          if (!['me', 'other'].includes(filters.sender) && String(message.senderId) !== String(filters.sender)) {
+            return false
+          }
         }
         if (filters.type !== 'all') {
           if (filters.type === 'reply' && !message.replyToId) {
@@ -1180,7 +1234,7 @@ function App() {
             return false
           }
         }
-        if (!matchesDateRange(message, filters.dateRange)) {
+        if (!matchesDateRange(message, filters.startAt, filters.endAt)) {
           return false
         }
         if (normalizedQuery && !normalizeMessageText(message).includes(normalizedQuery)) {
@@ -1214,6 +1268,12 @@ function App() {
 
   const handleChangeHistoryFilter = (field, value) => {
     const nextFilters = { ...messageHistoryFilters, [field]: value }
+    if (field === 'startAt' && nextFilters.endAt && value && nextFilters.endAt < value) {
+      nextFilters.endAt = value
+    }
+    if (field === 'endAt' && nextFilters.startAt && value && value < nextFilters.startAt) {
+      nextFilters.startAt = value
+    }
     setMessageHistoryFilters(nextFilters)
     const results = getFilteredHistoryMessages(searchMessageQuery, nextFilters)
     setSearchResults(results)
@@ -1246,27 +1306,19 @@ function App() {
 
   // 跳转到特定搜索结果
   const handleJumpToMessage = (messageIndex) => {
-    // 滚动到指定消息
-    setTimeout(() => {
-      const messageElement = document.querySelector(`[data-message-index="${messageIndex}"]`)
-      if (messageElement) {
-        messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
-        messageElement.classList.add('highlighted-message')
-        setTimeout(() => {
-          messageElement.classList.remove('highlighted-message')
-        }, 2000)
-      }
-    }, 100)
+    const messageId = (messages[currentChat] || [])[messageIndex]?.id
+    if (!messageId) return
+    setJumpToMessageId(messageId)
   }
 
   const handleJumpToOriginalMessage = (messageId) => {
     if (!messageId) return
-    const messageIndex = (messages[currentChat] || []).findIndex((message) => message.id === messageId)
-    if (messageIndex < 0) {
+    const exists = (messages[currentChat] || []).some((message) => message.id === messageId)
+    if (!exists) {
       alert('原消息已在当前设备被删除或清空，无法跳转')
       return
     }
-    handleJumpToMessage(messageIndex)
+    setJumpToMessageId(messageId)
   }
 
   // 高亮文本中的关键词
@@ -2490,6 +2542,10 @@ function App() {
   )
 
   const myRole = { [currentChat]: userRole }
+  const unreadNotificationCount = sessions.reduce((total, session) => {
+    if (session.isMuted) return total
+    return total + (session.badge || 0)
+  }, 0)
 
   // 未登录时显示登录界面
   if (!isLoggedIn) {
@@ -2571,6 +2627,8 @@ function App() {
           messages={messages}
           handleMessagesClick={handleMessagesClick}
           handleMessageContextMenu={handleMessageContextMenu}
+          jumpToMessageId={jumpToMessageId}
+          handleJumpHandled={() => setJumpToMessageId(null)}
           handleJumpToOriginalMessage={handleJumpToOriginalMessage}
           composerHeight={composerHeight}
           replyToMessage={replyToMessage}
@@ -2612,6 +2670,7 @@ function App() {
         closeUserPanel={closeUserPanel}
         userAvatar={userAvatar}
         profileData={profileData}
+        unreadNotificationCount={unreadNotificationCount}
 
         handleOpenProfile={handleOpenProfile}
         toggleNightMode={toggleNightMode}

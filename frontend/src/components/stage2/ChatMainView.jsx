@@ -27,6 +27,10 @@ function ChatMainView({
   handleMessagesClick,
   // 消息右键菜单触发函数。
   handleMessageContextMenu,
+  // 外部请求跳转到某条消息。
+  jumpToMessageId,
+  // 跳转请求完成后的回调。
+  handleJumpHandled,
   // 点击引用消息时跳转到原消息。
   handleJumpToOriginalMessage,
   // 输入区高度。
@@ -63,17 +67,42 @@ function ChatMainView({
   const imageInputRef = useRef(null)
   const videoInputRef = useRef(null)
   const messagesContainerRef = useRef(null)
-
-  // Keep the active conversation pinned to the bottom instead of aligning the
-  // sentinel to the top, which leaves a large blank area under short histories.
-  useEffect(() => {
-    const container = messagesContainerRef.current
-    if (!container) return
-    container.scrollTop = container.scrollHeight
-  }, [currentChat, messages])
+  const previousChatRef = useRef(null)
+  const shouldStickToBottomRef = useRef(true)
   const currentSession = getCurrentSession()
   const hasActiveConversation = Boolean(currentSession?.id)
   const currentMessages = messages[currentChat] || []
+
+  useEffect(() => {
+    const container = messagesContainerRef.current
+    if (!container) return
+    const isChatChanged = previousChatRef.current !== currentChat
+    if (isChatChanged) {
+      container.scrollTop = container.scrollHeight
+      shouldStickToBottomRef.current = true
+      previousChatRef.current = currentChat
+      return
+    }
+
+    if (shouldStickToBottomRef.current) {
+      container.scrollTop = container.scrollHeight
+    }
+  }, [currentChat, currentMessages.length])
+
+  useEffect(() => {
+    if (!jumpToMessageId) return
+    const container = messagesContainerRef.current
+    const messageElement = container?.querySelector(`[data-message-id="${jumpToMessageId}"]`)
+    if (messageElement) {
+      shouldStickToBottomRef.current = false
+      messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      messageElement.classList.add('highlighted-message')
+      window.setTimeout(() => {
+        messageElement.classList.remove('highlighted-message')
+      }, 2000)
+    }
+    handleJumpHandled?.()
+  }, [jumpToMessageId, handleJumpHandled])
   const replyCountMap = {}
   currentMessages.forEach((message) => {
     if (message.replyToId) {
@@ -137,7 +166,16 @@ function ChatMainView({
         </div>
       </header>
 
-      <div className="chat-messages" onClick={handleMessagesClick} ref={messagesContainerRef}>
+      <div
+        className="chat-messages"
+        onClick={handleMessagesClick}
+        ref={messagesContainerRef}
+        onScroll={(event) => {
+          const container = event.currentTarget
+          const distanceToBottom = container.scrollHeight - container.scrollTop - container.clientHeight
+          shouldStickToBottomRef.current = distanceToBottom < 48
+        }}
+      >
         {currentMessages.map((msg, index) => {
           // 在群聊中，根据消息发送者 ID 获取真实的成员头像和名称
           let peerAvatar = currentSession.avatar

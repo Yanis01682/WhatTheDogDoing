@@ -47,6 +47,7 @@ function Overlays({
   closeUserPanel,
   userAvatar,
   profileData,
+  unreadNotificationCount,
 
   handleOpenProfile,
   toggleNightMode,
@@ -194,6 +195,7 @@ function Overlays({
   cancelDeleteAccount,
   confirmDeleteAccount
 }) {
+  const [showAboutModal, setShowAboutModal] = useState(false)
   const peerIsFriend = peerProfile ? isAlreadyFriend(peerProfile.userId, peerProfile.name) : false
   const peerRequestPending = peerProfile
     ? sentFriendRequests.some(
@@ -223,6 +225,7 @@ function Overlays({
       }
   const currentGroupOwner = (groupMembers[currentChat] || []).find((member) => member.role === 'owner')
   const groupSenderOptions = (groupMembers[currentChat] || []).filter((member) => member.id !== profileData.id)
+  const privateSenderName = currentPrivateFriend?.remark || currentPrivateFriend?.name || currentSession.title
 
   const resolveResultSender = (result) => {
     if (result.sender === 'me') return '我'
@@ -388,17 +391,36 @@ function Overlays({
             <div className="user-panel-menu">
               <div className="menu-item" onClick={(e) => { e.stopPropagation(); handleOpenProfile() }}><span className="menu-icon">👤</span><span className="menu-text">个人信息</span><span className="menu-arrow">›</span></div>
               <div className="menu-item" onClick={(e) => { e.stopPropagation(); handleOpenChangePassword() }}><span className="menu-icon">🔑</span><span className="menu-text">修改密码</span><span className="menu-arrow">›</span></div>
-              <div className="menu-item"><span className="menu-icon">⚙️</span><span className="menu-text">设置</span><span className="menu-arrow">›</span></div>
               <div className="menu-item" onClick={toggleNightMode}><span className="menu-icon">{isNightMode ? '☀️' : '🌙'}</span><span className="menu-text">{isNightMode ? '日间模式' : '夜间模式'}</span><span className="menu-toggle"><span className={`toggle-switch ${isNightMode ? 'active' : ''}`}></span></span></div>
-              <div className="menu-item"><span className="menu-icon">🔔</span><span className="menu-text">消息通知</span><span className="menu-badge">3</span></div>
-              <div className="menu-item"><span className="menu-icon">📁</span><span className="menu-text">文件管理</span><span className="menu-arrow">›</span></div>
-              <div className="menu-item"><span className="menu-icon">❓</span><span className="menu-text">帮助与反馈</span><span className="menu-arrow">›</span></div>
-              <div className="menu-item"><span className="menu-icon">ℹ️</span><span className="menu-text">关于我们</span><span className="menu-arrow">›</span></div>
+              <div className="menu-item"><span className="menu-icon">🔔</span><span className="menu-text">消息通知</span><span className="menu-badge">{unreadNotificationCount}</span></div>
+              <div className="menu-item" onClick={() => setShowAboutModal(true)}><span className="menu-icon">ℹ️</span><span className="menu-text">关于我们</span><span className="menu-arrow">›</span></div>
             </div>
 
             <div className="user-panel-footer">
               <button className="logout-btn" onClick={handleLogout}><span className="logout-icon">🚪</span>退出登录</button>
               <button className="delete-account-btn" onClick={handleDeleteAccount}><span className="delete-account-icon">🗑️</span>注销账户</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showAboutModal && (
+        <div className="profile-modal-overlay" onClick={() => setShowAboutModal(false)}>
+          <div className="profile-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="profile-modal-header">
+              <h3>关于我们</h3>
+              <button className="profile-modal-close" onClick={() => setShowAboutModal(false)}>×</button>
+            </div>
+            <div className="profile-modal-body">
+              <div className="profile-view">
+                <div className="profile-info-list">
+                  <div className="profile-info-item"><span className="info-label">项目名称</span><span className="info-value">我的刀盾 / WhatTheDogDoing</span></div>
+                  <div className="profile-info-item"><span className="info-label">项目介绍</span><span className="info-value">这是由课程小组共同设计与开发的即时通讯系统，我们围绕真实聊天、好友管理、群聊协作和消息体验，持续打磨一个更完整、更稳定的聊天产品原型。</span></div>
+                  <div className="profile-info-item"><span className="info-label">开发成员</span><span className="info-value">zzy、zj、mwq、wjq</span></div>
+                  <div className="profile-info-item"><span className="info-label">团队说明</span><span className="info-value">我们以协作开发的方式完成前后端联调、界面交互、消息能力和系统完善，希望把“我的刀盾”做成一个兼顾功能完整性与使用体验的课程作品。</span></div>
+                </div>
+                <button className="edit-profile-btn" onClick={() => setShowAboutModal(false)}>我知道了</button>
+              </div>
             </div>
           </div>
         </div>
@@ -930,16 +952,14 @@ function Overlays({
               <div className="message-search-section">
                 <select className="message-search-input" value={messageHistoryFilters.sender} onChange={(e) => handleChangeHistoryFilter('sender', e.target.value)}>
                   <option value="all">全部成员</option>
-                  <option value={profileData.id}>我</option>
-                  {groupSenderOptions.map((member) => (
-                    <option key={member.id} value={member.id}>{member.displayName || member.name}</option>
-                  ))}
-                </select>
-                <select className="message-search-input" value={messageHistoryFilters.dateRange} onChange={(e) => handleChangeHistoryFilter('dateRange', e.target.value)}>
-                  <option value="all">全部时间</option>
-                  <option value="today">今天</option>
-                  <option value="7d">最近 7 天</option>
-                  <option value="30d">最近 30 天</option>
+                  <option value="me">我</option>
+                  {currentSession.isGroup ? (
+                    groupSenderOptions.map((member) => (
+                      <option key={member.id} value={member.id}>{member.displayName || member.name}</option>
+                    ))
+                  ) : (
+                    <option value="other">{privateSenderName}</option>
+                  )}
                 </select>
                 <select className="message-search-input" value={messageHistoryFilters.type} onChange={(e) => handleChangeHistoryFilter('type', e.target.value)}>
                   <option value="all">全部类型</option>
@@ -948,6 +968,27 @@ function Overlays({
                   <option value="video">视频</option>
                   <option value="reply">回复消息</option>
                 </select>
+              </div>
+              <div className="message-search-section history-time-range">
+                <label className="history-time-field">
+                  <span>开始时间</span>
+                  <input
+                    type="datetime-local"
+                    className="message-search-input"
+                    value={messageHistoryFilters.startAt}
+                    onChange={(e) => handleChangeHistoryFilter('startAt', e.target.value)}
+                  />
+                </label>
+                <label className="history-time-field">
+                  <span>结束时间</span>
+                  <input
+                    type="datetime-local"
+                    className="message-search-input"
+                    value={messageHistoryFilters.endAt}
+                    onChange={(e) => handleChangeHistoryFilter('endAt', e.target.value)}
+                    min={messageHistoryFilters.startAt || undefined}
+                  />
+                </label>
               </div>
 
               {searchResults.length > 0 && (
