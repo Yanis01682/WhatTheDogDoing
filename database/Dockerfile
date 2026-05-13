@@ -10,5 +10,9 @@ ENV MYSQL_DATABASE=whatthedogdoing
 # 声明数据目录，便于平台或运行时挂载持久卷
 VOLUME /var/lib/mysql
 
+# SECoder runtime may not allow MySQL native AIO initialization.
+# Force InnoDB to use the compatible non-native AIO path so mysqld can boot.
+COPY conf.d/secoder.cnf /etc/mysql/conf.d/secoder.cnf
+
 # 暴露 MySQL 默认端口
 EXPOSE 3306
