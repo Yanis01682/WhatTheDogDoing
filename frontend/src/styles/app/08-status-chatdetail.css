@@ -449,6 +449,21 @@
   color: #666;
 }
 
+.group-detail-value {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.group-detail-text {
+  flex: 1;
+  font-size: 0.95rem;
+  color: #333;
+  word-break: break-word;
+}
+
 /* 涓汉淇℃伅鍖哄煙 */
 .personal-info-section {
   display: flex;
@@ -497,6 +512,10 @@
 .detail-section {
   padding: 16px 24px;
   border-bottom: 1px solid #f0f0f0;
+}
+
+.announcement-section {
+  background: linear-gradient(180deg, rgba(102, 126, 234, 0.06), rgba(102, 126, 234, 0.02));
 }
 
 .detail-section.clickable {
@@ -725,6 +744,10 @@
   border-bottom-color: rgba(255, 255, 255, 0.08);
 }
 
+.night-mode .announcement-section {
+  background: linear-gradient(180deg, rgba(102, 126, 234, 0.14), rgba(102, 126, 234, 0.05));
+}
+
 .night-mode .detail-section.clickable:hover {
   background: rgba(255, 255, 255, 0.05);
 }
@@ -768,6 +791,10 @@
 
 .night-mode .group-name {
   color: #ffffff;
+}
+
+.night-mode .group-detail-text {
+  color: #e0e0e0;
 }
 
 .night-mode .group-name-edit-input {

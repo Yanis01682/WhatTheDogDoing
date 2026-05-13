@@ -259,6 +259,15 @@ def _format_message_time(timestamp):
     return timestamp.strftime("%Y年%m月%d日 %H:%M")
 
 
+def _format_display_datetime(timestamp):
+    if not timestamp:
+        return None
+    if timestamp.tzinfo is None:
+        timestamp = timestamp.replace(tzinfo=timezone.utc)
+    timestamp = timestamp.astimezone(CHINA_TZ)
+    return timestamp.strftime("%Y年%m月%d日 %H:%M")
+
+
 def _is_session_pinned(db: Session, conversation_id: int, user_id: int):
     return (
         db.query(models.ConversationPin)
@@ -1279,7 +1288,7 @@ def read_group_announcements(
             "publisherName": (publisher_map[item.publisher_id].nickname or publisher_map[item.publisher_id].username)
             if item.publisher_id in publisher_map
             else "系统",
-            "createdAt": item.created_at.isoformat() if item.created_at else None,
+            "createdAt": _format_display_datetime(item.created_at),
         }
         for item in announcements
     ]
@@ -1314,7 +1323,7 @@ def create_group_announcement(
             "id": announcement.id,
             "content": announcement.content,
             "publisherName": current_user.nickname or current_user.username,
-            "createdAt": announcement.created_at.isoformat() if announcement.created_at else None,
+            "createdAt": _format_display_datetime(announcement.created_at),
         },
     }
 

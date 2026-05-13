@@ -641,40 +641,11 @@ function Overlays({
                 <div className="group-chat-detail">
                   <div className="group-info-section">
                     {renderAvatar(getCurrentSession().avatar, 'group-avatar-large')}
-                    {!isEditingGroupName ? (
-                      <div className="group-name-row">
-                        <h2 className="group-name">{getCurrentSession().title}</h2>
-                        {canRenameCurrentGroup && (
-                          <button className="edit-group-name-btn" type="button" onClick={handleStartEditGroupName}>
-                            编辑名称
-                          </button>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="group-name-edit-row">
-                        <input
-                          className="group-name-edit-input"
-                          type="text"
-                          value={tempGroupName}
-                          onChange={(e) => setTempGroupName(e.target.value)}
-                          maxLength={64}
-                          placeholder="请输入群聊名称"
-                          autoFocus
-                        />
-                        <div className="group-name-edit-actions">
-                          <button className="save-group-name-btn" type="button" onClick={handleSaveGroupName} disabled={isRenamingGroup}>
-                            {isRenamingGroup ? '保存中...' : '保存'}
-                          </button>
-                          <button className="cancel-group-name-btn" type="button" onClick={handleCancelEditGroupName} disabled={isRenamingGroup}>
-                            取消
-                          </button>
-                        </div>
-                      </div>
-                    )}
+                    <div className="group-name-row">
+                      <h2 className="group-name">{getCurrentSession().title}</h2>
+                    </div>
                     <p className="group-member-count">{(groupMembers[currentChat] || []).length} 位成员</p>
                   </div>
-
-                  <div className="detail-section"><div className="section-title">群主</div><div className="section-content owner-info"><div onClick={() => handleOpenOwnerProfile()} style={{ cursor: 'pointer' }}>{renderAvatar(currentGroupOwner?.avatar || getCurrentSession().avatar, 'owner-avatar')}</div><div className="owner-info"><div className="owner-name">{currentGroupOwner?.displayName || getCurrentOwner()}</div><div className="owner-role">群主</div></div></div></div>
 
                   <div className="detail-section">
                     <div className="section-title">成员</div>
@@ -687,18 +658,49 @@ function Overlays({
                       <div className="view-all-members invite-action" onClick={handleOpenInviteMember} title="邀请好友">+</div>
                     </div>
                   </div>
-                  <div className="detail-section"><div className="section-title">我在本群的昵称</div><div className="section-content">{!isEditingGroupNickname ? (<div className="my-nickname">{(groupMembers[currentChat] || []).find((member) => member.name === profileData.username)?.groupNickname || '未设置'}<button type="button" className="edit-nickname-btn" onClick={handleStartEditGroupNickname}>编辑</button></div>) : (<div className="remark-edit-form"><input type="text" value={tempGroupNickname} onChange={(e) => setTempGroupNickname(e.target.value)} placeholder="请输入我在本群的昵称" autoFocus /><div className="remark-actions"><button type="button" className="save-remark-btn" onClick={handleSaveGroupNickname}>保存</button><button type="button" className="cancel-remark-btn" onClick={handleCancelEditGroupNickname}>取消</button></div></div>)}</div></div>
-                  <div className="detail-section"><div className="section-title">置顶聊天</div><div className="section-content"><label className="toggle-switch-label"><input type="checkbox" className="toggle-checkbox" checked={isChatPinned(currentChat)} onChange={() => handleTogglePinChat(currentChat)} /><span className="toggle-slider"></span></label></div></div>
-                  <div className="detail-section"><div className="section-title">消息免打扰</div><div className="section-content"><label className="toggle-switch-label"><input type="checkbox" className="toggle-checkbox" checked={isSessionMuted(currentChat)} onChange={() => handleToggleSessionMute(currentChat)} /><span className="toggle-slider"></span></label></div></div>
-                  <div className="detail-section clickable" onClick={handleOpenSearchMessage}>
+                  <div className="detail-section clickable" onClick={handleOpenMemberList}>
                     <div className="section-content">
-                      <span className="section-title" style={{ marginBottom: 0 }}>聊天记录</span>
+                      <span className="section-title" style={{ marginBottom: 0 }}>成员管理</span>
                       <span className="arrow-icon">›</span>
                     </div>
                   </div>
-                  <div className="detail-section"><div className="section-title">本机记录</div><div className="section-content"><button className="danger-btn" onClick={handleClearChatHistory}>清空聊天记录</button></div></div>
-
                   <div className="detail-section">
+                    <div className="section-title">群聊名称</div>
+                    <div className="section-content">
+                      {!isEditingGroupName ? (
+                        <div className="group-detail-value">
+                          <span className="group-detail-text">{getCurrentSession().title}</span>
+                          {canRenameCurrentGroup && (
+                            <button className="edit-group-name-btn" type="button" onClick={handleStartEditGroupName}>
+                              编辑
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="group-name-edit-row">
+                          <input
+                            className="group-name-edit-input"
+                            type="text"
+                            value={tempGroupName}
+                            onChange={(e) => setTempGroupName(e.target.value)}
+                            maxLength={64}
+                            placeholder="请输入群聊名称"
+                            autoFocus
+                          />
+                          <div className="group-name-edit-actions">
+                            <button className="save-group-name-btn" type="button" onClick={handleSaveGroupName} disabled={isRenamingGroup}>
+                              {isRenamingGroup ? '保存中...' : '保存'}
+                            </button>
+                            <button className="cancel-group-name-btn" type="button" onClick={handleCancelEditGroupName} disabled={isRenamingGroup}>
+                              取消
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="detail-section announcement-section">
                     <div className="section-title">群公告</div>
                     <div className="section-content">
                       {!isEditingAnnouncement ? (
@@ -720,20 +722,23 @@ function Overlays({
                       )}
                     </div>
                   </div>
-
-                  <div className="detail-section clickable" onClick={handleOpenMemberList}>
+                  <div className="detail-section"><div className="section-title">我在本群的昵称</div><div className="section-content">{!isEditingGroupNickname ? (<div className="my-nickname">{(groupMembers[currentChat] || []).find((member) => member.name === profileData.username)?.groupNickname || '未设置'}<button type="button" className="edit-nickname-btn" onClick={handleStartEditGroupNickname}>编辑</button></div>) : (<div className="remark-edit-form"><input type="text" value={tempGroupNickname} onChange={(e) => setTempGroupNickname(e.target.value)} placeholder="请输入我在本群的昵称" autoFocus /><div className="remark-actions"><button type="button" className="save-remark-btn" onClick={handleSaveGroupNickname}>保存</button><button type="button" className="cancel-remark-btn" onClick={handleCancelEditGroupNickname}>取消</button></div></div>)}</div></div>
+                  <div className="detail-section clickable" onClick={handleOpenSearchMessage}>
                     <div className="section-content">
-                      <span className="section-title" style={{ marginBottom: 0 }}>成员管理</span>
+                      <span className="section-title" style={{ marginBottom: 0 }}>查找聊天记录</span>
                       <span className="arrow-icon">›</span>
                     </div>
                   </div>
+                  <div className="detail-section"><div className="section-title">消息免打扰</div><div className="section-content"><label className="toggle-switch-label"><input type="checkbox" className="toggle-checkbox" checked={isSessionMuted(currentChat)} onChange={() => handleToggleSessionMute(currentChat)} /><span className="toggle-slider"></span></label></div></div>
+                  <div className="detail-section"><div className="section-title">置顶聊天</div><div className="section-content"><label className="toggle-switch-label"><input type="checkbox" className="toggle-checkbox" checked={isChatPinned(currentChat)} onChange={() => handleTogglePinChat(currentChat)} /><span className="toggle-slider"></span></label></div></div>
+                  <div className="detail-section"><div className="section-title">本机记录</div><div className="section-content"><button className="danger-btn" onClick={handleClearChatHistory}>清空聊天记录</button></div></div>
 
                   {userRole === 'owner' && (
-                    <div className="detail-section"><div className="section-title">危险操作</div><div className="section-content"><button className="danger-btn" onClick={handleDismissGroup}>解散群聊</button></div></div>
+                    <div className="detail-section"><div className="section-title">退出群聊</div><div className="section-content"><button className="danger-btn" onClick={handleDismissGroup}>解散群聊</button></div></div>
                   )}
 
                   {(userRole === 'member' || userRole === 'admin') && (
-                    <div className="detail-section"><div className="section-title">危险操作</div><div className="section-content"><button className="danger-btn" onClick={handleExitGroup}>退出群聊</button></div></div>
+                    <div className="detail-section"><div className="section-title">退出群聊</div><div className="section-content"><button className="danger-btn" onClick={handleExitGroup}>退出群聊</button></div></div>
                   )}
 
 
@@ -794,7 +799,7 @@ function Overlays({
 
                   <div className="detail-section clickable" onClick={handleOpenSearchMessage}>
                     <div className="section-content">
-                      <span className="section-title" style={{ marginBottom: 0 }}>聊天记录</span>
+                      <span className="section-title" style={{ marginBottom: 0 }}>查找聊天记录</span>
                       <span className="arrow-icon">›</span>
                     </div>
                   </div>
@@ -1031,7 +1036,7 @@ function Overlays({
                     <div key={item.id} className="search-result-item">
                       <div className="result-sender">{item.publisherName}</div>
                       <div className="result-text">{item.content}</div>
-                      <div className="result-time">{formatDisplayDateTime(item.createdAt)}</div>
+                      <div className="result-time">{item.createdAt || formatDisplayDateTime(item.createdAt)}</div>
                     </div>
                   ))}
                 </div>
