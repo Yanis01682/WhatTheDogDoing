@@ -1,5 +1,7 @@
 from datetime import datetime, timezone, timedelta
+import asyncio
 import base64
+import json
 import os
 import uuid
 from typing import Optional
@@ -96,7 +98,41 @@ class ConnectionManager:
             if not self.active_connections[user_id]:
                 del self.active_connections[user_id]
 
+    async def send_notification(self, user_id: int, payload: dict):
+        sockets = list(self.active_connections.get(user_id, []))
+        if not sockets:
+            return
+
+        message = json.dumps(payload)
+        disconnected = []
+        for socket in sockets:
+            try:
+                await socket.send_text(message)
+            except Exception:
+                disconnected.append(socket)
+
+        for socket in disconnected:
+            self.disconnect(socket, user_id)
+
+    async def notify_users(self, user_ids: list[int] | set[int], payload: dict):
+        tasks = [
+            self.send_notification(user_id, payload)
+            for user_id in set(user_ids)
+            if user_id is not None
+        ]
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)
+
 manager = ConnectionManager()
+
+
+def _dispatch_notification(user_ids: list[int] | set[int], payload: dict):
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        return
+
+    loop.create_task(manager.notify_users(user_ids, payload))
 
 def _get_private_conversation_between(db: Session, user_a_id: int, user_b_id: int):
     conversations = (
@@ -583,6 +619,13 @@ def send_friend_request(
     db.add(request)
     db.commit()
     db.refresh(request)
+    _dispatch_notification(
+        [current_user.id, friend_id],
+        {
+            "type": "friend_request_updated",
+            "friendRequestId": request.id,
+        },
+    )
     return _serialize_friend_request(request, target_user, "outgoing")
 
 
@@ -737,6 +780,13 @@ def accept_friend_request(
     conversation = _get_or_create_private_conversation(db, current_user.id, request.user_id)
 
     db.commit()
+    _dispatch_notification(
+        [current_user.id, request.user_id],
+        {
+            "type": "friend_request_updated",
+            "conversationId": conversation.id,
+        },
+    )
     return {
         "message": "Friend request accepted",
         "friend": _serialize_user(target_user),
@@ -754,6 +804,13 @@ def reject_friend_request(
 
     db.delete(request)
     db.commit()
+    _dispatch_notification(
+        [current_user.id, request.user_id],
+        {
+            "type": "friend_request_updated",
+            "friendRequestId": request_id,
+        },
+    )
     return {"message": "Friend request rejected"}
 
 
@@ -872,6 +929,20 @@ def send_message(
     db.add(new_message)
     db.commit()
     db.refresh(new_message)
+    member_ids = [
+        item.user_id
+        for item in db.query(models.ConversationMember.user_id)
+        .filter(models.ConversationMember.conversation_id == payload.conversation_id)
+        .all()
+    ]
+    _dispatch_notification(
+        member_ids,
+        {
+            "type": "conversation_updated",
+            "conversationId": payload.conversation_id,
+            "messageId": new_message.id,
+        },
+    )
     return {
         "status": "sent",
         "message": _serialize_message(new_message, current_user.id, current_user, reply_message, reply_sender),
@@ -936,6 +1007,20 @@ async def send_image_message(
     db.add(new_message)
     db.commit()
     db.refresh(new_message)
+    member_ids = [
+        item.user_id
+        for item in db.query(models.ConversationMember.user_id)
+        .filter(models.ConversationMember.conversation_id == conversation_id)
+        .all()
+    ]
+    _dispatch_notification(
+        member_ids,
+        {
+            "type": "conversation_updated",
+            "conversationId": conversation_id,
+            "messageId": new_message.id,
+        },
+    )
     
     return {
         "status": "sent",
@@ -1019,6 +1104,20 @@ async def send_video_message(
     db.add(new_message)
     db.commit()
     db.refresh(new_message)
+    member_ids = [
+        item.user_id
+        for item in db.query(models.ConversationMember.user_id)
+        .filter(models.ConversationMember.conversation_id == conversation_id)
+        .all()
+    ]
+    _dispatch_notification(
+        member_ids,
+        {
+            "type": "conversation_updated",
+            "conversationId": conversation_id,
+            "messageId": new_message.id,
+        },
+    )
     
     return {
         "status": "sent",
@@ -1041,8 +1140,23 @@ def revoke_message(
     if message.sender_id != current_user.id:
         raise HTTPException(status_code=403, detail="Only the sender can revoke this message")
 
+    conversation_id = message.conversation_id
+    member_ids = [
+        item.user_id
+        for item in db.query(models.ConversationMember.user_id)
+        .filter(models.ConversationMember.conversation_id == conversation_id)
+        .all()
+    ]
     db.delete(message)
     db.commit()
+    _dispatch_notification(
+        member_ids,
+        {
+            "type": "conversation_updated",
+            "conversationId": conversation_id,
+            "messageId": message_id,
+        },
+    )
     return {"message": "Message revoked successfully", "message_id": message_id}
 
 
@@ -1320,6 +1434,23 @@ def create_group_invite_request(
     db.add(invite_request)
     db.commit()
     db.refresh(invite_request)
+    manager_ids = [
+        item.user_id
+        for item in db.query(models.ConversationMember.user_id)
+        .filter(
+            models.ConversationMember.conversation_id == conversation_id,
+            models.ConversationMember.role.in_(("owner", "admin")),
+        )
+        .all()
+    ]
+    _dispatch_notification(
+        manager_ids,
+        {
+            "type": "group_invite_request_updated",
+            "conversationId": conversation_id,
+            "requestId": invite_request.id,
+        },
+    )
     return {
         "message": "Invite request submitted successfully",
         "request": _serialize_group_invite_request(invite_request, current_user, invitee, conversation),
@@ -1404,6 +1535,14 @@ def approve_group_invite_request(
     invite_request.reviewer_id = current_user.id
     invite_request.reviewed_at = datetime.now(timezone.utc)
     db.commit()
+    _dispatch_notification(
+        [current_user.id, invite_request.requester_id, invite_request.invitee_id],
+        {
+            "type": "group_invite_request_updated",
+            "conversationId": invite_request.conversation_id,
+            "requestId": invite_request.id,
+        },
+    )
     return {"message": "Invite request approved successfully"}
 
 
@@ -1424,6 +1563,14 @@ def reject_group_invite_request(
     invite_request.reviewer_id = current_user.id
     invite_request.reviewed_at = datetime.now(timezone.utc)
     db.commit()
+    _dispatch_notification(
+        [current_user.id, invite_request.requester_id, invite_request.invitee_id],
+        {
+            "type": "group_invite_request_updated",
+            "conversationId": invite_request.conversation_id,
+            "requestId": invite_request.id,
+        },
+    )
     return {"message": "Invite request rejected successfully"}
 
 

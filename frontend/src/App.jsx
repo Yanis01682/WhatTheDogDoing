@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import './App.css'
 import {
   INITIAL_CUSTOM_GROUPS,
@@ -211,6 +211,7 @@ function App() {
   const [friendSearchResults, setFriendSearchResults] = useState([])
   const [currentUserId, setCurrentUserId] = useState(null)
   const [jumpToMessageId, setJumpToMessageId] = useState(null)
+  const notificationSocketRef = useRef(null)
 
   const mergeFriendGroups = (groups = []) => {
     const merged = [DEFAULT_FRIEND_GROUP, ...INITIAL_CUSTOM_GROUPS.filter((group) => group !== DEFAULT_FRIEND_GROUP)]
@@ -553,41 +554,74 @@ function App() {
   }, [currentChat, currentUserId, isLoggedIn, sessions]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (!isLoggedIn) return
-
-    const pollSessions = async () => {
-      if (document.visibilityState !== 'visible') return
-
-      try {
-        await refreshRealtimeChatData(currentChat)
-        await refreshFriendRequests()
-      } catch (err) {
-        console.error('刷新会话失败', err)
-      }
-    }
-
-    const timerId = window.setInterval(pollSessions, 5000)
-    return () => window.clearInterval(timerId)
-  }, [currentChat, isLoggedIn]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    if (!isLoggedIn || !currentChat || dynamicSessions.some((session) => session.id === currentChat)) {
+    if (!isLoggedIn || !currentUserId) {
       return
     }
 
-    const pollMessages = async () => {
-      if (document.visibilityState !== 'visible') return
+    let reconnectTimerId = null
+    let isCancelled = false
 
-      try {
-        await refreshConversationMessages(currentChat)
-      } catch (err) {
-        console.error('刷新消息失败', err)
+    const cleanupSocket = () => {
+      if (notificationSocketRef.current) {
+        notificationSocketRef.current.close()
+        notificationSocketRef.current = null
       }
     }
 
-    const timerId = window.setInterval(pollMessages, 200)
-    return () => window.clearInterval(timerId)
-  }, [currentChat, dynamicSessions, isLoggedIn]) // eslint-disable-line react-hooks/exhaustive-deps
+    const scheduleReconnect = () => {
+      if (isCancelled) return
+      reconnectTimerId = window.setTimeout(connectNotificationSocket, 1500)
+    }
+
+    const handleNotification = async (event) => {
+      try {
+        const payload = JSON.parse(event.data)
+        if (payload.type === 'conversation_updated') {
+          await refreshRealtimeChatData(currentChat)
+          if (payload.conversationId === currentChat && !dynamicSessions.some((session) => session.id === currentChat)) {
+            await refreshConversationMessages(currentChat)
+          }
+          return
+        }
+
+        if (payload.type === 'friend_request_updated' || payload.type === 'group_invite_request_updated') {
+          await refreshFriendRequests()
+          await refreshRealtimeChatData(currentChat)
+        }
+      } catch (err) {
+        console.error('处理通知失败', err)
+      }
+    }
+
+    const connectNotificationSocket = () => {
+      cleanupSocket()
+
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+      const socket = new window.WebSocket(`${protocol}//${window.location.host}/api/chat/ws/${currentUserId}`)
+      notificationSocketRef.current = socket
+
+      socket.onmessage = handleNotification
+      socket.onclose = () => {
+        if (notificationSocketRef.current === socket) {
+          notificationSocketRef.current = null
+        }
+        scheduleReconnect()
+      }
+      socket.onerror = () => {
+        socket.close()
+      }
+    }
+
+    connectNotificationSocket()
+
+    return () => {
+      isCancelled = true
+      if (reconnectTimerId) {
+        window.clearTimeout(reconnectTimerId)
+      }
+      cleanupSocket()
+    }
+  }, [currentChat, currentUserId, dynamicSessions, isLoggedIn]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!showSearchMessageModal) return
@@ -2206,7 +2240,12 @@ function App() {
   // 确认退出登录
   const confirmLogout = () => {
     // (status removed from localStorage backup)
-    
+
+    if (notificationSocketRef.current) {
+      notificationSocketRef.current.close()
+      notificationSocketRef.current = null
+    }
+
     logout()
     setIsLoggedIn(false)
     setCurrentChat(null)
