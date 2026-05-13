@@ -270,7 +270,7 @@ function ChatMainView({
           <button className="cancel-reply-btn" type="button" aria-label="取消回复" onClick={cancelReply}>✕</button>
         </div>
       )}
-      <footer className="composer" style={{ height: `${composerHeight}px` }}>
+      <footer className="composer" style={{ minHeight: `${composerHeight}px` }}>
 
         <div className="composer-toolbar">
           <button className="toolbar-btn" type="button" aria-label="发送图片" onClick={() => imageInputRef.current?.click()}>📷</button>
