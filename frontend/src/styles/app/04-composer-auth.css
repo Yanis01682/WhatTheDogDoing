@@ -90,9 +90,9 @@
 }
 
 .composer-input:focus {
-  border-color: #0084ff;
+  border-color: #00bfa5;
   background: #ffffff;
-  box-shadow: 0 0 0 3px rgba(0, 132, 255, 0.1);
+  box-shadow: 0 0 0 3px rgba(0, 191, 165, 0.1);
 }
 
 .composer-actions {
@@ -108,10 +108,10 @@
   font-weight: 600;
   font-family: inherit;
   color: #ffffff;
-  background: linear-gradient(135deg, #0084ff, #0073e6);
+  background: linear-gradient(135deg, #00bfa5, #00a891);
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(0, 132, 255, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 191, 165, 0.3);
 }
 
 .send-btn:hover {
@@ -135,7 +135,7 @@
   justify-content: center;
   position: relative;
   overflow: hidden;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #07c160 0%, #06ad56 100%);
 }
 
 .login-box {
@@ -176,8 +176,8 @@
 .brand-logo .brand-dot {
   width: 16px;
   height: 16px;
-  background: linear-gradient(135deg, #0084ff, #0073e6);
-  box-shadow: 0 2px 8px rgba(0, 132, 255, 0.4);
+  background: linear-gradient(135deg, #00bfa5, #00a891);
+  box-shadow: 0 2px 8px rgba(0, 191, 165, 0.4);
 }
 
 .brand-logo h1 {
@@ -223,9 +223,9 @@
 }
 
 .form-group input:focus {
-  border-color: #0084ff;
+  border-color: #00bfa5;
   background: #ffffff;
-  box-shadow: 0 0 0 3px rgba(0, 132, 255, 0.1);
+  box-shadow: 0 0 0 3px rgba(0, 191, 165, 0.1);
 }
 
 .password-input-wrapper {
@@ -281,13 +281,13 @@
 
 .forgot-link {
   font-size: 0.85rem;
-  color: #0084ff;
+  color: #00bfa5;
   text-decoration: none;
   transition: color 0.2s ease;
 }
 
 .forgot-link:hover {
-  color: #0073e6;
+  color: #00a891;
   text-decoration: underline;
 }
 
@@ -299,15 +299,15 @@
   font-weight: 600;
   font-family: inherit;
   color: #ffffff;
-  background: linear-gradient(135deg, #0084ff, #0073e6);
+  background: linear-gradient(135deg, #00bfa5, #00a891);
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(0, 132, 255, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 191, 165, 0.3);
 }
 
 .login-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(0, 132, 255, 0.4);
+  box-shadow: 0 6px 16px rgba(0, 191, 165, 0.4);
 }
 
 .login-btn:active {
@@ -358,9 +358,9 @@
 }
 
 .social-btn:hover {
-  border-color: #0084ff;
-  color: #0084ff;
-  background: #f0f7ff;
+  border-color: #00bfa5;
+  color: #00bfa5;
+  background: #f0faf8;
 }
 
 .social-btn.wechat:hover {
@@ -387,14 +387,14 @@
 }
 
 .login-footer a {
-  color: #0084ff;
+  color: #00bfa5;
   text-decoration: none;
   font-weight: 600;
   transition: color 0.2s ease;
 }
 
 .login-footer a:hover {
-  color: #0073e6;
+  color: #00a891;
   text-decoration: underline;
 }
 
@@ -479,20 +479,20 @@
 }
 
 .back-to-login-btn {
-  border: 1px solid #0084ff;
+  border: 1px solid #00bfa5;
   border-radius: 10px;
   padding: 12px;
   font-size: 0.95rem;
   font-weight: 600;
   font-family: inherit;
-  color: #0084ff;
+  color: #00bfa5;
   background: transparent;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .back-to-login-btn:hover {
-  background: rgba(0, 132, 255, 0.1);
+  background: rgba(0, 191, 165, 0.1);
   transform: translateY(-1px);
 }
 

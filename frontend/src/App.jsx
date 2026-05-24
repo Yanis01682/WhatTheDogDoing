@@ -259,7 +259,7 @@ function App() {
     try {
       const profile = await getProfile()
       const resolvedAvatar =
-        profile.avatar || (profile.nickname || user.username || '我').slice(0, 1).toUpperCase()
+        profile.avatar || '/default-avatar.png'
       setProfileData({
         id: user.id ?? null,
         username: user.username || '',
@@ -272,7 +272,6 @@ function App() {
       })
       setUserAvatar(resolvedAvatar)
     } catch {
-      const fallbackAvatar = (user.username || '我').slice(0, 1).toUpperCase()
       setProfileData((prev) => ({
         ...prev,
         id: user.id ?? prev.id ?? null,
@@ -280,7 +279,7 @@ function App() {
         nickname: prev.nickname || '',
         email: user.email ?? prev.email ?? '',
       }))
-      setUserAvatar(fallbackAvatar)
+      setUserAvatar('/default-avatar.png')
     }
   }
 
@@ -312,6 +311,10 @@ function App() {
         )
         if (friend && friend.remark) {
           nextSession = { ...session, title: friend.remark }
+        }
+        // 如果会话头像是空字符串或单字符，使用默认头像
+        if (!nextSession.avatar || nextSession.avatar.length === 1) {
+          nextSession = { ...nextSession, avatar: '/default-avatar.png' }
         }
       }
       return applyLocalSessionPreview(nextSession)
@@ -606,8 +609,21 @@ function App() {
     const connectNotificationSocket = () => {
       cleanupSocket()
 
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-      const socket = new window.WebSocket(`${protocol}//${window.location.host}/api/chat/ws/${currentUserId}`)
+      // 使用环境变量配置的 WebSocket URL，如果没有则使用当前页面主机
+      const wsUrl = import.meta.env.VITE_WS_URL
+      let socketUrl
+      
+      if (wsUrl) {
+        // 如果配置了完整的 WebSocket URL，直接使用
+        socketUrl = `${wsUrl}/api/chat/ws/${currentUserId}`
+      } else {
+        // 否则使用当前页面的协议和主机
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+        socketUrl = `${protocol}//${window.location.host}/api/chat/ws/${currentUserId}`
+      }
+      
+      console.log('WebSocket 连接:', socketUrl)
+      const socket = new window.WebSocket(socketUrl)
       notificationSocketRef.current = socket
 
       socket.onmessage = handleNotification
@@ -1699,7 +1715,7 @@ function App() {
         const user = await getCurrentUser()
         if (user) {
           // 先重置展示态，避免上一个账号的头像短暂闪现
-          setUserAvatar('我')
+          setUserAvatar('/default-avatar.png')
           await syncProfileFromUser(user)
           setIsLoggedIn(true)
           await refreshRealtimeChatData()

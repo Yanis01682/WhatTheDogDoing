@@ -116,7 +116,10 @@
   width: 40px;
   height: 40px;
   border-radius: 6px;
-  background: #d8d8d8;
+  background-color: #d8d8d8;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   color: #333;
   font-size: 0.92rem;
   font-weight: 500;
@@ -259,7 +262,7 @@
 }
 
 .night-mode .message.outgoing .bubble {
-  background: #667eea;
+  background: #07c160;
   color: #ffffff;
 }
 

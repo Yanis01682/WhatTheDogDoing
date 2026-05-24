@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 
 function renderAvatar(av, className) {
-  if (typeof av === 'string' && av.startsWith('data:image')) {
+  if (typeof av === 'string' && (av.startsWith('data:image') || av.startsWith('/'))) {
     return (
       <div
         className={className}

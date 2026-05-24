@@ -65,7 +65,7 @@
   width: 38px;
   height: 38px;
   border-radius: 4px;
-  background: #0084ff;
+  background: #00bfa5;
   color: #fff;
   display: flex;
   align-items: center;
@@ -85,7 +85,7 @@
 .nav-status-dot.status-online { background: #07c160; }
 .nav-status-dot.status-busy { background: #ff4d4f; }
 .nav-status-dot.status-away { background: #faad14; }
-.nav-status-dot.status-invisible { background: #722ed1; }
+.nav-status-dot.status-invisible { background: #52c41a; }
 
 .nav-tab-btn {
   width: 100%;

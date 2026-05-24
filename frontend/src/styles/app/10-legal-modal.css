@@ -4,14 +4,14 @@
 
 /* 超链接样式 */
 .legal-link {
-  color: #0084ff;
+  color: #00bfa5;
   text-decoration: none;
   cursor: pointer;
   transition: color 0.2s ease;
 }
 
 .legal-link:hover {
-  color: #0073e6;
+  color: #00a891;
   text-decoration: underline;
 }
 
@@ -146,7 +146,7 @@
 }
 
 .legal-modal-confirm {
-  background: #0084ff;
+  background: #00bfa5;
   color: #ffffff;
   border: none;
   border-radius: 8px;
@@ -158,7 +158,7 @@
 }
 
 .legal-modal-confirm:hover {
-  background: #0073e6;
+  background: #00a891;
 }
 
 .legal-modal-confirm:disabled {
@@ -228,19 +228,19 @@
 }
 
 .night-mode .legal-modal-confirm {
-  background: #667eea;
+  background: #07c160;
 }
 
 .night-mode .legal-modal-confirm:hover {
-  background: #5a6fd6;
+  background: #06ad56;
 }
 
 .night-mode .legal-link {
-  color: #667eea;
+  color: #07c160;
 }
 
 .night-mode .legal-link:hover {
-  color: #7d8fff;
+  color: #09e673;
 }
 
 .night-mode .legal-modal-body::-webkit-scrollbar-thumb {

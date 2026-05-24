@@ -14,7 +14,7 @@ function LeftNav({
     <nav className="left-nav">
       <div className="left-nav-top">
         <div className="nav-avatar-wrapper" onClick={toggleUserPanel}>
-          {typeof userAvatar === 'string' && userAvatar.startsWith('data:image') ? (
+          {typeof userAvatar === 'string' && (userAvatar.startsWith('data:image') || userAvatar.startsWith('/')) ? (
             <div className="nav-avatar" style={{ backgroundImage: `url(${userAvatar})`, backgroundSize: 'cover', backgroundPosition: 'center' }}></div>
           ) : (
             <div className="nav-avatar">

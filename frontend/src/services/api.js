@@ -36,7 +36,26 @@ try {
 
 apiClient.interceptors.response.use(
   (res) => res,
-  (err) => Promise.reject(err)
+  (err) => {
+    // 详细错误日志
+    if (err.response) {
+      console.error('API Error:', {
+        status: err.response.status,
+        data: err.response.data,
+        url: err.config?.url,
+        method: err.config?.method
+      })
+      // 返回更友好的错误信息
+      const message = err.response.data?.detail || err.response.data?.message || `请求失败 (${err.response.status})`
+      err.message = message
+    } else if (err.request) {
+      console.error('Network Error:', err.message)
+      err.message = '网络连接失败，请检查后端服务是否运行'
+    } else {
+      console.error('Error:', err.message)
+    }
+    return Promise.reject(err)
+  }
 )
 
 export async function login({ username, password }) {

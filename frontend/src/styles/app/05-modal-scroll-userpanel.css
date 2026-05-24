@@ -164,7 +164,7 @@
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #07c160 0%, #06ad56 100%);
   color: #ffffff;
   font-size: 1.2rem;
   font-weight: 600;
@@ -328,7 +328,7 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #07c160 0%, #06ad56 100%);
   color: #ffffff;
   font-size: 1rem;
   font-weight: 600;
@@ -428,7 +428,7 @@
   align-items: center;
   gap: 16px;
   padding: 24px 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #07c160 0%, #06ad56 100%);
   color: #ffffff;
 }
 
@@ -665,7 +665,7 @@
 }
 
 .night-mode .tab-btn.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #07c160 0%, #06ad56 100%);
   color: #ffffff;
   border-color: transparent;
 }
@@ -1254,12 +1254,12 @@
 }
 
 .logout-confirm-footer .confirm-btn {
-  background: #667eea;
+  background: #07c160;
   color: #ffffff;
 }
 
 .logout-confirm-footer .confirm-btn:hover {
-  background: #5568d3;
+  background: #06ad56;
 }
 
 /* 修改密码模态框 */

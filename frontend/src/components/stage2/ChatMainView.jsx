@@ -111,7 +111,7 @@ function ChatMainView({
   })
 
   const renderMessageAvatar = (avatarValue, onClick) => {
-    if (typeof avatarValue === 'string' && avatarValue.startsWith('data:image')) {
+    if (typeof avatarValue === 'string' && (avatarValue.startsWith('data:image') || avatarValue.startsWith('/'))) {
       return (
         <div className="message-avatar-wrapper">
           <div
@@ -148,7 +148,7 @@ function ChatMainView({
     <section className="panel chat-panel">
       <header className="chat-topbar">
         <div className="chat-user">
-          {typeof currentSession.avatar === 'string' && currentSession.avatar.startsWith('data:image')
+          {typeof currentSession.avatar === 'string' && (currentSession.avatar.startsWith('data:image') || currentSession.avatar.startsWith('/'))
             ? <div className="avatar large" style={{ backgroundImage: `url(${currentSession.avatar})`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
             : <div className="avatar large">{currentSession.avatar}</div>}
           <div>

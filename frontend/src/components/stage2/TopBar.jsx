@@ -62,7 +62,7 @@ function TopBar({
         </div>
 
         <div className="user-avatar-wrapper" onClick={toggleUserPanel}>
-          {typeof userAvatar === 'string' && userAvatar.startsWith('data:image') ? (
+          {typeof userAvatar === 'string' && (userAvatar.startsWith('data:image') || userAvatar.startsWith('/')) ? (
             <div className="user-avatar" style={{ backgroundImage: `url(${userAvatar})`, backgroundSize: 'cover', backgroundPosition: 'center' }}></div>
           ) : (
             <div className="user-avatar">

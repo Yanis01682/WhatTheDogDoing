@@ -10,7 +10,7 @@ import { useState } from 'react'
  * image background; otherwise render the text initial inside a span.
  */
 function renderAvatar(av, className) {
-  if (typeof av === 'string' && av.startsWith('data:image')) {
+  if (typeof av === 'string' && (av.startsWith('data:image') || av.startsWith('/'))) {
     return (
       <div
         className={className}
@@ -379,7 +379,7 @@ function Overlays({
         <div className="user-panel-overlay" onClick={closeUserPanel}>
           <div className="user-panel" onClick={(e) => e.stopPropagation()}>
             <div className="user-panel-header">
-              {typeof userAvatar === 'string' && userAvatar.startsWith('data:image') ? (
+              {typeof userAvatar === 'string' && (userAvatar.startsWith('data:image') || userAvatar.startsWith('/')) ? (
                 <div className="user-panel-avatar" style={{ backgroundImage: `url(${userAvatar})`, backgroundSize: 'cover', backgroundPosition: 'center' }}></div>
               ) : (
                 <div className="user-panel-avatar"><span>{userAvatar}</span></div>
@@ -439,7 +439,7 @@ function Overlays({
               {!isEditingProfile ? (
                 <div className="profile-view">
                   <div className="profile-avatar-section">
-                    {typeof userAvatar === 'string' && userAvatar.startsWith('data:image') ? (
+                    {typeof userAvatar === 'string' && (userAvatar.startsWith('data:image') || userAvatar.startsWith('/')) ? (
                       <div className="profile-avatar" style={{ backgroundImage: `url(${userAvatar})`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
                         <label htmlFor="avatar-upload" className="avatar-overlay">
                           <span className="avatar-change-text">更换头像</span>
@@ -805,17 +805,9 @@ function Overlays({
                   </div>
                   <div className="detail-section"><div className="section-title">置顶聊天</div><div className="section-content"><label className="toggle-switch-label"><input type="checkbox" className="toggle-checkbox" checked={isChatPinned(currentChat)} onChange={() => handleTogglePinChat(currentChat)} /><span className="toggle-slider"></span></label></div></div>
                   <div className="detail-section"><div className="section-title">消息免打扰</div><div className="section-content"><label className="toggle-switch-label"><input type="checkbox" className="toggle-checkbox" checked={isSessionMuted(currentChat)} onChange={() => handleToggleSessionMute(currentChat)} /><span className="toggle-slider"></span></label></div></div>
-                  <div className="detail-section"><div className="section-title">本机记录</div><div className="section-content"><button className="danger-btn" onClick={handleClearChatHistory}>清空聊天记录</button></div></div>
                   <div className="detail-section"><div className="section-title">添加到黑名单</div><div className="section-content"><label className="toggle-switch-label"><input type="checkbox" className="toggle-checkbox" checked={currentSession.isGroup ? false : isUserInBlacklist(blacklistTarget.id)} onChange={() => !currentSession.isGroup && handleToggleBlacklist(blacklistTarget)} /><span className="toggle-slider"></span></label></div></div>
-                  <div 
-                    className={`detail-section clickable danger ${!currentPrivateFriend ? 'disabled' : ''}`}
-                    onClick={() => currentPrivateFriend && handleDeleteFriend(currentPrivateFriend.id)}
-                  >
-                    <div className="section-content">
-                      <span className="section-title" style={{ marginBottom: 0 }}>删除好友</span>
-                      <span className="arrow-icon">›</span>
-                    </div>
-                  </div>
+                  <div className="detail-section"><div className="section-title">本机记录</div><div className="section-content"><button className="danger-btn" onClick={handleClearChatHistory}>清空聊天记录</button></div></div>
+                  <div className="detail-section"><div className="section-content"><button className="danger-btn" onClick={() => currentPrivateFriend && handleDeleteFriend(currentPrivateFriend.id)} disabled={!currentPrivateFriend}>删除好友</button></div></div>
                 </div>
               )}
             </div>

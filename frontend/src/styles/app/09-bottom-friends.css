@@ -34,7 +34,7 @@
 }
 
 .tab-item.active {
-  color: #667eea;
+  color: #07c160;
 }
 
 .tab-icon {
@@ -59,11 +59,11 @@
 }
 
 .night-mode .tab-item:hover {
-  background: rgba(102, 126, 234, 0.1) !important;
+  background: rgba(7, 193, 96, 0.1) !important;
 }
 
 .night-mode .tab-item.active {
-  color: #667eea !important;
+  color: #07c160 !important;
 }
 
 
@@ -223,7 +223,7 @@
 }
 
 .qq-friend-item:hover {
-  background: linear-gradient(90deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.05) 100%);
+  background: linear-gradient(90deg, rgba(7, 193, 96, 0.08) 0%, rgba(6, 173, 86, 0.05) 100%);
 }
 
 /* QQ 椋庢牸澶村儚 */
@@ -232,7 +232,10 @@
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background-color: #07c160;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -240,7 +243,7 @@
   font-weight: 600;
   color: #ffffff;
   flex-shrink: 0;
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+  box-shadow: 0 2px 8px rgba(7, 193, 96, 0.2);
 }
 
 .qq-friend-avatar-img,
@@ -287,7 +290,7 @@
 }
 
 .qq-status-dot.invisible {
-  background: #722ed1;
+  background: #52c41a;
 }
 
 /* QQ 椋庢牸濂藉弸淇℃伅 */
@@ -342,7 +345,7 @@
 }
 
 .qq-status-icon.invisible {
-  color: #722ed1;
+  color: #52c41a;
 }
 
 /* 涓€х鍚?*/
@@ -376,7 +379,7 @@
   padding: 10px 24px;
   border: none;
   border-radius: 10px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #07c160 0%, #06ad56 100%);
   color: #ffffff;
   font-size: 0.95rem;
   font-weight: 600;
@@ -386,7 +389,7 @@
 
 .empty-friends-hint button:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 6px 16px rgba(7, 193, 96, 0.4);
 }
 
 /* 濂藉弸鐘舵€佺偣棰滆壊 */
@@ -407,7 +410,7 @@
 }
 
 .friend-status-dot.invisible {
-  background: #722ed1;
+  background: #52c41a;
 }
 
 /* 娣诲姞濂藉弸妯℃€佹 */
@@ -493,8 +496,8 @@
 
 .friend-search-input:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: #07c160;
+  box-shadow: 0 0 0 3px rgba(7, 193, 96, 0.1);
 }
 
 /* 鎼滅储缁撴灉 */
@@ -516,15 +519,15 @@
 }
 
 .search-result-item:hover {
-  border-color: #667eea;
-  background: rgba(102, 126, 234, 0.05);
+  border-color: #07c160;
+  background: rgba(7, 193, 96, 0.05);
 }
 
 .result-avatar {
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #07c160 0%, #06ad56 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -556,7 +559,7 @@
   padding: 8px 20px;
   border: none;
   border-radius: 10px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #07c160 0%, #06ad56 100%);
   color: #ffffff;
   font-size: 0.9rem;
   font-weight: 600;
@@ -567,7 +570,7 @@
 
 .send-request-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 6px 16px rgba(7, 193, 96, 0.4);
 }
 
 /* 濂藉弸璇锋眰鍖哄煙 */
@@ -593,7 +596,7 @@
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #07c160 0%, #06ad56 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -675,15 +678,15 @@
 }
 
 .friend-list-item:hover {
-  border-color: #667eea;
-  background: rgba(102, 126, 234, 0.05);
+  border-color: #07c160;
+  background: rgba(7, 193, 96, 0.05);
 }
 
 .friend-list-avatar {
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #07c160 0%, #06ad56 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -771,7 +774,7 @@
 }
 
 .night-mode .friend-search-input-wrapper input:focus {
-  border-color: #667eea;
+  border-color: #07c160;
   background: #2a2a2a;
 }
 
@@ -852,14 +855,14 @@
 
 .remark-edit-form input:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: #07c160;
+  box-shadow: 0 0 0 3px rgba(7, 193, 96, 0.1);
 }
 
 .remark-edit-form select:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: #07c160;
+  box-shadow: 0 0 0 3px rgba(7, 193, 96, 0.1);
 }
 
 .remark-actions {
@@ -880,13 +883,13 @@
 
 .save-remark-btn {
   border: none;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #07c160 0%, #06ad56 100%);
   color: #ffffff;
 }
 
 .save-remark-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 6px 16px rgba(7, 193, 96, 0.4);
 }
 
 .cancel-remark-btn {
@@ -914,8 +917,8 @@
 }
 
 .night-mode .remark-edit-form input:focus {
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+  border-color: #07c160;
+  box-shadow: 0 0 0 3px rgba(7, 193, 96, 0.2);
 }
 
 .night-mode .cancel-remark-btn {
@@ -1047,8 +1050,8 @@
 
 .message-search-input:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: #07c160;
+  box-shadow: 0 0 0 3px rgba(7, 193, 96, 0.1);
 }
 
 /* 鎼滅储缁撴灉淇℃伅 */
@@ -1079,9 +1082,9 @@
 }
 
 .nav-btn:hover:not(:disabled) {
-  border-color: #667eea;
-  color: #667eea;
-  background: rgba(102, 126, 234, 0.05);
+  border-color: #07c160;
+  color: #07c160;
+  background: rgba(7, 193, 96, 0.05);
 }
 
 .nav-btn:disabled {
@@ -1118,14 +1121,14 @@
 }
 
 .search-result-item.active {
-  background: rgba(102, 126, 234, 0.08);
-  border-color: #667eea;
+  background: rgba(7, 193, 96, 0.08);
+  border-color: #07c160;
 }
 
 .result-sender {
   font-size: 0.85rem;
   font-weight: 600;
-  color: #667eea;
+  color: #07c160;
   margin-bottom: 6px;
 }
 
@@ -1223,8 +1226,8 @@
 }
 
 .night-mode .message-search-input:focus {
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+  border-color: #07c160;
+  box-shadow: 0 0 0 3px rgba(7, 193, 96, 0.2);
 }
 
 .night-mode .search-results-info {
@@ -1238,9 +1241,9 @@
 }
 
 .night-mode .nav-btn:hover:not(:disabled) {
-  border-color: #667eea;
-  color: #667eea;
-  background: rgba(102, 126, 234, 0.15);
+  border-color: #07c160;
+  color: #07c160;
+  background: rgba(7, 193, 96, 0.15);
 }
 
 .night-mode .result-index {
@@ -1256,8 +1259,8 @@
 }
 
 .night-mode .search-result-item.active {
-  background: rgba(102, 126, 234, 0.15);
-  border-color: #667eea;
+  background: rgba(7, 193, 96, 0.15);
+  border-color: #07c160;
 }
 
 .night-mode .result-text {
@@ -1302,9 +1305,9 @@
 }
 
 .edit-announcement-btn:hover {
-  border-color: #667eea;
-  color: #667eea;
-  background: rgba(102, 126, 234, 0.05);
+  border-color: #07c160;
+  color: #07c160;
+  background: rgba(7, 193, 96, 0.05);
 }
 
 .announcement-edit-form {
@@ -1327,8 +1330,8 @@
 
 .announcement-edit-form textarea:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: #07c160;
+  box-shadow: 0 0 0 3px rgba(7, 193, 96, 0.1);
 }
 
 .announcement-actions {
@@ -1349,13 +1352,13 @@
 
 .save-announcement-btn {
   border: none;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #07c160 0%, #06ad56 100%);
   color: #ffffff;
 }
 
 .save-announcement-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 6px 16px rgba(7, 193, 96, 0.4);
 }
 
 .cancel-announcement-btn {
@@ -1470,7 +1473,7 @@
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #07c160 0%, #06ad56 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1528,9 +1531,9 @@
 }
 
 .transfer-btn:hover {
-  border-color: #667eea;
-  color: #667eea;
-  background: rgba(102, 126, 234, 0.05);
+  border-color: #07c160;
+  color: #07c160;
+  background: rgba(7, 193, 96, 0.05);
 }
 
 .remove-btn:hover {
@@ -1584,7 +1587,7 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #07c160 0%, #06ad56 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1604,7 +1607,7 @@
   padding: 12px 24px;
   border: none;
   border-radius: 12px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #07c160 0%, #06ad56 100%);
   color: #ffffff;
   font-size: 1rem;
   font-weight: 600;
@@ -1629,9 +1632,9 @@
 }
 
 .night-mode .edit-announcement-btn:hover {
-  border-color: #667eea;
-  color: #667eea;
-  background: rgba(102, 126, 234, 0.15);
+  border-color: #07c160;
+  color: #07c160;
+  background: rgba(7, 193, 96, 0.15);
 }
 
 .night-mode .announcement-edit-form textarea {
@@ -1641,8 +1644,8 @@
 }
 
 .night-mode .announcement-edit-form textarea:focus {
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+  border-color: #07c160;
+  box-shadow: 0 0 0 3px rgba(7, 193, 96, 0.2);
 }
 
 .night-mode .cancel-announcement-btn {
@@ -1708,9 +1711,9 @@
 }
 
 .night-mode .transfer-btn:hover {
-  border-color: #667eea;
-  color: #667eea;
-  background: rgba(102, 126, 234, 0.15);
+  border-color: #07c160;
+  color: #07c160;
+  background: rgba(7, 193, 96, 0.15);
 }
 
 .night-mode .remove-btn:hover {
@@ -1813,8 +1816,8 @@
 
 .group-name-input:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: #07c160;
+  box-shadow: 0 0 0 3px rgba(7, 193, 96, 0.1);
 }
 
 /* 閫夋嫨濂藉弸 */
@@ -1837,7 +1840,7 @@
 
 .selected-count {
   font-size: 0.85rem;
-  color: #667eea;
+  color: #07c160;
   font-weight: 600;
 }
 
@@ -1871,22 +1874,22 @@
 }
 
 .friend-checkbox.selected {
-  border-color: #667eea;
-  background: rgba(102, 126, 234, 0.05);
+  border-color: #07c160;
+  background: rgba(7, 193, 96, 0.05);
 }
 
 .friend-checkbox input[type="checkbox"] {
   width: 18px;
   height: 18px;
   cursor: pointer;
-  accent-color: #667eea;
+  accent-color: #07c160;
 }
 
 .friend-checkbox-avatar {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #07c160 0%, #06ad56 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1940,7 +1943,7 @@
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #07c160 0%, #06ad56 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1993,7 +1996,7 @@
 
 .create-group-submit-btn {
   border: none;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #07c160 0%, #06ad56 100%);
   color: #ffffff;
 }
 
@@ -2046,12 +2049,12 @@
 }
 
 .night-mode .group-name-input:focus {
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+  border-color: #07c160;
+  box-shadow: 0 0 0 3px rgba(7, 193, 96, 0.2);
 }
 
 .night-mode .selected-count {
-  color: #667eea;
+  color: #07c160;
 }
 
 .night-mode .friends-checkbox-list {
@@ -2067,8 +2070,8 @@
 }
 
 .night-mode .friend-checkbox.selected {
-  border-color: #667eea;
-  background: rgba(102, 126, 234, 0.15);
+  border-color: #07c160;
+  background: rgba(7, 193, 96, 0.15);
 }
 
 .night-mode .friend-checkbox-name {
@@ -2132,8 +2135,8 @@
 }
 
 .night-mode .friend-search-input:focus {
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+  border-color: #07c160;
+  box-shadow: 0 0 0 3px rgba(7, 193, 96, 0.2);
 }
 
 .night-mode .search-result-item {
@@ -2141,8 +2144,8 @@
 }
 
 .night-mode .search-result-item:hover {
-  border-color: #667eea;
-  background: rgba(102, 126, 234, 0.1);
+  border-color: #07c160;
+  background: rgba(7, 193, 96, 0.1);
 }
 
 .night-mode .result-name {
@@ -2187,8 +2190,8 @@
 }
 
 .night-mode .friend-list-item:hover {
-  border-color: #667eea;
-  background: rgba(102, 126, 234, 0.1);
+  border-color: #07c160;
+  background: rgba(7, 193, 96, 0.1);
 }
 
 .night-mode .friend-list-name {
@@ -2243,7 +2246,7 @@
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #07c160 0%, #06ad56 100%);
   display: flex;
   align-items: center;
   justify-content: center;

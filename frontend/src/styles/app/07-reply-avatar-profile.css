@@ -120,7 +120,7 @@
 
 .reply-preview-label {
   font-size: 0.8rem;
-  color: #0084ff;
+  color: #00bfa5;
   font-weight: 600;
 }
 
@@ -256,8 +256,8 @@
 }
 
 .night-mode .reply-preview {
-  background: linear-gradient(90deg, rgba(102, 126, 234, 0.15), rgba(102, 126, 234, 0.1));
-  border-left-color: #667eea;
+  background: linear-gradient(90deg, rgba(7, 193, 96, 0.15), rgba(7, 193, 96, 0.1));
+  border-left-color: #07c160;
 }
 
 .night-mode .reply-preview-label {
@@ -459,15 +459,15 @@
   font-weight: 600;
   font-family: inherit;
   color: #ffffff;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #07c160 0%, #06ad56 100%);
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 4px 12px rgba(7, 193, 96, 0.3);
 }
 
 .avatar-confirm-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 6px 16px rgba(7, 193, 96, 0.4);
 }
 
 .avatar-confirm-btn:active {
@@ -626,7 +626,10 @@
   width: 120px;
   height: 120px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background-color: #07c160;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -730,7 +733,7 @@
   font-weight: 600;
   font-family: inherit;
   color: #ffffff;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #07c160 0%, #06ad56 100%);
   cursor: pointer;
   transition: all 0.2s ease;
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
@@ -780,8 +783,8 @@
 .profile-edit-form select:focus,
 .profile-edit-form textarea:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: #07c160;
+  box-shadow: 0 0 0 3px rgba(7, 193, 96, 0.1);
 }
 
 .profile-edit-form textarea {
@@ -823,7 +826,7 @@
 .profile-form-buttons .save-btn {
   border: none;
   color: #ffffff;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #07c160 0%, #06ad56 100%);
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
@@ -896,7 +899,7 @@
 }
 
 .night-mode .edit-profile-btn {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #07c160 0%, #06ad56 100%);
 }
 
 .night-mode .profile-edit-form label {
@@ -914,8 +917,8 @@
 .night-mode .profile-edit-form input:focus,
 .night-mode .profile-edit-form select:focus,
 .night-mode .profile-edit-form textarea:focus {
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+  border-color: #07c160;
+  box-shadow: 0 0 0 3px rgba(7, 193, 96, 0.2);
 }
 
 .night-mode .profile-form-buttons .cancel-btn {
@@ -931,7 +934,7 @@
 }
 
 .night-mode .profile-form-buttons .save-btn {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #07c160 0%, #06ad56 100%);
 }
 
 

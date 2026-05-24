@@ -101,14 +101,18 @@ class ConnectionManager:
     async def send_notification(self, user_id: int, payload: dict):
         sockets = list(self.active_connections.get(user_id, []))
         if not sockets:
+            print(f"⚠️ 用户 {user_id} 没有活动的 WebSocket 连接")
             return
 
+        print(f"📨 向用户 {user_id} 发送 {len(sockets)} 个连接: {payload}")
         message = json.dumps(payload)
         disconnected = []
         for socket in sockets:
             try:
                 await socket.send_text(message)
-            except Exception:
+                print(f"✅ 消息发送成功到用户 {user_id}")
+            except Exception as e:
+                print(f"❌ 消息发送失败到用户 {user_id}: {e}")
                 disconnected.append(socket)
 
         for socket in disconnected:
@@ -127,9 +131,11 @@ manager = ConnectionManager()
 
 
 def _dispatch_notification(user_ids: list[int] | set[int], payload: dict):
+    print(f"📤 发送通知给 {len(set(user_ids))} 个用户: {payload}")
     try:
         loop = asyncio.get_running_loop()
     except RuntimeError:
+        print("⚠️ 没有运行中的事件循环，无法发送通知")
         return
 
     loop.create_task(manager.notify_users(user_ids, payload))
@@ -287,7 +293,7 @@ def _serialize_user(user: models.User, remark: Optional[str] = None, group_name:
         "userId": user.username,
         "accountId": str(user.id),
         "name": display_name,
-        "avatar": user.avatar or display_name[:1].upper(),
+        "avatar": user.avatar or '/default-avatar.png',
         "signature": user.bio or "",
         "email": user.email or "",
         "group": group_name or "我的好友",
@@ -422,7 +428,7 @@ def _serialize_session(db: Session, conversation: models.Conversation, current_u
         if peer_user:
             title = peer_user.nickname or peer_user.username
             real_name = peer_user.username
-            avatar = peer_user.avatar or title[:1].upper()
+            avatar = peer_user.avatar or '/default-avatar.png'
 
     payload = {
         "id": conversation.id,
@@ -1816,13 +1822,17 @@ def update_group_nickname(
 
 @router.websocket("/ws/{user_id}")
 async def websocket_endpoint(websocket: WebSocket, user_id: int, db: Session = Depends(get_db)):
+    print(f"🔌 WebSocket 连接请求: user_id={user_id}, client={websocket.client}")
     await manager.connect(websocket, user_id)
+    print(f"✅ WebSocket 连接成功: user_id={user_id}")
     try:
         while True:
             # 维持长连接，等待接收消息或心跳
             data = await websocket.receive_text() 
+            print(f"📨 收到消息 from user {user_id}: {data}")
     except WebSocketDisconnect:
         # --- 核心逻辑：用户关闭网页会触发这里 ---
+        print(f"❌ WebSocket 断开: user_id={user_id}")
         manager.disconnect(websocket, user_id)
         
         # 重新获取 user 实例防止 session 异常

@@ -139,8 +139,8 @@
 }
 
 .icon-btn.active {
-  background-color: rgba(0, 132, 255, 0.15);
-  color: #0084ff;
+  background-color: rgba(0, 191, 165, 0.15);
+  color: #00bfa5;
   transform: scale(1.05);
 }
 
@@ -259,9 +259,9 @@
 }
 
 .search-input-wrapper input:focus {
-  border-color: #0084ff;
+  border-color: #00bfa5;
   background: #ffffff;
-  box-shadow: 0 0 0 3px rgba(0, 132, 255, 0.1);
+  box-shadow: 0 0 0 3px rgba(0, 191, 165, 0.1);
 }
 
 .search-clear-btn {
@@ -327,20 +327,20 @@
 }
 
 .tab-btn:hover {
-  border-color: #0084ff;
-  color: #0084ff;
-  background: rgba(0, 132, 255, 0.05);
+  border-color: #00bfa5;
+  color: #00bfa5;
+  background: rgba(0, 191, 165, 0.05);
 }
 
 .tab-btn.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #07c160 0%, #06ad56 100%);
   color: #ffffff;
   border-color: transparent;
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 2px 8px rgba(7, 193, 96, 0.3);
 }
 
 .tab-btn.active:hover {
-  background: linear-gradient(135deg, #5568d3 0%, #6a4190 100%);
+  background: linear-gradient(135deg, #06ad56 0%, #059a4d 100%);
 }
 
 .session-list {
@@ -481,7 +481,10 @@
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background-color: #07c160;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   color: #ffffff;
   font-size: 1.3rem;
   font-weight: 600;
@@ -524,7 +527,7 @@
 }
 
 .session-status-dot.status-invisible {
-  background: #722ed1;
+  background: #52c41a;
 }
 
 .session-status-dot.status-offline {
@@ -621,8 +624,8 @@
 }
 
 .night-mode .icon-btn.active {
-  background-color: rgba(102, 126, 234, 0.2) !important;
-  color: #667eea !important;
+  background-color: rgba(7, 193, 96, 0.2) !important;
+  color: #07c160 !important;
 }
 
 .night-mode .search-wrap {
@@ -638,7 +641,7 @@
 
 .night-mode .search-input-wrapper input:focus {
   background: #454545 !important;
-  border-color: #667eea !important;
+  border-color: #07c160 !important;
 }
 
 .night-mode .search-clear-btn {
@@ -701,7 +704,7 @@
 }
 
 .night-mode .avatar {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #07c160 0%, #06ad56 100%);
   color: #ffffff;
 }
 

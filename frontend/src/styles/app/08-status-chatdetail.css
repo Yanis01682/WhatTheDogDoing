@@ -81,14 +81,14 @@
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #722ed1;
+  background: #52c41a;
   position: relative;
   vertical-align: middle;
 }
 
-/* 紫色隐身月亮 */
+/* 绿色隐身月亮 */
 .moon-icon-invisible {
-  color: #722ed1;
+  color: #52c41a;
 }
 
 .moon-icon-invisible::after {
@@ -110,8 +110,8 @@
 }
 
 .status-icon-invisible {
-  color: #722ed1;
-  fill: #722ed1;
+  color: #52c41a;
+  fill: #52c41a;
 }
 
 .status-menu-text {
@@ -121,7 +121,7 @@
 }
 
 .status-menu-check {
-  color: #667eea;
+  color: #07c160;
   font-weight: bold;
   font-size: 1rem;
 }
@@ -178,84 +178,26 @@
 
 .status-select:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: #07c160;
+  box-shadow: 0 0 0 3px rgba(7, 193, 96, 0.1);
 }
 
-/* 澶滈棿妯″紡涓嬬殑鐘舵€侀€夋嫨鍣?*/
-.night-mode .status-selector {
-  background: rgba(255, 255, 255, 0.1);
-}
+/* 澶滈棿妯″紡涓
+```
 
-.night-mode .status-selector:hover {
-  background: rgba(255, 255, 255, 0.15);
-}
-
-.night-mode .status-text {
-  color: #e0e0e0;
-}
-
-.night-mode .status-arrow {
-  color: #888;
-}
-
-.night-mode .status-menu {
-  background: #2a2a2a;
-  border-color: rgba(255, 255, 255, 0.1);
-}
-
-.night-mode .status-menu-item {
-  color: #e0e0e0;
-}
-
-.night-mode .status-menu-item:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.night-mode .status-menu-text {
-  color: #e0e0e0;
-}
-
-.night-mode .user-status-selector {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.night-mode .user-status-selector:hover {
-  background: rgba(255, 255, 255, 0.15);
-}
-
-.night-mode .user-status-text {
-  color: #b0b0b0;
-}
-
-.night-mode .user-status-arrow {
-  color: #888;
-}
-
-.night-mode .status-select {
-  border-color: rgba(255, 255, 255, 0.2);
-  background: #2a2a2a;
-  color: #e0e0e0;
-}
-
-.night-mode .status-select:focus {
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
-}
-
-
+```
 /* ========================================
    17. 鑱婂ぉ璇︽儏妯℃€佹鏍峰紡
    ======================================== */
 
-/* 鑱婂ぉ璇︽儏閬僵灞?*/
+/* 鑱ぉ璇︽儏閬僵灞?*/
 .chat-detail-overlay {
   position: fixed;
   top: 0;
   right: 0;
   bottom: 0;
   left: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.3);
   z-index: 1000;
   animation: fadeIn 0.2s ease;
 }
@@ -267,9 +209,9 @@
   right: 0;
   bottom: 0;
   width: 100%;
-  max-width: 360px;
-  background: #ffffff;
-  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.15);
+  max-width: 380px;
+  background: #ededed;
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.1);
   animation: slideInRight 0.3s ease;
   overflow-y: auto;
 }
@@ -288,9 +230,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 24px;
-  border-bottom: 1px solid #e5e5e5;
-  background: linear-gradient(90deg, #f8f9fa, #ffffff);
+  padding: 16px 20px;
+  border-bottom: 1px solid #d9d9d9;
+  background: #ededed;
   position: sticky;
   top: 0;
   z-index: 1;
@@ -298,9 +240,9 @@
 
 .chat-detail-header h3 {
   margin: 0;
-  font-size: 1.2rem;
-  font-weight: 600;
-  color: #0a0a0a;
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: #000;
 }
 
 .chat-detail-close {
@@ -333,24 +275,32 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 32px 24px;
-  border-bottom: 1px solid #e5e5e5;
-  background: linear-gradient(180deg, #f8f9fa, #ffffff);
+  padding: 30px 20px;
+  border-bottom: 8px solid #ededed;
+  background: #fff;
 }
 
 .group-avatar-large {
-  width: 80px;
-  height: 80px;
-  border-radius: 16px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  width: 64px;
+  height: 64px;
+  min-width: 64px;
+  min-height: 64px;
+  max-width: 64px;
+  max-height: 64px;
+  border-radius: 8px;
+  background-color: #07c160;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 2.5rem;
-  font-weight: 600;
+  font-size: 2rem;
+  font-weight: 500;
   color: #ffffff;
-  margin-bottom: 16px;
-  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+  margin-bottom: 12px;
+  box-shadow: none;
+  overflow: hidden;
 }
 
 .member-avatar-small-inner,
@@ -376,20 +326,20 @@
 
 .group-name {
   margin: 0;
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: #0a0a0a;
+  font-size: 1.2rem;
+  font-weight: 500;
+  color: #000;
 }
 
 .edit-group-name-btn,
 .save-group-name-btn,
 .cancel-group-name-btn {
-  padding: 6px 12px;
-  border: 1px solid #d0d0d0;
-  border-radius: 8px;
-  background: #ffffff;
-  font-size: 0.82rem;
-  color: #555;
+  padding: 4px 12px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  background: #fff;
+  font-size: 0.85rem;
+  color: #576b95;
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -397,9 +347,7 @@
 .edit-group-name-btn:hover,
 .save-group-name-btn:hover,
 .cancel-group-name-btn:hover {
-  border-color: #667eea;
-  color: #667eea;
-  background: rgba(102, 126, 234, 0.08);
+  background: #f5f5f5;
 }
 
 .group-name-edit-row {
@@ -420,8 +368,8 @@
 }
 
 .group-name-edit-input:focus {
-  border-color: #667eea;
-  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.15);
+  border-color: #07c160;
+  box-shadow: 0 0 0 2px rgba(7, 193, 96, 0.15);
 }
 
 .group-name-edit-actions {
@@ -469,37 +417,45 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 32px 24px;
-  border-bottom: 1px solid #e5e5e5;
-  background: linear-gradient(180deg, #f8f9fa, #ffffff);
+  padding: 30px 20px;
+  border-bottom: 8px solid #ededed;
+  background: #fff;
 }
 
 .personal-avatar-large {
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  width: 64px;
+  height: 64px;
+  min-width: 64px;
+  min-height: 64px;
+  max-width: 64px;
+  max-height: 64px;
+  border-radius: 6px;
+  background-color: #07c160;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 2.5rem;
-  font-weight: 600;
+  font-size: 2rem;
+  font-weight: 500;
   color: #ffffff;
-  margin-bottom: 16px;
-  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  margin-bottom: 12px;
+  box-shadow: none;
+  transition: none;
+  overflow: hidden;
 }
 
 .personal-avatar-large:hover {
-  transform: scale(1.05);
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+  transform: none;
+  box-shadow: none;
 }
 
 .personal-name {
-  margin: 0 0 8px 0;
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: #0a0a0a;
+  margin: 0 0 6px 0;
+  font-size: 1.2rem;
+  font-weight: 500;
+  color: #000;
 }
 
 .personal-status {
@@ -510,21 +466,22 @@
 
 /* 璇︽儏鍖哄潡閫氱敤鏍峰紡 */
 .detail-section {
-  padding: 16px 24px;
-  border-bottom: 1px solid #f0f0f0;
+  padding: 16px 20px;
+  background: #fff;
+  border-bottom: none;
 }
 
-.announcement-section {
-  background: linear-gradient(180deg, rgba(102, 126, 234, 0.06), rgba(102, 126, 234, 0.02));
+.detail-section:not(:last-child) {
+  border-bottom: 1px solid #e5e5e5;
 }
 
 .detail-section.clickable {
   cursor: pointer;
-  transition: background 0.2s ease;
+  transition: background 0.15s ease;
 }
 
 .detail-section.clickable:hover {
-  background: #fafafa;
+  background: #f5f5f5;
 }
 
 .detail-section.danger .section-title {
@@ -532,10 +489,10 @@
 }
 
 .section-title {
-  font-size: 0.9rem;
-  color: #666;
-  margin-bottom: 12px;
-  font-weight: 500;
+  font-size: 0.95rem;
+  color: #888;
+  margin-bottom: 0;
+  font-weight: 400;
 }
 
 .section-content {
@@ -555,15 +512,15 @@
 }
 
 .owner-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  width: 36px;
+  height: 36px;
+  border-radius: 4px;
+  background: linear-gradient(135deg, #07c160 0%, #06ad56 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.2rem;
-  font-weight: 600;
+  font-size: 1rem;
+  font-weight: 500;
   color: #ffffff;
 }
 
@@ -596,69 +553,66 @@
 
 .edit-nickname-btn,
 .edit-remark-btn {
-  padding: 6px 16px;
-  border: 1px solid #d0d0d0;
-  border-radius: 8px;
-  background: #ffffff;
-  font-size: 0.85rem;
-  color: #666;
+  padding: 4px 14px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  background: #fff;
+  font-size: 0.9rem;
+  color: #576b95;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
 }
 
 .edit-nickname-btn:hover,
 .edit-remark-btn:hover {
-  border-color: #667eea;
-  color: #667eea;
-  background: rgba(102, 126, 234, 0.05);
+  background: #f5f5f5;
 }
 
 /* 鎴愬憳棰勮 */
 .members-preview {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
+  gap: 10px;
 }
 
 .member-avatar-small {
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  width: 48px;
+  height: 48px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #07c160 0%, #06ad56 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1rem;
-  font-weight: 600;
+  font-size: 1.1rem;
+  font-weight: 500;
   color: #ffffff;
   cursor: pointer;
-  transition: transform 0.2s ease;
+  transition: opacity 0.15s ease;
 }
 
 .member-avatar-small:hover {
-  transform: scale(1.1);
+  opacity: 0.8;
 }
 
 .view-all-members {
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
-  background: #f5f5f5;
+  width: 48px;
+  height: 48px;
+  border-radius: 6px;
+  background: #ededed;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.5rem;
-  color: #999;
+  font-size: 1.8rem;
+  color: #b0b0b0;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background 0.15s ease;
 }
 
 .view-all-members:hover {
   background: #e5e5e5;
-  color: #666;
 }
 
-/* 寮€鍏冲垏鎹㈡牱寮?*/
+/* 寮€鍏冲 hitter鎹㈡牱寮?*/
 .toggle-switch-label {
   position: relative;
   display: inline-block;
@@ -698,7 +652,7 @@
 }
 
 .toggle-checkbox:checked + .toggle-slider {
-  background-color: #667eea;
+  background-color: #07c160;
 }
 
 .toggle-checkbox:checked + .toggle-slider:before {
@@ -784,9 +738,9 @@
 .night-mode .edit-group-name-btn:hover,
 .night-mode .save-group-name-btn:hover,
 .night-mode .cancel-group-name-btn:hover {
-  border-color: #667eea;
-  color: #667eea;
-  background: rgba(102, 126, 234, 0.1);
+  border-color: #07c160;
+  color: #07c160;
+  background: rgba(7, 193, 96, 0.1);
 }
 
 .night-mode .group-name {
@@ -804,8 +758,8 @@
 }
 
 .night-mode .group-name-edit-input:focus {
-  border-color: #667eea;
-  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+  border-color: #07c160;
+  box-shadow: 0 0 0 2px rgba(7, 193, 96, 0.2);
 }
 
 .night-mode .save-group-name-btn:disabled,
@@ -842,7 +796,7 @@
 }
 
 .night-mode .toggle-checkbox:checked + .toggle-slider {
-  background-color: #667eea;
+  background-color: #07c160;
 }
 
 .night-mode .tag-placeholder {
