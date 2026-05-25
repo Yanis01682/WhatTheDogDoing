@@ -222,6 +222,7 @@ function App() {
   const [currentUserId, setCurrentUserId] = useState(null)
   const [jumpToMessageId, setJumpToMessageId] = useState(null)
   const notificationSocketRef = useRef(null)
+  const pendingMessageDebugRef = useRef(new Map())
 
   const mergeFriendGroups = (groups = []) => {
     const merged = [DEFAULT_FRIEND_GROUP, ...INITIAL_CUSTOM_GROUPS.filter((group) => group !== DEFAULT_FRIEND_GROUP)]
@@ -350,11 +351,28 @@ function App() {
       return
     }
 
+    const refreshStartedAt = performance.now()
     const fetchedMessages = await getMessages(conversationId)
     console.log('[刷新消息] 获取到的消息数量:', fetchedMessages.length)
     if (fetchedMessages.length > 0) {
       const lastMsg = fetchedMessages[fetchedMessages.length - 1]
       console.log('[刷新消息] 最后一条消息:', { id: lastMsg.id, type: lastMsg.type, text: lastMsg.text?.substring(0, 20), mediaUrl: lastMsg.mediaUrl })
+
+      const debugKey = `${conversationId}:${lastMsg.id}`
+      const pendingDebug = pendingMessageDebugRef.current.get(debugKey)
+      if (pendingDebug) {
+        const now = performance.now()
+        console.log('[消息延迟] 刷新命中已发送消息', {
+          conversationId,
+          messageId: lastMsg.id,
+          text: lastMsg.text,
+          httpLatencyMs: Math.round(pendingDebug.httpLatencyMs ?? 0),
+          refreshRequestMs: Math.round(now - refreshStartedAt),
+          totalLatencyMs: Math.round(now - pendingDebug.startedAt),
+          deliveredAt: new Date().toISOString(),
+        })
+        pendingMessageDebugRef.current.delete(debugKey)
+      }
     }
     
     const withMarkedReplies = applyLocalMessageFilters(conversationId, fetchedMessages)
@@ -572,7 +590,9 @@ function App() {
     }
 
     let reconnectTimerId = null
+    let pollingTimerId = null
     let isCancelled = false
+    let wsFailCount = 0
 
     const cleanupSocket = () => {
       if (notificationSocketRef.current) {
@@ -581,8 +601,36 @@ function App() {
       }
     }
 
+    const stopPolling = () => {
+      if (pollingTimerId) {
+        window.clearInterval(pollingTimerId)
+        pollingTimerId = null
+      }
+    }
+
+    const startPolling = () => {
+      if (pollingTimerId) return
+      console.log('WebSocket 不可用，降级为轮询模式')
+      pollingTimerId = window.setInterval(async () => {
+        if (isCancelled) return
+        try {
+          await refreshRealtimeChatData(currentChat)
+          if (currentChat) {
+            await refreshConversationMessages(currentChat)
+          }
+        } catch (err) {
+          console.error('轮询刷新失败', err)
+        }
+      }, 3000)
+    }
+
     const scheduleReconnect = () => {
       if (isCancelled) return
+      wsFailCount++
+      if (wsFailCount >= 3) {
+        startPolling()
+        return
+      }
       reconnectTimerId = window.setTimeout(connectNotificationSocket, 1500)
     }
 
@@ -611,18 +659,23 @@ function App() {
 
       // 使用环境变量配置的 WebSocket URL，如果没有则使用当前页面主机
       const wsUrl = import.meta.env.VITE_WS_URL
-      if (!wsUrl) {
-        return
-      }
+      let socketUrl
 
-      // 只有显式配置了 VITE_WS_URL 时才启用 WebSocket，
-      // 否则默认走现有 HTTP 轮询，避免远程环境/代理不支持 WS 时产生握手报错。
-      const socketUrl = `${wsUrl}/api/chat/ws/${currentUserId}`
+      if (wsUrl) {
+        socketUrl = `${wsUrl}/api/chat/ws/${currentUserId}`
+      } else {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+        socketUrl = `${protocol}//${window.location.host}/api/chat/ws/${currentUserId}`
+      }
 
       console.log('WebSocket 连接:', socketUrl)
       const socket = new window.WebSocket(socketUrl)
       notificationSocketRef.current = socket
 
+      socket.onopen = () => {
+        wsFailCount = 0
+        stopPolling()
+      }
       socket.onmessage = handleNotification
       socket.onclose = () => {
         if (notificationSocketRef.current === socket) {
@@ -642,6 +695,7 @@ function App() {
       if (reconnectTimerId) {
         window.clearTimeout(reconnectTimerId)
       }
+      stopPolling()
       cleanupSocket()
     }
   }, [currentChat, currentUserId, dynamicSessions, isLoggedIn]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -2114,31 +2168,59 @@ function App() {
       !editingMessageId
 
     if (shouldUseBackend) {
-      try {
-        const result = await sendChatMessage(activeSession.id, messageInput, replyToMessage?.id)
+      const text = messageInput
+      const replyId = replyToMessage?.id
+      const sessionId = activeSession.id
+      const startedAt = performance.now()
+
+      // 乐观更新：立即显示消息，不等服务器返回
+      const optimisticMsg = {
+        id: `pending-${Date.now()}`,
+        text,
+        sender: 'me',
+        sender_id: currentUserId,
+        time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+        replyTo: replyId || null,
+      }
+      setMessages((prev) => ({
+        ...prev,
+        [sessionId]: [...(prev[sessionId] || []), optimisticMsg]
+      }))
+      setSessions((prev) =>
+        prev.map((session) =>
+          session.id === sessionId
+            ? { ...session, lastMessage: text, time: optimisticMsg.time }
+            : session
+        )
+      )
+      setMessageInput('')
+      setReplyToMessage(null)
+      setEditingMessageId(null)
+
+      const uiMs = performance.now() - startedAt
+      console.log(`[消息延迟] UI 更新完成 | ${Math.round(uiMs)}ms | ✅`)
+
+      // 后台发送，成功后替换乐观消息为真实消息
+      sendChatMessage(sessionId, text, replyId).then((result) => {
+        const httpMs = performance.now() - startedAt
+        console.log(`[消息延迟] 服务器确认 | HTTP: ${Math.round(httpMs)}ms`)
         setMessages((prev) => ({
           ...prev,
-          [activeSession.id]: [...(prev[activeSession.id] || []), result.message]
-        }))
-        setSessions((prev) =>
-          prev.map((session) =>
-            session.id === activeSession.id
-              ? {
-                  ...session,
-                  lastMessage: result.message.text,
-                  time: result.message.time
-                }
-              : session
+          [sessionId]: (prev[sessionId] || []).map((m) =>
+            m.id === optimisticMsg.id ? result.message : m
           )
-        )
-        setMessageInput('')
-        setReplyToMessage(null)
-        setEditingMessageId(null)
-        return
-      } catch (err) {
-        alert(err.response?.data?.detail || '发送消息失败')
-        return
-      }
+        }))
+      }).catch((err) => {
+        // 发送失败，标记消息
+        console.error('发送失败', err)
+        setMessages((prev) => ({
+          ...prev,
+          [sessionId]: (prev[sessionId] || []).map((m) =>
+            m.id === optimisticMsg.id ? { ...m, failed: true } : m
+          )
+        }))
+      })
+      return
     }
 
     const newMessage = {
