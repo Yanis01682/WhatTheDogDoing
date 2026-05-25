@@ -611,17 +611,14 @@ function App() {
 
       // 使用环境变量配置的 WebSocket URL，如果没有则使用当前页面主机
       const wsUrl = import.meta.env.VITE_WS_URL
-      let socketUrl
-      
-      if (wsUrl) {
-        // 如果配置了完整的 WebSocket URL，直接使用
-        socketUrl = `${wsUrl}/api/chat/ws/${currentUserId}`
-      } else {
-        // 否则使用当前页面的协议和主机
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-        socketUrl = `${protocol}//${window.location.host}/api/chat/ws/${currentUserId}`
+      if (!wsUrl) {
+        return
       }
-      
+
+      // 只有显式配置了 VITE_WS_URL 时才启用 WebSocket，
+      // 否则默认走现有 HTTP 轮询，避免远程环境/代理不支持 WS 时产生握手报错。
+      const socketUrl = `${wsUrl}/api/chat/ws/${currentUserId}`
+
       console.log('WebSocket 连接:', socketUrl)
       const socket = new window.WebSocket(socketUrl)
       notificationSocketRef.current = socket
