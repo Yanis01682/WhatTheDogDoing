@@ -508,13 +508,15 @@
   bottom: 0;
   overflow: hidden;
   z-index: 1;
+  background-color: #1a1a2e;
+  background-image: url('/login5.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 .bg-circle {
-  position: absolute;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
-  animation: float 20s ease-in-out infinite;
+  display: none;
 }
 
 .bg-circle-1 {
