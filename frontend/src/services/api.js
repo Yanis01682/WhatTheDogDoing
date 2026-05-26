@@ -264,6 +264,16 @@ export async function publishGroupAnnouncement(conversationId, content) {
   return res.data
 }
 
+export async function getUnconfirmedAnnouncements(conversationId) {
+  const res = await apiClient.get(`/api/chat/groups/${conversationId}/announcements/unconfirmed`)
+  return res.data
+}
+
+export async function confirmAnnouncement(conversationId, announcementId) {
+  const res = await apiClient.post(`/api/chat/groups/${conversationId}/announcements/${announcementId}/confirm`)
+  return res.data
+}
+
 export async function sendChatMessage(conversationId, content, replyToId) {
   const payload = { conversation_id: conversationId, content }
   if (replyToId) payload.reply_to_id = replyToId

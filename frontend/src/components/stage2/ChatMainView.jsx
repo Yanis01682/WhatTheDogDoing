@@ -68,7 +68,11 @@ function ChatMainView({
   // 打开图片/视频灯箱
   onOpenLightbox,
   // 打开个人信息页面。
-  handleOpenProfile
+  handleOpenProfile,
+  // 未确认的群公告
+  pendingAnnouncements = [],
+  // 确认公告回调
+  onConfirmAnnouncement,
 }) {
   const imageInputRef = useRef(null)
   const videoInputRef = useRef(null)
@@ -317,6 +321,16 @@ function ChatMainView({
 
         <div className={`composer-resize-handle ${isComposingResizing ? 'resizing' : ''}`} onMouseDown={handleComposerResizeStart}></div>
       </footer>
+
+      {pendingAnnouncements.length > 0 && (
+        <div className="announcement-overlay">
+          <div className="announcement-popup">
+            <h3>📢 群公告</h3>
+            <div className="announcement-content">{pendingAnnouncements[0].content}</div>
+            <button className="announcement-confirm-btn" onClick={() => onConfirmAnnouncement(pendingAnnouncements[0].id)}>我已知晓</button>
+          </div>
+        </div>
+      )}
     </section>
   )
 }

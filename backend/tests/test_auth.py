@@ -352,7 +352,7 @@ def test_delete_account_cleans_friendships_private_messages_and_group_membership
     assert all(member["name"] != "cleanup_alice" for member in group_members.json())
 
     assert group_messages.status_code == 200
-    assert group_messages.json() == []
+    assert all(m["sender"] == "system" for m in group_messages.json())
 
     assert private_messages.status_code == 403
 

@@ -332,11 +332,17 @@ def _serialize_message(
     sender_name = (sender.nickname or sender.username) if sender else "系统"
     # 确保 message_type 有默认值
     msg_type = message.message_type if message.message_type else "text"
+    if msg_type == "system":
+        msg_sender = "system"
+    elif message.sender_id == current_user_id:
+        msg_sender = "me"
+    else:
+        msg_sender = "other"
     payload = {
         "id": message.id,
         "text": message.content,
         "type": msg_type,
-        "sender": "me" if message.sender_id == current_user_id else "other",
+        "sender": msg_sender,
         "senderId": message.sender_id,
         "senderName": sender_name,
         "time": _format_message_time(message.timestamp),
@@ -1361,6 +1367,13 @@ def create_group(
         role = "owner" if member_id == current_user.id else "member"
         db.add(models.ConversationMember(conversation_id=conversation.id, user_id=member_id, role=role))
 
+    # 系统消息：创建群聊
+    invited_users = db.query(models.User).filter(models.User.id.in_(member_ids)).all()
+    invited_names = [u.nickname or u.username for u in invited_users if u.id != current_user.id]
+    creator_name = current_user.nickname or current_user.username
+    sys_text = f'"{creator_name}"邀请"{"、".join(invited_names)}"加入了群聊'
+    db.add(models.Message(conversation_id=conversation.id, sender_id=None, message_type="system", content=sys_text))
+
     db.commit()
     return {
         "message": "Group created successfully",
@@ -1464,6 +1477,13 @@ def create_group_announcement(
         content=content,
     )
     db.add(announcement)
+    db.flush()
+
+    # 系统消息：发布群公告
+    publisher_name = current_user.nickname or current_user.username
+    sys_text = f'"{publisher_name}"发布了新公告'
+    db.add(models.Message(conversation_id=conversation_id, sender_id=None, message_type="system", content=sys_text))
+
     db.commit()
     db.refresh(announcement)
     return {
@@ -1475,6 +1495,67 @@ def create_group_announcement(
             "createdAt": _format_display_datetime(announcement.created_at),
         },
     }
+
+
+@router.get("/groups/{conversation_id}/announcements/unconfirmed")
+def get_unconfirmed_announcements(
+    conversation_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    """获取当前用户未确认的群公告"""
+    _get_group_or_404(db, conversation_id)
+    _get_member_or_403(db, conversation_id, current_user.id)
+
+    confirmed_ids = {
+        c.announcement_id
+        for c in db.query(models.AnnouncementConfirmation)
+        .filter(models.AnnouncementConfirmation.user_id == current_user.id)
+        .all()
+    }
+    announcements = (
+        db.query(models.GroupAnnouncement)
+        .filter(models.GroupAnnouncement.conversation_id == conversation_id)
+        .order_by(models.GroupAnnouncement.created_at.desc())
+        .all()
+    )
+    unconfirmed = [a for a in announcements if a.id not in confirmed_ids]
+    if not unconfirmed:
+        return []
+
+    publisher_ids = {a.publisher_id for a in unconfirmed if a.publisher_id}
+    publishers = db.query(models.User).filter(models.User.id.in_(publisher_ids)).all() if publisher_ids else []
+    pub_map = {u.id: u for u in publishers}
+    return [
+        {
+            "id": a.id,
+            "content": a.content,
+            "publisherName": (pub_map[a.publisher_id].nickname or pub_map[a.publisher_id].username) if a.publisher_id in pub_map else "系统",
+            "createdAt": _format_display_datetime(a.created_at),
+        }
+        for a in unconfirmed
+    ]
+
+
+@router.post("/groups/{conversation_id}/announcements/{announcement_id}/confirm")
+def confirm_announcement(
+    conversation_id: int,
+    announcement_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    """确认群公告"""
+    _get_group_or_404(db, conversation_id)
+    _get_member_or_403(db, conversation_id, current_user.id)
+
+    existing = db.query(models.AnnouncementConfirmation).filter(
+        models.AnnouncementConfirmation.announcement_id == announcement_id,
+        models.AnnouncementConfirmation.user_id == current_user.id,
+    ).first()
+    if not existing:
+        db.add(models.AnnouncementConfirmation(announcement_id=announcement_id, user_id=current_user.id))
+        db.commit()
+    return {"message": "Confirmed"}
 
 
 @router.post("/groups/{conversation_id}/invite")
@@ -1528,6 +1609,13 @@ def invite_group_members(
     # 添加新成员
     for member_id in new_member_ids:
         db.add(models.ConversationMember(conversation_id=conversation_id, user_id=member_id))
+
+    # 系统消息：邀请成员
+    new_users = db.query(models.User).filter(models.User.id.in_(new_member_ids)).all()
+    new_names = [u.nickname or u.username for u in new_users]
+    inviter_name = current_user.nickname or current_user.username
+    sys_text = f'"{inviter_name}"邀请"{"、".join(new_names)}"加入了群聊'
+    db.add(models.Message(conversation_id=conversation_id, sender_id=None, message_type="system", content=sys_text))
 
     db.commit()
     return {

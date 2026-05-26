@@ -96,6 +96,15 @@ class GroupAnnouncement(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
 
+class AnnouncementConfirmation(Base):
+    __tablename__ = "announcement_confirmations"
+    __table_args__ = {'extend_existing': True}
+    id = Column(Integer, primary_key=True, index=True)
+    announcement_id = Column(Integer, ForeignKey("group_announcements.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    confirmed_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
 class GroupInviteRequest(Base):
     __tablename__ = "group_invite_requests"
     __table_args__ = {'extend_existing': True}

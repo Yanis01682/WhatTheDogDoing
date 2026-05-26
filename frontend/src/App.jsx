@@ -19,6 +19,8 @@ import {
   rejectGroupInviteRequest,
   getGroupAnnouncements,
   publishGroupAnnouncement,
+  getUnconfirmedAnnouncements,
+  confirmAnnouncement,
   renameGroup,
   getFriendRequests,
   getGroupMembers,
@@ -147,6 +149,7 @@ function App() {
   const [isNightMode, setIsNightMode] = useState(false) // 夜间模式
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false) // 注销账户二次确认
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false) // 退出登录二次确认
+  const [pendingAnnouncements, setPendingAnnouncements] = useState([]) // 未确认的群公告
   const [sessionFilter, setSessionFilter] = useState('all') // 会话筛选：all-全部 | personal-个人 | group-群聊
   const [searchQuery, setSearchQuery] = useState('') // 搜索关键词
   const [chatlistWidth] = useState(320) // 会话列表宽度（固定，不再支持拖拽）
@@ -586,6 +589,14 @@ function App() {
     loadGroupMembers()
   }, [currentChat, currentUserId, isLoggedIn, sessions]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // 进入群聊时加载未确认公告
+  useEffect(() => {
+    if (!isLoggedIn || !currentChat) return
+    const session = sessions.find((item) => item.id === currentChat)
+    if (!session?.isGroup) { setPendingAnnouncements([]); return }
+    getUnconfirmedAnnouncements(currentChat).then(setPendingAnnouncements).catch(() => {})
+  }, [currentChat, isLoggedIn, sessions]) // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     if (!isLoggedIn || !currentUserId) {
       return
@@ -648,7 +659,7 @@ function App() {
           // 如果通知携带完整消息，直接插入，避免额外请求
           if (payload.message && payload.conversationId === currentChat) {
             const msg = payload.message
-            msg.sender = msg.senderId === currentUserId ? 'me' : 'other'
+            msg.sender = msg.type === 'system' ? 'system' : (msg.senderId === currentUserId ? 'me' : 'other')
             setMessages((prev) => {
               const existing = prev[currentChat] || []
               if (existing.some(m => m.id === msg.id)) return prev
@@ -663,6 +674,10 @@ function App() {
               }
               return { ...prev, [currentChat]: [...existing, msg] }
             })
+            // 如果是公告系统消息，刷新未确认公告
+            if (msg.type === 'system' && msg.content && msg.content.includes('发布了新公告')) {
+              getUnconfirmedAnnouncements(currentChat).then(setPendingAnnouncements).catch(() => {})
+            }
           }
           // 会话列表刷新不阻塞消息渲染
           refreshRealtimeChatData(currentChat)
@@ -2900,6 +2915,11 @@ function App() {
           isComposingResizing={isComposingResizing}
           handleComposerResizeStart={handleComposerResizeStart}
           onOpenLightbox={openLightbox}
+          pendingAnnouncements={pendingAnnouncements}
+          onConfirmAnnouncement={async (id) => {
+            await confirmAnnouncement(currentChat, id)
+            setPendingAnnouncements(prev => prev.filter(a => a.id !== id))
+          }}
         />
       </main>
 
