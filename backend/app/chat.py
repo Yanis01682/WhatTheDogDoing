@@ -1872,8 +1872,9 @@ def exit_group(
     if membership.role == "owner":
         raise HTTPException(status_code=403, detail=ERR_OWNER_CANNOT_LEAVE)
 
+    user_name = current_user.nickname or current_user.username
     db.delete(membership)
-    db.flush()  # ensure delete is visible to subsequent queries in this session
+    db.flush()
 
     remaining_members = (
         db.query(models.ConversationMember)
@@ -1890,6 +1891,8 @@ def exit_group(
         for message in messages:
             db.delete(message)
         db.delete(conversation)
+    else:
+        db.add(models.Message(conversation_id=conversation_id, sender_id=None, message_type="system", content=f'"{user_name}"退出了群聊'))
 
     db.commit()
     return {
@@ -1964,6 +1967,9 @@ def transfer_group_ownership(
 
     my_member.role = "member"
     new_owner_member.role = "owner"
+    new_owner_user = db.query(models.User).filter(models.User.id == new_owner_id).first()
+    new_owner_name = new_owner_user.nickname or new_owner_user.username if new_owner_user else str(new_owner_id)
+    db.add(models.Message(conversation_id=conversation_id, sender_id=None, message_type="system", content=f'"{new_owner_name}"已成为新群主'))
     db.commit()
     return {"message": "Ownership transferred successfully"}
 
@@ -1998,7 +2004,10 @@ def kick_group_member(
     if my_member.role == "admin" and target_member.role in ("owner", "admin"):
         raise HTTPException(status_code=403, detail="Admins can only kick regular members")
 
+    target_user = db.query(models.User).filter(models.User.id == target_id).first()
+    target_name = target_user.nickname or target_user.username if target_user else str(target_id)
     db.delete(target_member)
+    db.add(models.Message(conversation_id=conversation_id, sender_id=None, message_type="system", content=f'"{target_name}"被移出了群聊'))
     db.commit()
     return {"message": "Member kicked successfully"}
 
@@ -2031,6 +2040,10 @@ def set_group_admin(
         raise HTTPException(status_code=404, detail="Target user is not in the group")
 
     target_member.role = "admin" if is_admin else "member"
+    target_user = db.query(models.User).filter(models.User.id == target_id).first()
+    target_name = target_user.nickname or target_user.username if target_user else str(target_id)
+    action = "成为了管理员" if is_admin else "被取消了管理员"
+    db.add(models.Message(conversation_id=conversation_id, sender_id=None, message_type="system", content=f'"{target_name}"{action}'))
     db.commit()
     return {"message": "Role updated successfully", "role": target_member.role}
 
