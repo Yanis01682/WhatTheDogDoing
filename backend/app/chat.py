@@ -1232,8 +1232,9 @@ async def send_voice_message(
     current_user: models.User = Depends(auth.get_current_user),
 ):
     """发送语音消息，最大 2MB"""
-    ALLOWED_AUDIO_TYPES = {'audio/webm', 'audio/ogg', 'audio/mp4', 'audio/mpeg', 'audio/wav'}
-    if file.content_type not in ALLOWED_AUDIO_TYPES:
+    ALLOWED_AUDIO_TYPES = {'audio/webm', 'audio/ogg', 'audio/mp4', 'audio/mpeg', 'audio/wav', 'audio/mp3'}
+    content_type_base = (file.content_type or '').split(';')[0].strip()
+    if content_type_base not in ALLOWED_AUDIO_TYPES:
         raise HTTPException(status_code=400, detail="不支持的音频格式")
 
     MAX_FILE_SIZE = 2 * 1024 * 1024
@@ -1243,7 +1244,7 @@ async def send_voice_message(
 
     _ensure_conversation_membership(db, conversation_id, current_user.id)
 
-    ext = file.content_type.split('/')[-1].replace('mpeg', 'mp3')
+    ext = content_type_base.split('/')[-1].replace('mpeg', 'mp3')
     unique_filename = f"{uuid.uuid4().hex}.{ext}"
     upload_dir = os.path.join(os.path.dirname(__file__), '..', 'uploads')
     os.makedirs(upload_dir, exist_ok=True)
