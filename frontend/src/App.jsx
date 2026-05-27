@@ -2014,7 +2014,17 @@ function App() {
     setMessageInput(value)
     
     // 检测是否输入了 @
-    if (getCurrentSession().isGroup && value.endsWith('@')) {
+    const currentSession = getCurrentSession()
+    if (!currentSession || !currentSession.isGroup) {
+      // 如果不是群聊，隐藏选择器
+      if (showMentionPicker) {
+        hideMentionPicker()
+      }
+      return
+    }
+    
+    // 检查是否刚输入了 @
+    if (value.endsWith('@')) {
       showMentionPickerHandler('')
     } else if (showMentionPicker) {
       // 如果正在显示选择器，更新搜索关键词
