@@ -2046,12 +2046,21 @@ function App() {
   // 显示 @ 成员选择器
   const showMentionPickerHandler = (searchQuery = '') => {
     const currentSession = getCurrentSession()
-    console.log('showMentionPickerHandler called:', { currentSession, isGroup: currentSession?.isGroup })
-    if (!currentSession || !currentSession.isGroup) return // 只在群聊中显示
+    console.log('showMentionPickerHandler called:')
+    console.log('- currentSession:', currentSession)
+    console.log('- isGroup:', currentSession?.isGroup)
+    console.log('- currentChat:', currentChat)
+    console.log('- groupMembers[currentChat]:', groupMembers[currentChat])
+    
+    if (!currentSession || !currentSession.isGroup) {
+      console.log('Not a group chat, returning')
+      return // 只在群聊中显示
+    }
+    
+    console.log('Setting showMentionPicker to true')
     setMentionSearchQuery(searchQuery)
     setShowMentionPicker(true)
     setSelectedMentionIndex(0)
-    console.log('Mention picker should be visible now')
   }
 
   // 隐藏 @ 成员选择器

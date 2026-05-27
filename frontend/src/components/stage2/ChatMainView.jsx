@@ -163,8 +163,7 @@ function ChatMainView({
       position: 'fixed',
       bottom: window.innerHeight - rect.top + 8,
       left: rect.left,
-      right: rect.right,
-      maxWidth: rect.width,
+      width: rect.width,
     }
   }
 
