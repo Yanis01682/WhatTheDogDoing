@@ -161,6 +161,9 @@ function App() {
   const [contextMenu, setContextMenu] = useState(null) // 右键菜单：{ messageId, x, y, type }
   const [replyToMessage, setReplyToMessage] = useState(null) // 回复的消息：{ id, text, sender }
   const [editingMessageId, setEditingMessageId] = useState(null) // 正在编辑的消息 ID
+  const [showMentionPicker, setShowMentionPicker] = useState(false) // @ 成员选择器显示状态
+  const [mentionSearchQuery, setMentionSearchQuery] = useState('') // @ 成员搜索关键词
+  const [selectedMentionIndex, setSelectedMentionIndex] = useState(0) // @ 成员选中索引
   const [userAvatar, setUserAvatar] = useState('我') // 用户头像（支持图片或文字）
   const [showProfileModal, setShowProfileModal] = useState(false) // 个人信息模态框
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false) // 修改密码模态框
@@ -2006,6 +2009,72 @@ function App() {
     setReplyToMessage(null)
   }
 
+  // 包装 setMessageInput，检测 @ 键
+  const handleMessageInputChange = (value) => {
+    setMessageInput(value)
+    
+    // 检测是否输入了 @
+    if (getCurrentSession().isGroup && value.endsWith('@')) {
+      showMentionPickerHandler('')
+    } else if (showMentionPicker) {
+      // 如果正在显示选择器，更新搜索关键词
+      const lastAtIndex = value.lastIndexOf('@')
+      if (lastAtIndex !== -1) {
+        const query = value.substring(lastAtIndex + 1)
+        // 如果包含空格或其他分隔符，隐藏选择器
+        if (query.includes(' ') || query.includes('\n')) {
+          hideMentionPicker()
+        } else {
+          setMentionSearchQuery(query)
+        }
+      } else {
+        hideMentionPicker()
+      }
+    }
+  }
+
+  // 显示 @ 成员选择器
+  const showMentionPickerHandler = (searchQuery = '') => {
+    if (!getCurrentSession().isGroup) return // 只在群聊中显示
+    setMentionSearchQuery(searchQuery)
+    setShowMentionPicker(true)
+    setSelectedMentionIndex(0)
+  }
+
+  // 隐藏 @ 成员选择器
+  const hideMentionPicker = () => {
+    setShowMentionPicker(false)
+    setMentionSearchQuery('')
+    setSelectedMentionIndex(0)
+  }
+
+  // 选择 @ 成员
+  const handleSelectMention = (member) => {
+    const mentionText = `@${member.groupNickname || member.nickname || member.username} `
+    setMessageInput(prev => prev + mentionText)
+    hideMentionPicker()
+    
+    // 聚焦到输入框
+    setTimeout(() => {
+      const textarea = document.querySelector('.composer-input')
+      if (textarea) {
+        textarea.focus()
+      }
+    }, 0)
+  }
+
+  // 获取当前群聊的成员列表（过滤后的）
+  const getFilteredMentionMembers = () => {
+    const members = groupMembers[currentChat] || []
+    if (!mentionSearchQuery) return members
+    
+    const query = mentionSearchQuery.toLowerCase()
+    return members.filter(member => {
+      const name = (member.groupNickname || member.nickname || member.username || '').toLowerCase()
+      return name.includes(query)
+    })
+  }
+
   // 打开个人信息页面
   const handleOpenProfile = () => {
     setShowProfileModal(true)
@@ -2904,7 +2973,7 @@ function App() {
           showEmojiPicker={showEmojiPicker}
           toggleEmojiPicker={toggleEmojiPicker}
           messageInput={messageInput}
-          setMessageInput={setMessageInput}
+          setMessageInput={handleMessageInputChange}
           handleKeyPress={handleKeyPress}
           handleSendMessage={handleSendMessage}
           handleSendImage={handleSendImage}
@@ -2920,6 +2989,12 @@ function App() {
             await confirmAnnouncement(currentChat, id)
             setPendingAnnouncements(prev => prev.filter(a => a.id !== id))
           }}
+          showMentionPicker={showMentionPicker}
+          hideMentionPicker={hideMentionPicker}
+          handleSelectMention={handleSelectMention}
+          getFilteredMentionMembers={getFilteredMentionMembers}
+          selectedMentionIndex={selectedMentionIndex}
+          setSelectedMentionIndex={setSelectedMentionIndex}
         />
       </main>
 

@@ -73,6 +73,18 @@ function ChatMainView({
   pendingAnnouncements = [],
   // 确认公告回调
   onConfirmAnnouncement,
+  // @ 成员选择器显示状态
+  showMentionPicker,
+  // 隐藏 @ 成员选择器
+  hideMentionPicker,
+  // 选择 @ 成员
+  handleSelectMention,
+  // 获取过滤后的成员列表
+  getFilteredMentionMembers,
+  // 选中索引
+  selectedMentionIndex,
+  // 设置选中索引
+  setSelectedMentionIndex,
 }) {
   const imageInputRef = useRef(null)
   const videoInputRef = useRef(null)
@@ -107,13 +119,32 @@ function ChatMainView({
     if (messageElement) {
       shouldStickToBottomRef.current = false
       messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      messageElement.classList.add('highlighted-message')
-      window.setTimeout(() => {
-        messageElement.classList.remove('highlighted-message')
-      }, 2000)
+      handleJumpHandled()
     }
-    handleJumpHandled?.()
   }, [jumpToMessageId, handleJumpHandled])
+
+  // 处理输入框键盘事件（@ 选择器）
+  const handleInputKeyDown = (e) => {
+    if (!showMentionPicker) return
+
+    const filteredMembers = getFilteredMentionMembers()
+    if (filteredMembers.length === 0) return
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setSelectedMentionIndex(prev => (prev + 1) % filteredMembers.length)
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setSelectedMentionIndex(prev => (prev - 1 + filteredMembers.length) % filteredMembers.length)
+    } else if (e.key === 'Enter' || e.key === 'Tab') {
+      e.preventDefault()
+      handleSelectMention(filteredMembers[selectedMentionIndex])
+    } else if (e.key === 'Escape') {
+      e.preventDefault()
+      hideMentionPicker()
+    }
+  }
+
   const replyCountMap = {}
   currentMessages.forEach((message) => {
     if (message.replyToId) {
@@ -311,6 +342,7 @@ function ChatMainView({
           value={messageInput}
           onChange={(e) => setMessageInput(e.target.value)}
           onKeyPress={handleKeyPress}
+          onKeyDown={handleInputKeyDown}
           disabled={!hasActiveConversation}
           rows="3"
         />
@@ -328,6 +360,44 @@ function ChatMainView({
             <h3>📢 群公告</h3>
             <div className="announcement-content">{pendingAnnouncements[0].content}</div>
             <button className="announcement-confirm-btn" onClick={() => onConfirmAnnouncement(pendingAnnouncements[0].id)}>我已知晓</button>
+          </div>
+        </div>
+      )}
+
+      {/* @ 成员选择器 */}
+      {showMentionPicker && currentSession.isGroup && (
+        <div className="mention-picker-overlay">
+          <div className="mention-picker-list">
+            {getFilteredMentionMembers().map((member, index) => (
+              <div
+                key={member.id}
+                className={`mention-picker-item ${index === selectedMentionIndex ? 'selected' : ''}`}
+                onClick={() => handleSelectMention(member)}
+                onMouseEnter={() => setSelectedMentionIndex(index)}
+              >
+                <div
+                  className="mention-picker-avatar"
+                  style={{
+                    backgroundImage: member.avatar ? `url(${member.avatar})` : 'none',
+                  }}
+                >
+                  {!member.avatar && (member.groupNickname || member.nickname || member.username || '?')[0]}
+                </div>
+                <div className="mention-picker-info">
+                  <div className="mention-picker-name">
+                    {member.groupNickname || member.nickname || member.username}
+                  </div>
+                  {member.groupNickname && member.nickname && member.groupNickname !== member.nickname && (
+                    <div className="mention-picker-remark">{member.nickname}</div>
+                  )}
+                </div>
+              </div>
+            ))}
+            {getFilteredMentionMembers().length === 0 && (
+              <div className="mention-picker-item" style={{ cursor: 'default', color: '#999' }}>
+                没有找到匹配的成员
+              </div>
+            )}
           </div>
         </div>
       )}
