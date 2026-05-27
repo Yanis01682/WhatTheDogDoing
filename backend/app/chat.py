@@ -1615,9 +1615,14 @@ def invite_group_members(
     new_names = [u.nickname or u.username for u in new_users]
     inviter_name = current_user.nickname or current_user.username
     sys_text = f'"{inviter_name}"邀请"{"、".join(new_names)}"加入了群聊'
-    db.add(models.Message(conversation_id=conversation_id, sender_id=None, message_type="system", content=sys_text))
+    sys_msg = models.Message(conversation_id=conversation_id, sender_id=None, message_type="system", content=sys_text)
+    db.add(sys_msg)
 
     db.commit()
+    db.refresh(sys_msg)
+    # 通知所有成员（包括新加入的）
+    all_member_ids = existing_member_ids | set(new_member_ids)
+    _dispatch_notification(all_member_ids, {"type": "conversation_updated", "conversationId": conversation_id, "messageId": sys_msg.id})
     return {
         "message": "Members invited successfully",
         "conversation_id": conversation_id,
@@ -1873,6 +1878,14 @@ def exit_group(
         raise HTTPException(status_code=403, detail=ERR_OWNER_CANNOT_LEAVE)
 
     user_name = current_user.nickname or current_user.username
+    # 收集退出前的成员 ID（含自己）用于通知
+    pre_exit_member_ids = {
+        m.user_id for m in db.query(models.ConversationMember)
+        .filter(models.ConversationMember.conversation_id == conversation_id)
+        .all()
+    }
+    pre_exit_member_ids.add(current_user.id)
+
     db.delete(membership)
     db.flush()
 
@@ -1891,10 +1904,14 @@ def exit_group(
         for message in messages:
             db.delete(message)
         db.delete(conversation)
+        db.commit()
     else:
-        db.add(models.Message(conversation_id=conversation_id, sender_id=None, message_type="system", content=f'"{user_name}"退出了群聊'))
+        sys_msg = models.Message(conversation_id=conversation_id, sender_id=None, message_type="system", content=f'"{user_name}"退出了群聊')
+        db.add(sys_msg)
+        db.commit()
+        db.refresh(sys_msg)
+        _dispatch_notification(pre_exit_member_ids, {"type": "conversation_updated", "conversationId": conversation_id, "messageId": sys_msg.id})
 
-    db.commit()
     return {
         "message": "Successfully left the group",
         "conversation_id": conversation_id,
@@ -1969,8 +1986,16 @@ def transfer_group_ownership(
     new_owner_member.role = "owner"
     new_owner_user = db.query(models.User).filter(models.User.id == new_owner_id).first()
     new_owner_name = new_owner_user.nickname or new_owner_user.username if new_owner_user else str(new_owner_id)
-    db.add(models.Message(conversation_id=conversation_id, sender_id=None, message_type="system", content=f'"{new_owner_name}"已成为新群主'))
+    sys_msg = models.Message(conversation_id=conversation_id, sender_id=None, message_type="system", content=f'"{new_owner_name}"已成为新群主')
+    db.add(sys_msg)
     db.commit()
+    db.refresh(sys_msg)
+    member_ids = {
+        m.user_id for m in db.query(models.ConversationMember)
+        .filter(models.ConversationMember.conversation_id == conversation_id)
+        .all()
+    }
+    _dispatch_notification(member_ids, {"type": "conversation_updated", "conversationId": conversation_id, "messageId": sys_msg.id})
     return {"message": "Ownership transferred successfully"}
 
 
@@ -2007,8 +2032,18 @@ def kick_group_member(
     target_user = db.query(models.User).filter(models.User.id == target_id).first()
     target_name = target_user.nickname or target_user.username if target_user else str(target_id)
     db.delete(target_member)
-    db.add(models.Message(conversation_id=conversation_id, sender_id=None, message_type="system", content=f'"{target_name}"被移出了群聊'))
+    sys_msg = models.Message(conversation_id=conversation_id, sender_id=None, message_type="system", content=f'"{target_name}"被移出了群聊')
+    db.add(sys_msg)
     db.commit()
+    db.refresh(sys_msg)
+    # 通知剩余成员和被踢者
+    remaining_ids = {
+        m.user_id for m in db.query(models.ConversationMember)
+        .filter(models.ConversationMember.conversation_id == conversation_id)
+        .all()
+    }
+    remaining_ids.add(target_id)
+    _dispatch_notification(remaining_ids, {"type": "conversation_updated", "conversationId": conversation_id, "messageId": sys_msg.id})
     return {"message": "Member kicked successfully"}
 
 
@@ -2043,8 +2078,16 @@ def set_group_admin(
     target_user = db.query(models.User).filter(models.User.id == target_id).first()
     target_name = target_user.nickname or target_user.username if target_user else str(target_id)
     action = "成为了管理员" if is_admin else "被取消了管理员"
-    db.add(models.Message(conversation_id=conversation_id, sender_id=None, message_type="system", content=f'"{target_name}"{action}'))
+    sys_msg = models.Message(conversation_id=conversation_id, sender_id=None, message_type="system", content=f'"{target_name}"{action}')
+    db.add(sys_msg)
     db.commit()
+    db.refresh(sys_msg)
+    member_ids = {
+        m.user_id for m in db.query(models.ConversationMember)
+        .filter(models.ConversationMember.conversation_id == conversation_id)
+        .all()
+    }
+    _dispatch_notification(member_ids, {"type": "conversation_updated", "conversationId": conversation_id, "messageId": sys_msg.id})
     return {"message": "Role updated successfully", "role": target_member.role}
 
 

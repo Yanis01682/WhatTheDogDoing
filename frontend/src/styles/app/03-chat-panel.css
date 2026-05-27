@@ -111,6 +111,10 @@
   font-size: 0.85rem;
   padding: 6px 12px;
   border-radius: 12px;
+  text-align: center;
+}
+.message.system-message .message-time {
+  text-align: center;
 }
 
 .message-avatar {
