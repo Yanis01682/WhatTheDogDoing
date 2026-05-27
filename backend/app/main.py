@@ -55,6 +55,13 @@ def _delete_conversation_with_related_data(db: Session, conversation_id: int):
 
 @app.on_event("startup")
 def initialize_database():
+    import asyncio
+    from .chat import ConnectionManager
+    try:
+        ConnectionManager._loop = asyncio.get_running_loop()
+    except RuntimeError:
+        ConnectionManager._loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(ConnectionManager._loop)
     last_error = None
 
     for attempt in range(1, 21):

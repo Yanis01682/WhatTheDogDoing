@@ -81,6 +81,8 @@ class ConversationMutePayload(BaseModel):
 
 
 class ConnectionManager:
+    _loop: asyncio.AbstractEventLoop | None = None
+
     def __init__(self):
         # 存储 active 链接: {user_id: [websocket1, websocket2]}
         self.active_connections: dict[int, list[WebSocket]] = {}
@@ -142,13 +144,19 @@ manager = ConnectionManager()
 
 def _dispatch_notification(user_ids: list[int] | set[int], payload: dict):
     print(f"📤 发送通知给 {len(set(user_ids))} 个用户: {payload}")
-    try:
-        loop = asyncio.get_running_loop()
-    except RuntimeError:
-        print("⚠️ 没有运行中的事件循环，无法发送通知")
-        return
+    # 优先使用 WebSocket 连接管理器中缓存的主循环（sync endpoint 也可以推送）
+    loop = ConnectionManager._loop
+    if loop is None:
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            print("⚠️ 没有运行中的事件循环，无法发送通知")
+            return
 
-    loop.create_task(manager.notify_users(user_ids, payload))
+    if loop.is_running():
+        asyncio.run_coroutine_threadsafe(manager.notify_users(user_ids, payload), loop)
+    else:
+        loop.run_until_complete(manager.notify_users(user_ids, payload))
 
 def _get_private_conversation_between(db: Session, user_a_id: int, user_b_id: int):
     conversations = (

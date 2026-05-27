@@ -116,6 +116,9 @@
 .message.system-message .message-time {
   text-align: center;
 }
+.message.system-message .message-content {
+  align-items: center;
+}
 
 .message-avatar {
   width: 40px;
