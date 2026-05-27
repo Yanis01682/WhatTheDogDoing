@@ -328,12 +328,16 @@ function App() {
         }
       }
       
-      // 如果是被 @ 的会话，显示 [有人@我]
+      // 先调用 applyLocalSessionPreview
+      nextSession = applyLocalSessionPreview(nextSession)
+      
+      // 如果是被 @ 的会话，在 applyLocalSessionPreview 之后显示 [有人@我]
       if (atMentionSessionId && session.id === atMentionSessionId) {
+        console.log('设置 [有人@我]:', { sessionId: session.id, atMentionSessionId, originalLastMessage: nextSession.lastMessage })
         nextSession = { ...nextSession, lastMessage: '[有人@我]' }
       }
       
-      return applyLocalSessionPreview(nextSession)
+      return nextSession
     })
     setSessions(mappedSessions)
     setPinnedChatIds((prev) => {
@@ -707,6 +711,15 @@ function App() {
                                      String(payload.message.mentionedUserIds).split(',').map(id => parseInt(id.trim())).includes(currentUserId))
                                      ? payload.conversationId
                                      : null
+          
+          console.log('@ 提醒调试:', {
+            hasMessage: !!payload.message,
+            senderId: payload.message?.senderId,
+            currentUserId,
+            mentionedUserIds: payload.message?.mentionedUserIds,
+            isMentioned: atMentionSessionId !== null,
+            atMentionSessionId
+          })
           
           // 会话列表刷新不阻塞消息渲染
           await refreshRealtimeChatData(currentChat, atMentionSessionId)
