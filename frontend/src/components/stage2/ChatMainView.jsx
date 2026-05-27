@@ -423,7 +423,7 @@ function ChatMainView({
                     backgroundImage: (member.avatar && member.avatar.startsWith('http')) ? `url(${member.avatar})` : 'none',
                   }}
                 >
-                  {(!member.avatar || !member.avatar.startsWith('http')) && (member.displayName || member.groupNickname || member.name || '?')[0]}
+                  {(!member.avatar || !member.avatar.startsWith('http')) && (member.displayName || member.groupNickname || member.name || '?')[0].toUpperCase()}
                 </div>
                 <div className="mention-picker-info">
                   <div className="mention-picker-name">
