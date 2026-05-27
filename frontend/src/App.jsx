@@ -231,6 +231,7 @@ function App() {
   const [jumpToMessageId, setJumpToMessageId] = useState(null)
   const notificationSocketRef = useRef(null)
   const pendingMessageDebugRef = useRef(new Map())
+  const [atMentionCount, setAtMentionCount] = useState(0) // @ 提醒计数
 
   const mergeFriendGroups = (groups = []) => {
     const merged = [DEFAULT_FRIEND_GROUP, ...INITIAL_CUSTOM_GROUPS.filter((group) => group !== DEFAULT_FRIEND_GROUP)]
@@ -663,6 +664,19 @@ function App() {
           if (payload.message && payload.conversationId === currentChat) {
             const msg = payload.message
             msg.sender = msg.type === 'system' ? 'system' : (msg.senderId === currentUserId ? 'me' : 'other')
+            
+            // 检查是否被 @
+            if (msg.sender !== 'me' && msg.mentionedUserIds) {
+              const mentionedIds = String(msg.mentionedUserIds).split(',').map(id => parseInt(id.trim()))
+              if (mentionedIds.includes(currentUserId)) {
+                // 增加 @ 计数
+                setAtMentionCount(prev => prev + 1)
+                
+                // 显示浏览器通知
+                showAtMentionNotification(msg, payload.conversationId)
+              }
+            }
+            
             setMessages((prev) => {
               const existing = prev[currentChat] || []
               if (existing.some(m => m.id === msg.id)) return prev
@@ -696,6 +710,48 @@ function App() {
         }
       } catch (err) {
         console.error('处理通知失败', err)
+      }
+    }
+
+    // 显示 @ 提醒通知
+    const showAtMentionNotification = async (message, conversationId) => {
+      // 请求浏览器通知权限
+      if ('Notification' in window && Notification.permission === 'default') {
+        await Notification.requestPermission()
+      }
+
+      // 如果用户允许通知，则显示
+      if ('Notification' in window && Notification.permission === 'granted') {
+        const session = sessions.find(s => s.id === conversationId) || 
+                       dynamicSessions.find(s => s.id === conversationId)
+        const chatName = session?.title || '新消息'
+        const senderName = message.senderName || '有人'
+        
+        const notification = new Notification(`[@] ${senderName} 在 "${chatName}" 中提到了你`, {
+          body: message.content || '点击查看消息',
+          icon: '/favicon.svg',
+          tag: `at-mention-${conversationId}-${message.id}`,
+          requireInteraction: false,
+        })
+
+        // 点击通知时切换到对应聊天
+        notification.onclick = () => {
+          window.focus()
+          setCurrentChat(conversationId)
+          setAtMentionCount(0) // 清除计数
+          notification.close()
+        }
+      }
+
+      // 播放提示音（可选）
+      try {
+        const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVWo62rhmhgXnWUmIh0a2FzbH2Af3eEgHt5e3l7e3x9fn9/goOEhYaHiImKi4yNjo+QkZKTlJWWl5iZmpucnZ6foKGio6SlpqeoqaqrrK2ur7CxsrO0tba3uLm6u7y9vr/AwcLDxMXGx8jJysvMzc7P0NHS09TV1tfY2drb3N3e3+Dh4uPk5ebn6Onq6+zt7u/w8fLz9PX29/j5+vv8/f7/AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0+P0BBQkNERUZHSElKS0xNTk9QUVJTVFVWV1hZWltcXV5fYGFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6e3x9fn+AgYKDhIWGh4iJiouMjY6PkJGSk5SVlpeYmZqbnJ2en6ChoqOkpaanqKmqq6ytrq+wsbKztLW2t7i5uru8vb6/wMHCw8TFxsfIycrLzM3Oz9DR0tPU1dbX2Nna29zd3t/g4eLj5OXm5+jp6uvs7e7v8PHy8/T19vf4+fr7/P3+/w==')
+        audio.volume = 0.5
+        await audio.play().catch(() => {
+          // 忽略自动播放限制错误
+        })
+      } catch (e) {
+        // 忽略音频播放错误
       }
     }
 
@@ -2906,6 +2962,15 @@ function App() {
     return total + (session.badge || 0)
   }, 0)
 
+  // 切换聊天并清除 @ 计数
+  const handleSwitchChat = (chatId) => {
+    setCurrentChat(chatId)
+    // 如果切换到被 @ 的聊天，清除计数
+    if (chatId && atMentionCount > 0) {
+      setAtMentionCount(0)
+    }
+  }
+
   // 未登录时显示登录界面
   if (!isLoggedIn) {
     return (
@@ -2928,6 +2993,7 @@ function App() {
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           pendingRequestCount={friendRequestList.length + groupInviteRequests.length}
+          atMentionCount={atMentionCount}
         />
 
       <main className="im-layout">
@@ -2949,7 +3015,7 @@ function App() {
           dynamicSessions={dynamicSessions}
           sessions={sessions}
           currentChat={currentChat}
-          setCurrentChat={setCurrentChat}
+          setCurrentChat={handleSwitchChat}
           myFriends={myFriends}
           customGroups={_customGroups}
           collapsedGroups={collapsedGroups}
