@@ -97,11 +97,12 @@ function ChatMainView({
   const currentMessages = messages[currentChat] || []
   
   // 调试信息
-  console.log('ChatMainView render:', { 
-    showMentionPicker, 
-    isGroup: currentSession?.isGroup,
-    groupMembersCount: (groupMembers[currentChat] || []).length 
-  })
+  console.log('ChatMainView render:')
+  console.log('- showMentionPicker:', showMentionPicker)
+  console.log('- currentSession.isGroup:', currentSession?.isGroup)
+  console.log('- currentChat:', currentChat)
+  console.log('- groupMembers[currentChat]:', groupMembers[currentChat])
+  console.log('- groupMembers[currentChat]?.length:', (groupMembers[currentChat] || []).length)
 
   useEffect(() => {
     const container = messagesContainerRef.current
@@ -149,6 +150,21 @@ function ChatMainView({
     } else if (e.key === 'Escape') {
       e.preventDefault()
       hideMentionPicker()
+    }
+  }
+
+  // 计算选择器位置
+  const getPickerStyle = () => {
+    const textarea = document.querySelector('.composer-input')
+    if (!textarea) return {}
+    
+    const rect = textarea.getBoundingClientRect()
+    return {
+      position: 'fixed',
+      bottom: window.innerHeight - rect.top + 8,
+      left: rect.left,
+      right: rect.right,
+      maxWidth: rect.width,
     }
   }
 
@@ -393,7 +409,7 @@ function ChatMainView({
 
       {/* @ 成员选择器 */}
       {showMentionPicker && currentSession.isGroup && (
-        <div className="mention-picker-overlay">
+        <div className="mention-picker-overlay" style={getPickerStyle()}>
           <div className="mention-picker-list">
             {getFilteredMentionMembers().map((member, index) => (
               <div
