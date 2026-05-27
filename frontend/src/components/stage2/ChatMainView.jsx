@@ -360,7 +360,7 @@ function ChatMainView({
           className="composer-input"
           placeholder="输入消息... (Shift+Enter 换行)"
           value={messageInput}
-          onChange={(e) => handleMessageInputChange(e.target.value)}
+          onChange={(e) => setMessageInput(e.target.value)}
           onKeyPress={handleKeyPress}
           onKeyDown={handleInputKeyDown}
           disabled={!hasActiveConversation}
