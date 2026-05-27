@@ -715,33 +715,30 @@ function App() {
 
     // 显示 @ 提醒通知
     const showAtMentionNotification = async (message, conversationId) => {
-      // 请求浏览器通知权限
-      if ('Notification' in window && Notification.permission === 'default') {
-        await Notification.requestPermission()
-      }
-
-      // 如果用户允许通知，则显示
-      if ('Notification' in window && Notification.permission === 'granted') {
-        const session = sessions.find(s => s.id === conversationId) || 
-                       dynamicSessions.find(s => s.id === conversationId)
-        const chatName = session?.title || '新消息'
-        const senderName = message.senderName || '有人'
-        
-        const notification = new Notification(`[@] ${senderName} 在 "${chatName}" 中提到了你`, {
-          body: message.content || '点击查看消息',
-          icon: '/favicon.svg',
-          tag: `at-mention-${conversationId}-${message.id}`,
-          requireInteraction: false,
+      // 更新会话列表显示 [有人@我]
+      setDynamicSessions(prev => {
+        return prev.map(session => {
+          if (session.id === conversationId) {
+            return {
+              ...session,
+              lastMessage: '[有人@我]',
+            }
+          }
+          return session
         })
-
-        // 点击通知时切换到对应聊天
-        notification.onclick = () => {
-          window.focus()
-          setCurrentChat(conversationId)
-          setAtMentionCount(0) // 清除计数
-          notification.close()
-        }
-      }
+      })
+      
+      setSessions(prev => {
+        return prev.map(session => {
+          if (session.id === conversationId) {
+            return {
+              ...session,
+              lastMessage: '[有人@我]',
+            }
+          }
+          return session
+        })
+      })
 
       // 播放提示音（可选）
       try {
@@ -2128,8 +2125,20 @@ function App() {
 
   // 选择 @ 成员
   const handleSelectMention = (member) => {
-    const mentionText = `@${member.displayName || member.groupNickname || member.name} `
-    setMessageInput(prev => prev + mentionText)
+    const memberName = member.displayName || member.groupNickname || member.name
+    const mentionText = `@${memberName} `
+    
+    setMessageInput(prev => {
+      // 找到最后一个 @ 的位置并替换
+      const lastAtIndex = prev.lastIndexOf('@')
+      if (lastAtIndex !== -1) {
+        // 替换最后一个 @ 为 @用户名
+        return prev.substring(0, lastAtIndex) + mentionText
+      }
+      // 如果没有找到 @，直接追加
+      return prev + mentionText
+    })
+    
     hideMentionPicker()
     
     // 聚焦到输入框

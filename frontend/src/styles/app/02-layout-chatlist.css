@@ -582,6 +582,12 @@
   flex: 1;
 }
 
+/* @ 提醒样式 - 橙色高亮 */
+.session-meta.at-mention {
+  color: #ff9800;
+  font-weight: 600;
+}
+
 .session-badge {
   display: inline-flex;
   align-items: center;

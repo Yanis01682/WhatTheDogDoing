@@ -193,7 +193,7 @@ function SidebarPanel({
             <span className="session-time">{session.time}</span>
           </div>
           <div className="session-row">
-            <p className="session-meta">{session.lastMessage}</p>
+            <p className={`session-meta ${session.lastMessage?.includes('@我') ? 'at-mention' : ''}`}>{session.lastMessage}</p>
             {session.badge > 0 && <span className="session-badge">{session.badge}</span>}
           </div>
         </div>
