@@ -1045,6 +1045,7 @@ def send_message(
                 "time": _format_message_time(new_message.timestamp),
                 "timestamp": new_message.timestamp.isoformat() if new_message.timestamp else None,
                 "replyToId": new_message.reply_to_id,
+                "mentionedUserIds": new_message.mentioned_user_ids,
             },
         },
     )
