@@ -109,6 +109,7 @@ def initialize_database():
                     ("media_url", "VARCHAR(500)"),
                     ("media_data", "TEXT"),
                     ("media_name", "VARCHAR(200)"),
+                    ("mentioned_user_ids", "VARCHAR(500)"),
                 ]:
                 try:
                     with engine.connect() as connection:

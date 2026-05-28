@@ -34,6 +34,7 @@ def test_initialize_database_runs_sqlite_migrations(monkeypatch):
         "SELECT media_url FROM messages LIMIT 1",
         "SELECT media_data FROM messages LIMIT 1",
         "SELECT media_name FROM messages LIMIT 1",
+        "SELECT mentioned_user_ids FROM messages LIMIT 1",
         "SELECT remark FROM friendships LIMIT 1",
         "SELECT read_index FROM conversation_members LIMIT 1",
         "SELECT role FROM conversation_members LIMIT 1",
@@ -73,5 +74,6 @@ def test_initialize_database_runs_sqlite_migrations(monkeypatch):
     assert "CREATE_ALL" in executed_sql
     assert any("ALTER TABLE users ADD COLUMN status" in sql for sql in executed_sql)
     assert any("ALTER TABLE messages ADD COLUMN media_data TEXT" in sql for sql in executed_sql)
+    assert any("ALTER TABLE messages ADD COLUMN mentioned_user_ids" in sql for sql in executed_sql)
     assert any("ALTER TABLE conversation_members ADD COLUMN role" in sql for sql in executed_sql)
     assert any("CREATE TABLE conversation_pins" in sql for sql in executed_sql)
