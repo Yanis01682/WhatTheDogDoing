@@ -164,3 +164,20 @@
   pointer-events: none;
   line-height: 1;
 }
+
+/* @ 提醒徽章 - 更醒目的橙色 */
+.at-mention-badge {
+  background: #ff9800;
+  animation: pulse-at-mention 2s ease-in-out infinite;
+}
+
+@keyframes pulse-at-mention {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.9;
+  }
+}

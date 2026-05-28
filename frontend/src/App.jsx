@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+﻿import { useEffect, useRef, useState } from 'react'
 import './App.css'
 import {
   INITIAL_CUSTOM_GROUPS,
@@ -52,6 +52,7 @@ import {
   setGroupAdmin,
   updateGroupNickname,
   updateSessionMute,
+  sendForwardMessage,
 } from './services/api'
 import AuthView from './components/stage2/AuthView'
 import LeftNav from './components/stage2/LeftNav'
@@ -150,6 +151,7 @@ function App() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false) // 注销账户二次确认
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false) // 退出登录二次确认
   const [pendingAnnouncements, setPendingAnnouncements] = useState([]) // 未确认的群公告
+  const [atMentionSessionId, setAtMentionSessionId] = useState(null) // 被 @ 的会话 ID，用于显示 [有人@我] 标记
   const [sessionFilter, setSessionFilter] = useState('all') // 会话筛选：all-全部 | personal-个人 | group-群聊
   const [searchQuery, setSearchQuery] = useState('') // 搜索关键词
   const [chatlistWidth] = useState(320) // 会话列表宽度（固定，不再支持拖拽）
@@ -161,6 +163,15 @@ function App() {
   const [contextMenu, setContextMenu] = useState(null) // 右键菜单：{ messageId, x, y, type }
   const [replyToMessage, setReplyToMessage] = useState(null) // 回复的消息：{ id, text, sender }
   const [editingMessageId, setEditingMessageId] = useState(null) // 正在编辑的消息 ID
+  const [showMentionPicker, setShowMentionPicker] = useState(false) // @ 成员选择器显示状态
+  const [mentionSearchQuery, setMentionSearchQuery] = useState('') // @ 成员搜索关键词
+  const [selectedMentionIndex, setSelectedMentionIndex] = useState(0) // @ 成员选中索引
+  // 转发相关状态
+  const [isMultiSelectMode, setIsMultiSelectMode] = useState(false) // 多选模式
+  const [selectedMessages, setSelectedMessages] = useState([]) // 选中的消息列表
+  const [showForwardDialog, setShowForwardDialog] = useState(false) // 转发对话框
+  const [showForwardDetail, setShowForwardDetail] = useState(false) // 转发详情弹层
+  const [forwardDetailData, setForwardDetailData] = useState(null) // 转发详情数据
   const [userAvatar, setUserAvatar] = useState('我') // 用户头像（支持图片或文字）
   const [showProfileModal, setShowProfileModal] = useState(false) // 个人信息模态框
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false) // 修改密码模态框
@@ -228,6 +239,7 @@ function App() {
   const [jumpToMessageId, setJumpToMessageId] = useState(null)
   const notificationSocketRef = useRef(null)
   const pendingMessageDebugRef = useRef(new Map())
+  const [atMentionCount, setAtMentionCount] = useState(0) // @ 提醒计数
 
   const mergeFriendGroups = (groups = []) => {
     const merged = [DEFAULT_FRIEND_GROUP, ...INITIAL_CUSTOM_GROUPS.filter((group) => group !== DEFAULT_FRIEND_GROUP)]
@@ -289,11 +301,17 @@ function App() {
     }
   }
 
-  const refreshRealtimeChatData = async (preferredChatId = null) => {
+  const refreshRealtimeChatData = async (preferredChatId = null, forceAtMentionSessionId = null) => {
+    // 使用传入的参数或 state 中的值
+    const effectiveAtMentionSessionId = forceAtMentionSessionId !== undefined ? forceAtMentionSessionId : atMentionSessionId
+    console.log('refreshRealtimeChatData 调用:', { preferredChatId, effectiveAtMentionSessionId, currentUserId })
     const [fetchedFriends, fetchedSessions] = await Promise.all([
       getFriends(),
       getSessions()
     ])
+
+    console.log(' 获取到的好友列表:', fetchedFriends)
+    console.log(' 好友数量:', fetchedFriends.length)
 
     const mergedGroups = mergeFriendGroups(fetchedFriends.map((friend) => friend.group))
     _setCustomGroups(mergedGroups)
@@ -303,6 +321,7 @@ function App() {
       group: friend.group || mergedGroups[0] || DEFAULT_FRIEND_GROUP,
       remark: friend.remark || ''
     }))
+    console.log('👥 映射后的好友列表:', mappedFriends)
     setMyFriends(mappedFriends)
     
     const mappedSessions = fetchedSessions.map(session => {
@@ -323,7 +342,21 @@ function App() {
           nextSession = { ...nextSession, avatar: '/default-avatar.png' }
         }
       }
-      return applyLocalSessionPreview(nextSession)
+      
+      // 先调用 applyLocalSessionPreview
+      nextSession = applyLocalSessionPreview(nextSession)
+      
+      // 如果是被 @ 的会话，在 applyLocalSessionPreview 之后显示 [有人@我]
+      if (effectiveAtMentionSessionId && session.id === effectiveAtMentionSessionId) {
+        console.log('设置 [有人@我]:', { sessionId: session.id, effectiveAtMentionSessionId, originalLastMessage: nextSession.lastMessage })
+        nextSession = { 
+          ...nextSession, 
+          lastMessage: '[有人@我]',
+          originalLastMessage: nextSession.lastMessage // 保存原始消息
+        }
+      }
+      
+      return nextSession
     })
     setSessions(mappedSessions)
     setPinnedChatIds((prev) => {
@@ -445,6 +478,7 @@ function App() {
     if (!message) return '暂无消息'
     if (message.type === 'image') return '[图片]'
     if (message.type === 'video') return '[视频]'
+    if (message.type === 'forward') return '[聊天记录]'
     return message.text || '暂无消息'
   }
   const applyLocalSessionPreview = (session) => {
@@ -653,13 +687,26 @@ function App() {
     }
 
     const handleNotification = async (event) => {
+      console.log('🔔🔔🔔 handleNotification 被调用！', event)
       try {
         const payload = JSON.parse(event.data)
+        console.log('收到 WebSocket 通知:', payload)
+        console.log('当前 currentUserId:', currentUserId)
         if (payload.type === 'conversation_updated') {
           // 如果通知携带完整消息，直接插入，避免额外请求
           if (payload.message && payload.conversationId === currentChat) {
             const msg = payload.message
             msg.sender = msg.type === 'system' ? 'system' : (msg.senderId === currentUserId ? 'me' : 'other')
+            
+            // 检查是否被 @
+            if (msg.sender !== 'me' && msg.mentionedUserIds) {
+              const mentionedIds = String(msg.mentionedUserIds).split(',').map(id => parseInt(id.trim()))
+              if (mentionedIds.includes(currentUserId)) {
+                // 增加 @ 计数
+                setAtMentionCount(prev => prev + 1)
+              }
+            }
+            
             setMessages((prev) => {
               const existing = prev[currentChat] || []
               if (existing.some(m => m.id === msg.id)) return prev
@@ -682,8 +729,42 @@ function App() {
               })
             }
           }
-          // 会话列表刷新不阻塞消息渲染
-          refreshRealtimeChatData(currentChat)
+          
+          // 检查是否需要显示 [有人@我]
+          const hasMessage = payload.message
+          const isNotSelf = hasMessage && payload.message.senderId !== currentUserId
+          const hasMentionedIds = hasMessage && payload.message.mentionedUserIds
+          let isMentioned = false
+          let mentionedIdsArray = []
+          
+          if (hasMentionedIds) {
+            mentionedIdsArray = String(payload.message.mentionedUserIds).split(',').map(id => parseInt(id.trim()))
+            isMentioned = mentionedIdsArray.includes(currentUserId)
+          }
+          
+          const atMentionSessionId = (hasMessage && isNotSelf && hasMentionedIds && isMentioned)
+                                     ? payload.conversationId
+                                     : null
+          
+          // 如果有被 @ 的会话，更新 state
+          if (atMentionSessionId) {
+            setAtMentionSessionId(atMentionSessionId)
+          }
+          
+          console.log('@ 提醒调试:', {
+            hasMessage,
+            senderId: payload.message?.senderId,
+            currentUserId,
+            isNotSelf,
+            mentionedUserIds: payload.message?.mentionedUserIds,
+            mentionedIdsArray,
+            isMentioned,
+            atMentionSessionId
+          })
+          
+          // 会话列表刷新不阻塞消息渲染，传入 atMentionSessionId 确保立即显示
+          await refreshRealtimeChatData(currentChat, atMentionSessionId)
+          
           if (!payload.message && payload.conversationId === currentChat) {
             refreshConversationMessages(currentChat)
           }
@@ -1932,6 +2013,7 @@ function App() {
       canRevoke,
       canReply,
       canDelete,
+      message: msg, // 保存完整消息对象用于转发
     })
   }
 
@@ -2007,6 +2089,212 @@ function App() {
   // 取消回复
   const cancelReply = () => {
     setReplyToMessage(null)
+  }
+
+  // 切换消息选择状态（多选模式）
+  const toggleMessageSelection = (message) => {
+    setSelectedMessages(prev => {
+      const exists = prev.find(m => m.id === message.id)
+      if (exists) {
+        return prev.filter(m => m.id !== message.id)
+      } else {
+        return [...prev, message]
+      }
+    })
+  }
+
+  // 退出多选模式
+  const exitMultiSelectMode = () => {
+    setIsMultiSelectMode(false)
+    setSelectedMessages([])
+  }
+
+  // 开始转发流程
+  const startForward = () => {
+    if (selectedMessages.length === 0) return
+    setShowForwardDialog(true)
+  }
+
+  // 取消转发
+  const cancelForward = () => {
+    setShowForwardDialog(false)
+  }
+
+  // 从右键菜单开始多选
+  const startMultiSelectFromMenu = () => {
+    if (!contextMenu || !contextMenu.message) return
+    setIsMultiSelectMode(true)
+    setSelectedMessages([contextMenu.message])
+    closeContextMenu()
+  }
+
+  // 发送合并转发消息到指定会话
+  const handleSendMessageToSession = async (targetSessionId, messagesToForward) => {
+    if (!targetSessionId || !messagesToForward || messagesToForward.length === 0) return
+    
+    try {
+      // 获取当前用户信息
+      const currentUser = await getCurrentUser()
+      const srcSession = getCurrentSession()
+      
+      // 构建转发标题：参考微信风格
+      let forwardTitle = ''
+      if (srcSession && srcSession.isGroup) {
+        forwardTitle = `${srcSession.title || '群聊'}的聊天记录`
+      } else if (srcSession) {
+        const myName = currentUser.nickname || currentUser.username
+        const peerName = srcSession.title || '对方'
+        forwardTitle = `${myName}和${peerName}的聊天记录`
+      } else {
+        forwardTitle = `${currentUser.nickname || currentUser.username}的聊天记录`
+      }
+      
+      // 构建转发消息列表（排序后打包）
+      const sortedMessages = [...messagesToForward].sort((a, b) => {
+        // 按时间排序
+        const aTime = a.timestamp ? new Date(a.timestamp) : new Date(0)
+        const bTime = b.timestamp ? new Date(b.timestamp) : new Date(0)
+        return aTime - bTime
+      })
+      
+      const forwardMessages = sortedMessages.map(msg => ({
+        senderName: msg.sender === 'me' ? (currentUser.nickname || currentUser.username) : (msg.senderName || '对方'),
+        text: msg.text || '',
+        type: msg.type || 'text',
+        time: msg.time || '',
+        mediaUrl: msg.mediaUrl || null,
+        mediaName: msg.mediaName || null,
+        // 保留嵌套转发数据，避免二次转发丢失合并转发卡片
+        forwardData: msg.forwardData || null,
+      }))
+      
+      // 调用合并转发 API
+      await sendForwardMessage(targetSessionId, forwardTitle, forwardMessages)
+      
+      // 退出多选模式
+      exitMultiSelectMode()
+      
+      console.log('合并转发成功', { targetSessionId, messageCount: forwardMessages.length })
+    } catch (error) {
+      console.error('合并转发失败', error)
+      alert('转发失败，请重试')
+    }
+  }
+
+  // 打开转发详情弹层
+  const handleOpenForwardDetail = (forwardData) => {
+    setForwardDetailData(forwardData)
+    setShowForwardDetail(true)
+  }
+
+  // 关闭转发详情弹层
+  const handleCloseForwardDetail = () => {
+    setShowForwardDetail(false)
+    setForwardDetailData(null)
+  }
+
+  // 包装 setMessageInput，检测 @ 键
+  const handleMessageInputChange = (value) => {
+    setMessageInput(value)
+    
+    // 检测是否输入了 @
+    const currentSession = getCurrentSession()
+    if (!currentSession || !currentSession.isGroup) {
+      // 如果不是群聊，隐藏选择器
+      if (showMentionPicker) {
+        hideMentionPicker()
+      }
+      return
+    }
+    
+    // 检查是否刚输入了 @
+    if (value.endsWith('@')) {
+      showMentionPickerHandler('')
+    } else if (showMentionPicker) {
+      // 如果正在显示选择器，更新搜索关键词
+      const lastAtIndex = value.lastIndexOf('@')
+      if (lastAtIndex !== -1) {
+        const query = value.substring(lastAtIndex + 1)
+        // 如果包含空格或其他分隔符，隐藏选择器
+        if (query.includes(' ') || query.includes('\n')) {
+          hideMentionPicker()
+        } else {
+          setMentionSearchQuery(query)
+        }
+      } else {
+        hideMentionPicker()
+      }
+    }
+  }
+
+  // 显示 @ 成员选择器
+  const showMentionPickerHandler = (searchQuery = '') => {
+    const currentSession = getCurrentSession()
+    console.log('showMentionPickerHandler called:')
+    console.log('- currentSession:', currentSession)
+    console.log('- isGroup:', currentSession?.isGroup)
+    console.log('- currentChat:', currentChat)
+    console.log('- groupMembers[currentChat]:', groupMembers[currentChat])
+    
+    if (!currentSession || !currentSession.isGroup) {
+      console.log('Not a group chat, returning')
+      return // 只在群聊中显示
+    }
+    
+    console.log('Setting showMentionPicker to true')
+    setMentionSearchQuery(searchQuery)
+    setShowMentionPicker(true)
+    setSelectedMentionIndex(0)
+  }
+
+  // 隐藏 @ 成员选择器
+  const hideMentionPicker = () => {
+    setShowMentionPicker(false)
+    setMentionSearchQuery('')
+    setSelectedMentionIndex(0)
+  }
+
+  // 选择 @ 成员
+  const handleSelectMention = (member) => {
+    const memberName = member.displayName || member.groupNickname || member.name
+    const mentionText = `@${memberName} `
+    
+    setMessageInput(prev => {
+      // 找到最后一个 @ 的位置并替换
+      const lastAtIndex = prev.lastIndexOf('@')
+      if (lastAtIndex !== -1) {
+        // 替换最后一个 @ 为 @用户名
+        return prev.substring(0, lastAtIndex) + mentionText
+      }
+      // 如果没有找到 @，直接追加
+      return prev + mentionText
+    })
+    
+    hideMentionPicker()
+    
+    // 聚焦到输入框
+    setTimeout(() => {
+      const textarea = document.querySelector('.composer-input')
+      if (textarea) {
+        textarea.focus()
+      }
+    }, 0)
+  }
+
+  // 获取当前群聊的成员列表（过滤后的）
+  const getFilteredMentionMembers = () => {
+    const members = groupMembers[currentChat] || []
+    
+    // 过滤掉当前用户（不能@自己）
+    const filteredMembers = members.filter(member => member.id !== currentUserId)
+    
+    if (!mentionSearchQuery) return filteredMembers
+    
+    const query = mentionSearchQuery.toLowerCase()
+    return filteredMembers.filter(member => {
+      const name = (member.displayName || member.groupNickname || member.name || '').toLowerCase()
+      return name.includes(query)
+    })
   }
 
   // 打开个人信息页面
@@ -2818,6 +3106,21 @@ function App() {
     return total + (session.badge || 0)
   }, 0)
 
+  // 切换聊天并清除 @ 计数
+  const handleSwitchChat = async (chatId) => {
+    setCurrentChat(chatId)
+    // 如果切换到被 @ 的聊天，清除计数和标记
+    if (chatId) {
+      setAtMentionCount(0)
+      // 清除 [有人@我] 标记
+      if (atMentionSessionId === chatId) {
+        setAtMentionSessionId(null)
+        // 刷新会话列表，移除 [有人@我] 标记并获取最新消息
+        await refreshRealtimeChatData(chatId)
+      }
+    }
+  }
+
   // 未登录时显示登录界面
   if (!isLoggedIn) {
     return (
@@ -2840,6 +3143,7 @@ function App() {
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           pendingRequestCount={friendRequestList.length + groupInviteRequests.length}
+          atMentionCount={atMentionCount}
         />
 
       <main className="im-layout">
@@ -2861,7 +3165,7 @@ function App() {
           dynamicSessions={dynamicSessions}
           sessions={sessions}
           currentChat={currentChat}
-          setCurrentChat={setCurrentChat}
+          setCurrentChat={handleSwitchChat}
           myFriends={myFriends}
           customGroups={_customGroups}
           collapsedGroups={collapsedGroups}
@@ -2907,7 +3211,7 @@ function App() {
           showEmojiPicker={showEmojiPicker}
           toggleEmojiPicker={toggleEmojiPicker}
           messageInput={messageInput}
-          setMessageInput={setMessageInput}
+          setMessageInput={handleMessageInputChange}
           handleKeyPress={handleKeyPress}
           handleSendMessage={handleSendMessage}
           handleSendImage={handleSendImage}
@@ -2923,6 +3227,18 @@ function App() {
             await confirmAnnouncement(currentChat, id)
             setPendingAnnouncements(prev => prev.filter(a => a.id !== id))
           }}
+          showMentionPicker={showMentionPicker}
+          hideMentionPicker={hideMentionPicker}
+          handleSelectMention={handleSelectMention}
+          getFilteredMentionMembers={getFilteredMentionMembers}
+          selectedMentionIndex={selectedMentionIndex}
+          setSelectedMentionIndex={setSelectedMentionIndex}
+          isMultiSelectMode={isMultiSelectMode}
+          selectedMessages={selectedMessages}
+          toggleMessageSelection={toggleMessageSelection}
+          exitMultiSelectMode={exitMultiSelectMode}
+          startForward={startForward}
+          handleOpenForwardDetail={handleOpenForwardDetail}
         />
       </main>
 
@@ -2936,6 +3252,15 @@ function App() {
 
         handleRevokeMessage={handleRevokeMessage}
         handleDeleteMessage={handleDeleteMessage}
+        startMultiSelectFromMenu={startMultiSelectFromMenu}
+        showForwardDialog={showForwardDialog}
+        cancelForward={cancelForward}
+        selectedMessages={selectedMessages}
+        handleSendMessageToSession={handleSendMessageToSession}
+        showForwardDetail={showForwardDetail}
+        forwardDetailData={forwardDetailData}
+        handleCloseForwardDetail={handleCloseForwardDetail}
+        handleOpenForwardDetail={handleOpenForwardDetail}
         showMemberModal={showMemberModal}
         closeMemberModal={closeMemberModal}
         sessions={sessions}

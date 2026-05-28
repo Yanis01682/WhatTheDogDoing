@@ -62,6 +62,7 @@ class Message(Base):
     media_url = Column(String(500), nullable=True)  # 图片URL路径
     media_data = Column(Text().with_variant(_MySQLMEDIUMTEXT(), 'mysql'), nullable=True)  # 持久化图片内容
     media_name = Column(String(200), nullable=True)  # 原始文件名
+    mentioned_user_ids = Column(String(500), nullable=True)  # 被@的用户ID列表，逗号分隔，如 "1,2,3"
     timestamp = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
 

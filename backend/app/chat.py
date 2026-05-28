@@ -47,6 +47,12 @@ class FriendRequestPayload(BaseModel):
     friend_id: int
 
 
+class ForwardMessagePayload(BaseModel):
+    conversation_id: int
+    forward_title: str
+    forward_messages: list[dict]
+
+
 class FriendRemarkPayload(BaseModel):
     remark: str
 
@@ -232,6 +238,49 @@ def _get_group_or_404(db: Session, conversation_id: int):
     return conversation
 
 
+def _parse_mentioned_users(content: str, conversation_id: int, db: Session):
+    """
+    从消息内容中解析被 @ 的用户 ID 列表
+    支持格式：@用户名 或 @userId
+    返回：(清理后的内容, 逗号分隔的用户ID字符串)
+    """
+    import re
+    
+    # 获取群聊所有成员
+    members = (
+        db.query(models.ConversationMember, models.User)
+        .join(models.User, models.ConversationMember.user_id == models.User.id)
+        .filter(models.ConversationMember.conversation_id == conversation_id)
+        .all()
+    )
+    
+    mentioned_ids = set()
+    cleaned_content = content
+    
+    for member, user in members:
+        # 匹配 @昵称 或 @username
+        nickname = user.nickname or user.username
+        username = user.username
+        
+        # 尝试匹配 @昵称
+        pattern_nickname = re.compile(r'@' + re.escape(nickname) + r'(?:\s|$|，|,|。|！|？)', re.UNICODE)
+        matches = pattern_nickname.findall(cleaned_content)
+        if matches:
+            mentioned_ids.add(user.id)
+        
+        # 尝试匹配 @username（如果不同）
+        if username != nickname:
+            pattern_username = re.compile(r'@' + re.escape(username) + r'(?:\s|$|，|,|。|！|？)', re.UNICODE)
+            matches = pattern_username.findall(cleaned_content)
+            if matches:
+                mentioned_ids.add(user.id)
+    
+    # 将用户ID列表转换为逗号分隔的字符串
+    mentioned_ids_str = ','.join(str(uid) for uid in sorted(mentioned_ids)) if mentioned_ids else None
+    
+    return cleaned_content, mentioned_ids_str
+
+
 def _get_conversation_membership_or_403(db: Session, conversation_id: int, user_id: int, detail: str):
     membership = (
         db.query(models.ConversationMember)
@@ -356,6 +405,7 @@ def _serialize_message(
         "time": _format_message_time(message.timestamp),
         "timestamp": message.timestamp.isoformat() if message.timestamp else None,
         "replyToId": message.reply_to_id,
+        "mentionedUserIds": message.mentioned_user_ids,
     }
     # 添加图片消息的媒体信息
     if msg_type == "image" and (message.media_data or message.media_url):
@@ -412,7 +462,7 @@ def _serialize_messages(
         for user in reply_senders:
             users_by_id[user.id] = user
 
-    return [
+    result = [
         _serialize_message(
             message,
             current_user_id,
@@ -422,6 +472,11 @@ def _serialize_messages(
         )
         for message in messages
     ]
+    # Add forwardData for merged forward messages
+    for i, message in enumerate(messages):
+        if message.message_type == "forward" and message.media_data:
+            result[i]["forwardData"] = json.loads(message.media_data)
+    return result
 
 
 def _serialize_session(db: Session, conversation: models.Conversation, current_user: models.User):
@@ -967,11 +1022,17 @@ def send_message(
     if reply_message and reply_message.sender_id is not None:
         reply_sender = db.query(models.User).filter(models.User.id == reply_message.sender_id).first()
 
+    # 解析 @ 用户
+    cleaned_content, mentioned_user_ids = _parse_mentioned_users(content, payload.conversation_id, db)
+    print(f"🔍 解析 @ 用户: content='{content}', cleaned='{cleaned_content}', mentioned_ids={mentioned_user_ids}")
+    print(f"🔍 解析 @ 用户: content='{content}', cleaned='{cleaned_content}', mentioned_ids={mentioned_user_ids}")
+
     new_message = models.Message(
         conversation_id=payload.conversation_id,
         sender_id=current_user.id,
         reply_to_id=payload.reply_to_id,
-        content=content,
+        content=cleaned_content,
+        mentioned_user_ids=mentioned_user_ids,
     )
     db.add(new_message)
     db.commit()
@@ -997,12 +1058,75 @@ def send_message(
                 "time": _format_message_time(new_message.timestamp),
                 "timestamp": new_message.timestamp.isoformat() if new_message.timestamp else None,
                 "replyToId": new_message.reply_to_id,
+                "mentionedUserIds": new_message.mentioned_user_ids,
+            },
+        },
+    )
+    print(f"📤 发送通知: conversationId={payload.conversation_id}, mentionedUserIds={new_message.mentioned_user_ids}")
+    return {
+        "status": "sent",
+        "message": _serialize_message(new_message, current_user.id, current_user, reply_message, reply_sender),
+    }
+
+
+@router.post("/messages/send-forward")
+def send_forward_message(
+    payload: ForwardMessagePayload = Body(...),
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    """发送合并转发消息
+    
+    将多条选中的消息打包成一条合并转发消息发送到目标会话。
+    消息类型为 "forward"，content 存储标题文本，media_data 存储转发消息列表的 JSON。
+    """
+    _ensure_conversation_membership(db, payload.conversation_id, current_user.id)
+
+    if not payload.forward_messages:
+        raise HTTPException(status_code=400, detail="转发消息列表不能为空")
+
+    forward_data_json = json.dumps({
+        "title": payload.forward_title,
+        "messages": payload.forward_messages,
+    }, ensure_ascii=False)
+
+    new_message = models.Message(
+        conversation_id=payload.conversation_id,
+        sender_id=current_user.id,
+        message_type="forward",
+        content=payload.forward_title,
+        media_data=forward_data_json,
+    )
+    db.add(new_message)
+    db.commit()
+    db.refresh(new_message)
+    member_ids = [
+        item.user_id
+        for item in db.query(models.ConversationMember.user_id)
+        .filter(models.ConversationMember.conversation_id == payload.conversation_id)
+        .all()
+    ]
+    _dispatch_notification(
+        member_ids,
+        {
+            "type": "conversation_updated",
+            "conversationId": payload.conversation_id,
+            "messageId": new_message.id,
+            "message": {
+                "id": new_message.id,
+                "text": new_message.content,
+                "type": new_message.message_type or "forward",
+                "senderId": current_user.id,
+                "senderName": current_user.nickname or current_user.username,
+                "time": _format_message_time(new_message.timestamp),
+                "timestamp": new_message.timestamp.isoformat() if new_message.timestamp else None,
+                "forwardData": forward_data_json if len(forward_data_json) < 500 else None,
             },
         },
     )
     return {
         "status": "sent",
-        "message": _serialize_message(new_message, current_user.id, current_user, reply_message, reply_sender),
+        "message": _serialize_message(new_message, current_user.id, current_user),
     }
 
 
@@ -2202,11 +2326,14 @@ async def websocket_endpoint(websocket: WebSocket, user_id: int, db: Session = D
                     if not membership:
                         continue
                     sender = db.query(models.User).filter(models.User.id == user_id).first()
+                    # 解析 @ 用户
+                    cleaned_content, mentioned_user_ids = _parse_mentioned_users(content, conv_id, db)
                     new_message = models.Message(
                         conversation_id=conv_id,
                         sender_id=user_id,
                         reply_to_id=payload.get("reply_to_id"),
-                        content=content,
+                        content=cleaned_content,
+                        mentioned_user_ids=mentioned_user_ids,
                     )
                     db.add(new_message)
                     db.commit()
@@ -2229,6 +2356,7 @@ async def websocket_endpoint(websocket: WebSocket, user_id: int, db: Session = D
                             "time": _format_message_time(new_message.timestamp),
                             "timestamp": new_message.timestamp.isoformat() if new_message.timestamp else None,
                             "replyToId": new_message.reply_to_id,
+                            "mentionedUserIds": new_message.mentioned_user_ids,
                         },
                     })
             except (json.JSONDecodeError, KeyError):

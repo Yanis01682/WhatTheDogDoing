@@ -73,6 +73,26 @@ function ChatMainView({
   pendingAnnouncements = [],
   // 确认公告回调
   onConfirmAnnouncement,
+  // @ 成员选择器显示状态
+  showMentionPicker,
+  // 隐藏 @ 成员选择器
+  hideMentionPicker,
+  // 选择 @ 成员
+  handleSelectMention,
+  // 获取过滤后的成员列表
+  getFilteredMentionMembers,
+  // 选中索引
+  selectedMentionIndex,
+  // 设置选中索引
+  setSelectedMentionIndex,
+  // 多选模式相关
+  isMultiSelectMode,
+  selectedMessages,
+  toggleMessageSelection,
+  exitMultiSelectMode,
+  startForward,
+  // 转发详情
+  handleOpenForwardDetail,
 }) {
   const imageInputRef = useRef(null)
   const videoInputRef = useRef(null)
@@ -83,6 +103,14 @@ function ChatMainView({
   const currentSession = getCurrentSession()
   const hasActiveConversation = Boolean(currentSession?.id)
   const currentMessages = messages[currentChat] || []
+  
+  // 调试信息
+  console.log('ChatMainView render:')
+  console.log('- showMentionPicker:', showMentionPicker)
+  console.log('- currentSession.isGroup:', currentSession?.isGroup)
+  console.log('- currentChat:', currentChat)
+  console.log('- groupMembers[currentChat]:', groupMembers[currentChat])
+  console.log('- groupMembers[currentChat]?.length:', (groupMembers[currentChat] || []).length)
 
   useEffect(() => {
     const container = messagesContainerRef.current
@@ -107,13 +135,68 @@ function ChatMainView({
     if (messageElement) {
       shouldStickToBottomRef.current = false
       messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      messageElement.classList.add('highlighted-message')
-      window.setTimeout(() => {
-        messageElement.classList.remove('highlighted-message')
-      }, 2000)
+      handleJumpHandled()
     }
-    handleJumpHandled?.()
   }, [jumpToMessageId, handleJumpHandled])
+
+  // 处理输入框键盘事件（@ 选择器）
+  const handleInputKeyDown = (e) => {
+    if (!showMentionPicker) return
+
+    const filteredMembers = getFilteredMentionMembers()
+    if (filteredMembers.length === 0) return
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setSelectedMentionIndex(prev => (prev + 1) % filteredMembers.length)
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setSelectedMentionIndex(prev => (prev - 1 + filteredMembers.length) % filteredMembers.length)
+    } else if (e.key === 'Enter' || e.key === 'Tab') {
+      e.preventDefault()
+      handleSelectMention(filteredMembers[selectedMentionIndex])
+    } else if (e.key === 'Escape') {
+      e.preventDefault()
+      hideMentionPicker()
+    }
+  }
+
+  // 计算选择器位置
+  const getPickerStyle = () => {
+    const textarea = document.querySelector('.composer-input')
+    if (!textarea) return {}
+    
+    const rect = textarea.getBoundingClientRect()
+    return {
+      position: 'fixed',
+      bottom: window.innerHeight - rect.top + 8,
+      left: rect.left,
+      width: Math.min(300, rect.width), // 最大宽度 300px
+    }
+  }
+
+  // 高亮显示消息中的 @ 用户名
+  const highlightMentions = (text, mentionedUserIds) => {
+    if (!text || !mentionedUserIds) return text
+    
+    const members = groupMembers[currentChat] || []
+    const mentionedIds = mentionedUserIds.split(',').map(id => parseInt(id))
+    
+    let result = text
+    mentionedIds.forEach(userId => {
+      const member = members.find(m => m.id === userId)
+      if (member) {
+        const name = member.groupNickname || member.nickname || member.username || ''
+        if (name) {
+          const regex = new RegExp(`@${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'g')
+          result = result.replace(regex, `<span class="mention-highlight">@${name}</span>`)
+        }
+      }
+    })
+    
+    return <span dangerouslySetInnerHTML={{ __html: result }} />
+  }
+
   const replyCountMap = {}
   currentMessages.forEach((message) => {
     if (message.replyToId) {
@@ -203,9 +286,12 @@ function ChatMainView({
             key={msg.id}
             data-message-index={index}
             data-message-id={msg.id}
-            className={`message ${msg.sender === 'me' ? 'outgoing' : msg.sender === 'system' ? 'system-message' : 'incoming'} ${msg.replyTo || msg.replyToId ? 'has-reply' : ''}`}
+            className={`message ${msg.sender === 'me' ? 'outgoing' : msg.sender === 'system' ? 'system-message' : 'incoming'} ${msg.replyTo || msg.replyToId ? 'has-reply' : ''} ${isMultiSelectMode && selectedMessages.some(m => m.id === msg.id) ? 'selected' : ''}`}
             onContextMenu={(e) => handleMessageContextMenu(e, msg)}
+            onClick={() => isMultiSelectMode && toggleMessageSelection(msg)}
+            style={{ cursor: isMultiSelectMode ? 'pointer' : 'default' }}
           >
+
             {msg.sender !== 'system' && (
               msg.sender === 'me'
                 ? renderMessageAvatar(userAvatar, handleOpenProfile)
@@ -244,8 +330,31 @@ function ChatMainView({
                   <div className="message-voice-wrap">
                     <audio controls preload="metadata" src={msg.mediaUrl} />
                   </div>
+                ) : msg.type === 'forward' && msg.forwardData ? (
+                  <div
+                    className="forward-card"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleOpenForwardDetail && handleOpenForwardDetail(msg.forwardData)
+                    }}
+                  >
+                    <div className="forward-card-title">{msg.forwardData.title || '聊天记录'}</div>
+                    <div className="forward-card-previews">
+                      {msg.forwardData.messages.slice(0, 4).map((fm, fi) => (
+                        <div key={fi} className="forward-preview-item">
+                          <span className="forward-preview-sender">{fm.senderName}:</span>
+                          <span className="forward-preview-text">
+                            {fm.type === 'image' ? '[图片]' : fm.type === 'video' ? '[视频]' : fm.type === 'file' ? '[文件]' : fm.type === 'forward' ? '[聊天记录]' : (fm.text || '')}
+                          </span>
+                        </div>
+                      ))}
+                      {msg.forwardData.messages.length > 4 && (
+                        <div className="forward-preview-more">... 共 {msg.forwardData.messages.length} 条消息</div>
+                      )}
+                    </div>
+                  </div>
                 ) : (
-                  msg.text
+                  highlightMentions(msg.text, msg.mentionedUserIds)
                 )}
               </div>
               {(msg.replyTo || msg.replyToId) && (
@@ -291,6 +400,23 @@ function ChatMainView({
           <button className="cancel-reply-btn" type="button" aria-label="取消回复" onClick={cancelReply}>✕</button>
         </div>
       )}
+
+      {isMultiSelectMode && (
+        <div className="multiselect-toolbar">
+          <div className="multiselect-info">
+            <span>已选择 {selectedMessages.length} 条消息</span>
+          </div>
+          <div className="multiselect-actions">
+            <button className="multiselect-btn" onClick={startForward} disabled={selectedMessages.length === 0}>
+              转发
+            </button>
+            <button className="multiselect-btn cancel" onClick={exitMultiSelectMode}>
+              取消
+            </button>
+          </div>
+        </div>
+      )}
+
       <footer className="composer" style={{ minHeight: `${composerHeight}px` }}>
 
         <div className="composer-toolbar">
@@ -311,6 +437,7 @@ function ChatMainView({
           value={messageInput}
           onChange={(e) => setMessageInput(e.target.value)}
           onKeyPress={handleKeyPress}
+          onKeyDown={handleInputKeyDown}
           disabled={!hasActiveConversation}
           rows="3"
         />
@@ -328,6 +455,47 @@ function ChatMainView({
             <h3>📢 群公告</h3>
             <div className="announcement-content">{pendingAnnouncements[0].content}</div>
             <button className="announcement-confirm-btn" onClick={() => onConfirmAnnouncement(pendingAnnouncements[0].id)}>我已知晓</button>
+          </div>
+        </div>
+      )}
+
+      {/* @ 成员选择器 */}
+      {showMentionPicker && currentSession?.isGroup && (
+        <div className="mention-picker-overlay" style={getPickerStyle()}>
+          <div className="mention-picker-list">
+            {getFilteredMentionMembers().map((member, index) => (
+              <div
+                key={member.id}
+                className={`mention-picker-item ${index === selectedMentionIndex ? 'selected' : ''}`}
+                onClick={() => handleSelectMention(member)}
+                onMouseEnter={() => setSelectedMentionIndex(index)}
+              >
+                <div
+                  className="mention-picker-avatar"
+                  style={{
+                    backgroundImage: (member.avatar && member.avatar.length > 1 && member.avatar !== '/default-avatar.png') ? `url(${member.avatar})` : 'none',
+                  }}
+                >
+                  {(() => {
+                    const name = member.displayName || member.groupNickname || member.name || '?'
+                    return name[0] ? name[0].toUpperCase() : '?'
+                  })()}
+                </div>
+                <div className="mention-picker-info">
+                  <div className="mention-picker-name">
+                    {member.displayName || member.groupNickname || member.name}
+                  </div>
+                  {member.groupNickname && member.displayName && member.groupNickname !== member.displayName && (
+                    <div className="mention-picker-remark">{member.displayName}</div>
+                  )}
+                </div>
+              </div>
+            ))}
+            {getFilteredMentionMembers().length === 0 && (
+              <div className="mention-picker-item" style={{ cursor: 'default', color: '#999' }}>
+                没有找到匹配的成员
+              </div>
+            )}
           </div>
         </div>
       )}

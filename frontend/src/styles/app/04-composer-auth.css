@@ -557,3 +557,99 @@
   }
 }
 
+/* ========================================
+   @ 成员选择弹窗样式
+   ======================================== */
+.mention-picker-overlay {
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  max-height: 240px;
+  overflow-y: auto;
+  z-index: 1000; /* 提高 z-index 确保在最上层 */
+}
+
+.mention-picker-list {
+  padding: 8px 0;
+}
+
+.mention-picker-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.mention-picker-item:hover,
+.mention-picker-item.selected {
+  background: #f0f0f0;
+}
+
+.mention-picker-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: #d8d8d8;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  color: #333;
+  font-size: 0.85rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.mention-picker-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.mention-picker-name {
+  font-size: 0.9rem;
+  color: #333;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mention-picker-remark {
+  font-size: 0.75rem;
+  color: #999;
+  margin-top: 2px;
+}
+
+.night-mode .mention-picker-overlay {
+  background: #2a2a2a;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.night-mode .mention-picker-item:hover,
+.night-mode .mention-picker-item.selected {
+  background: #3a3a3a;
+}
+
+.night-mode .mention-picker-name {
+  color: #e0e0e0;
+}
+
+/* @ 用户名高亮样式 */
+.mention-highlight {
+  color: #0abab5;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mention-highlight:hover {
+  text-decoration: underline;
+}
+
+.night-mode .mention-highlight {
+  color: #09d4c8;
+}
+

@@ -281,6 +281,16 @@ export async function sendChatMessage(conversationId, content, replyToId) {
   return res.data
 }
 
+export async function sendForwardMessage(conversationId, forwardTitle, forwardMessages) {
+  const payload = {
+    conversation_id: conversationId,
+    forward_title: forwardTitle,
+    forward_messages: forwardMessages,
+  }
+  const res = await apiClient.post('/api/chat/messages/send-forward', payload)
+  return res.data
+}
+
 export async function sendImageMessage(conversationId, file, replyToId = null) {
   const formData = new FormData()
   formData.append('file', file)

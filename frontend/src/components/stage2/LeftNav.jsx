@@ -9,6 +9,7 @@ function LeftNav({
   activeTab,
   setActiveTab,
   pendingRequestCount = 0,
+  atMentionCount = 0, // @ 提醒计数
 }) {
   return (
     <nav className="left-nav">
@@ -23,15 +24,21 @@ function LeftNav({
           )}
         </div>
 
-        <button 
-          className={`nav-tab-btn ${activeTab === 'chats' ? 'active' : ''}`}
-          onClick={() => setActiveTab('chats')}
-          aria-label="会话"
-        >
-          <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
-            <path d="M12 3c5.5 0 10 3.58 10 8s-4.5 8-10 8c-1.24 0-2.43-.2-3.53-.55L4 21l1.55-3.66C4.04 15.7 3 13.9 3 11c0-4.42 4.5-8 9-8z"/>
-          </svg>
-        </button>
+        <div style={{ position: 'relative', width: '100%' }}>
+          <button 
+            className={`nav-tab-btn ${activeTab === 'chats' ? 'active' : ''}`}
+            onClick={() => setActiveTab('chats')}
+            aria-label="会话"
+          >
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+              <path d="M12 3c5.5 0 10 3.58 10 8s-4.5 8-10 8c-1.24 0-2.43-.2-3.53-.55L4 21l1.55-3.66C4.04 15.7 3 13.9 3 11c0-4.42 4.5-8 9-8z"/>
+            </svg>
+          </button>
+          {/* @ 提醒徽章 */}
+          {atMentionCount > 0 && (
+            <span className="nav-tab-badge at-mention-badge">{atMentionCount > 99 ? '99+' : atMentionCount}</span>
+          )}
+        </div>
 
         <button 
           className={`nav-tab-btn ${activeTab === 'friends' ? 'active' : ''}`}
