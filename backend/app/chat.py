@@ -47,6 +47,12 @@ class FriendRequestPayload(BaseModel):
     friend_id: int
 
 
+class ForwardMessagePayload(BaseModel):
+    conversation_id: int
+    forward_title: str
+    forward_messages: list[dict]
+
+
 class FriendRemarkPayload(BaseModel):
     remark: str
 
@@ -456,7 +462,7 @@ def _serialize_messages(
         for user in reply_senders:
             users_by_id[user.id] = user
 
-    return [
+    result = [
         _serialize_message(
             message,
             current_user_id,
@@ -466,6 +472,11 @@ def _serialize_messages(
         )
         for message in messages
     ]
+    # Add forwardData for merged forward messages
+    for i, message in enumerate(messages):
+        if message.message_type == "forward" and message.media_data:
+            result[i]["forwardData"] = json.loads(message.media_data)
+    return result
 
 
 def _serialize_session(db: Session, conversation: models.Conversation, current_user: models.User):
@@ -1013,6 +1024,8 @@ def send_message(
 
     # 解析 @ 用户
     cleaned_content, mentioned_user_ids = _parse_mentioned_users(content, payload.conversation_id, db)
+    print(f"🔍 解析 @ 用户: content='{content}', cleaned='{cleaned_content}', mentioned_ids={mentioned_user_ids}")
+    print(f"🔍 解析 @ 用户: content='{content}', cleaned='{cleaned_content}', mentioned_ids={mentioned_user_ids}")
 
     new_message = models.Message(
         conversation_id=payload.conversation_id,
@@ -1049,9 +1062,71 @@ def send_message(
             },
         },
     )
+    print(f"📤 发送通知: conversationId={payload.conversation_id}, mentionedUserIds={new_message.mentioned_user_ids}")
     return {
         "status": "sent",
         "message": _serialize_message(new_message, current_user.id, current_user, reply_message, reply_sender),
+    }
+
+
+@router.post("/messages/send-forward")
+def send_forward_message(
+    payload: ForwardMessagePayload = Body(...),
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    """发送合并转发消息
+    
+    将多条选中的消息打包成一条合并转发消息发送到目标会话。
+    消息类型为 "forward"，content 存储标题文本，media_data 存储转发消息列表的 JSON。
+    """
+    _ensure_conversation_membership(db, payload.conversation_id, current_user.id)
+
+    if not payload.forward_messages:
+        raise HTTPException(status_code=400, detail="转发消息列表不能为空")
+
+    forward_data_json = json.dumps({
+        "title": payload.forward_title,
+        "messages": payload.forward_messages,
+    }, ensure_ascii=False)
+
+    new_message = models.Message(
+        conversation_id=payload.conversation_id,
+        sender_id=current_user.id,
+        message_type="forward",
+        content=payload.forward_title,
+        media_data=forward_data_json,
+    )
+    db.add(new_message)
+    db.commit()
+    db.refresh(new_message)
+    member_ids = [
+        item.user_id
+        for item in db.query(models.ConversationMember.user_id)
+        .filter(models.ConversationMember.conversation_id == payload.conversation_id)
+        .all()
+    ]
+    _dispatch_notification(
+        member_ids,
+        {
+            "type": "conversation_updated",
+            "conversationId": payload.conversation_id,
+            "messageId": new_message.id,
+            "message": {
+                "id": new_message.id,
+                "text": new_message.content,
+                "type": new_message.message_type or "forward",
+                "senderId": current_user.id,
+                "senderName": current_user.nickname or current_user.username,
+                "time": _format_message_time(new_message.timestamp),
+                "timestamp": new_message.timestamp.isoformat() if new_message.timestamp else None,
+                "forwardData": forward_data_json if len(forward_data_json) < 500 else None,
+            },
+        },
+    )
+    return {
+        "status": "sent",
+        "message": _serialize_message(new_message, current_user.id, current_user),
     }
 
 

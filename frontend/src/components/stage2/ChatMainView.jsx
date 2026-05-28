@@ -85,6 +85,14 @@ function ChatMainView({
   selectedMentionIndex,
   // 设置选中索引
   setSelectedMentionIndex,
+  // 多选模式相关
+  isMultiSelectMode,
+  selectedMessages,
+  toggleMessageSelection,
+  exitMultiSelectMode,
+  startForward,
+  // 转发详情
+  handleOpenForwardDetail,
 }) {
   const imageInputRef = useRef(null)
   const videoInputRef = useRef(null)
@@ -178,9 +186,11 @@ function ChatMainView({
     mentionedIds.forEach(userId => {
       const member = members.find(m => m.id === userId)
       if (member) {
-        const name = member.groupNickname || member.nickname || member.username
-        const regex = new RegExp(`@${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'g')
-        result = result.replace(regex, `<span class="mention-highlight">@${name}</span>`)
+        const name = member.groupNickname || member.nickname || member.username || ''
+        if (name) {
+          const regex = new RegExp(`@${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'g')
+          result = result.replace(regex, `<span class="mention-highlight">@${name}</span>`)
+        }
       }
     })
     
@@ -276,9 +286,12 @@ function ChatMainView({
             key={msg.id}
             data-message-index={index}
             data-message-id={msg.id}
-            className={`message ${msg.sender === 'me' ? 'outgoing' : msg.sender === 'system' ? 'system-message' : 'incoming'} ${msg.replyTo || msg.replyToId ? 'has-reply' : ''}`}
+            className={`message ${msg.sender === 'me' ? 'outgoing' : msg.sender === 'system' ? 'system-message' : 'incoming'} ${msg.replyTo || msg.replyToId ? 'has-reply' : ''} ${isMultiSelectMode && selectedMessages.some(m => m.id === msg.id) ? 'selected' : ''}`}
             onContextMenu={(e) => handleMessageContextMenu(e, msg)}
+            onClick={() => isMultiSelectMode && toggleMessageSelection(msg)}
+            style={{ cursor: isMultiSelectMode ? 'pointer' : 'default' }}
           >
+
             {msg.sender !== 'system' && (
               msg.sender === 'me'
                 ? renderMessageAvatar(userAvatar, handleOpenProfile)
@@ -316,6 +329,29 @@ function ChatMainView({
                 ) : msg.type === 'voice' && msg.mediaUrl ? (
                   <div className="message-voice-wrap">
                     <audio controls preload="metadata" src={msg.mediaUrl} />
+                  </div>
+                ) : msg.type === 'forward' && msg.forwardData ? (
+                  <div
+                    className="forward-card"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleOpenForwardDetail && handleOpenForwardDetail(msg.forwardData)
+                    }}
+                  >
+                    <div className="forward-card-title">{msg.forwardData.title || '聊天记录'}</div>
+                    <div className="forward-card-previews">
+                      {msg.forwardData.messages.slice(0, 4).map((fm, fi) => (
+                        <div key={fi} className="forward-preview-item">
+                          <span className="forward-preview-sender">{fm.senderName}:</span>
+                          <span className="forward-preview-text">
+                            {fm.type === 'image' ? '[图片]' : fm.type === 'video' ? '[视频]' : fm.type === 'file' ? '[文件]' : fm.type === 'forward' ? '[聊天记录]' : (fm.text || '')}
+                          </span>
+                        </div>
+                      ))}
+                      {msg.forwardData.messages.length > 4 && (
+                        <div className="forward-preview-more">... 共 {msg.forwardData.messages.length} 条消息</div>
+                      )}
+                    </div>
                   </div>
                 ) : (
                   highlightMentions(msg.text, msg.mentionedUserIds)
@@ -364,6 +400,23 @@ function ChatMainView({
           <button className="cancel-reply-btn" type="button" aria-label="取消回复" onClick={cancelReply}>✕</button>
         </div>
       )}
+
+      {isMultiSelectMode && (
+        <div className="multiselect-toolbar">
+          <div className="multiselect-info">
+            <span>已选择 {selectedMessages.length} 条消息</span>
+          </div>
+          <div className="multiselect-actions">
+            <button className="multiselect-btn" onClick={startForward} disabled={selectedMessages.length === 0}>
+              转发
+            </button>
+            <button className="multiselect-btn cancel" onClick={exitMultiSelectMode}>
+              取消
+            </button>
+          </div>
+        </div>
+      )}
+
       <footer className="composer" style={{ minHeight: `${composerHeight}px` }}>
 
         <div className="composer-toolbar">
@@ -407,7 +460,7 @@ function ChatMainView({
       )}
 
       {/* @ 成员选择器 */}
-      {showMentionPicker && currentSession.isGroup && (
+      {showMentionPicker && currentSession?.isGroup && (
         <div className="mention-picker-overlay" style={getPickerStyle()}>
           <div className="mention-picker-list">
             {getFilteredMentionMembers().map((member, index) => (
@@ -423,7 +476,10 @@ function ChatMainView({
                     backgroundImage: (member.avatar && member.avatar.length > 1 && member.avatar !== '/default-avatar.png') ? `url(${member.avatar})` : 'none',
                   }}
                 >
-                  {(!member.avatar || member.avatar.length <= 1 || member.avatar === '/default-avatar.png') && (member.displayName || member.groupNickname || member.name || '?')[0].toUpperCase()}
+                  {(() => {
+                    const name = member.displayName || member.groupNickname || member.name || '?'
+                    return name[0] ? name[0].toUpperCase() : '?'
+                  })()}
                 </div>
                 <div className="mention-picker-info">
                   <div className="mention-picker-name">

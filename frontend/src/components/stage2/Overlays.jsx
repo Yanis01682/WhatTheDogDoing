@@ -32,6 +32,17 @@ function Overlays({
   handleReplyMessage,
   handleRevokeMessage,
   handleDeleteMessage,
+  startMultiSelectFromMenu,
+  // 转发相关
+  showForwardDialog,
+  cancelForward,
+  selectedMessages,
+  handleSendMessageToSession,
+  // 转发详情弹层
+  showForwardDetail,
+  forwardDetailData,
+  handleCloseForwardDetail,
+  handleOpenForwardDetail,
   // 群成员弹层。
   showMemberModal,
   closeMemberModal,
@@ -197,6 +208,7 @@ function Overlays({
   confirmDeleteAccount
 }) {
   const [showAboutModal, setShowAboutModal] = useState(false)
+  const [forwardTargetSearch, setForwardTargetSearch] = useState('') // 转发目标搜索
   const peerIsFriend = peerProfile ? isAlreadyFriend(peerProfile.userId, peerProfile.name) : false
   const peerRequestPending = peerProfile
     ? sentFriendRequests.some(
@@ -204,7 +216,7 @@ function Overlays({
       )
     : false
   const currentSession = getCurrentSession()
-  const currentPrivateFriend = !currentSession.isGroup
+  const currentPrivateFriend = !currentSession?.isGroup && currentSession
     ? myFriends.find(
         (friend) =>
           (currentSession.peerUserId != null && String(friend.accountId) === String(currentSession.peerUserId)) ||
@@ -219,18 +231,18 @@ function Overlays({
         name: currentPrivateFriend.remark || currentPrivateFriend.name,
         avatar: currentPrivateFriend.avatar
       }
-    : {
+    : currentSession ? {
         id: currentSession.id,
         name: currentSession.title,
         avatar: currentSession.avatar
-      }
+      } : null
   const currentGroupOwner = (groupMembers[currentChat] || []).find((member) => member.role === 'owner')
   const groupSenderOptions = (groupMembers[currentChat] || []).filter((member) => member.id !== profileData.id)
-  const privateSenderName = currentPrivateFriend?.remark || currentPrivateFriend?.name || currentSession.title
+  const privateSenderName = currentPrivateFriend?.remark || currentPrivateFriend?.name || currentSession?.title
 
   const resolveResultSender = (result) => {
     if (result.sender === 'me') return '我'
-    if (!currentSession.isGroup) return currentSession.title
+    if (!currentSession?.isGroup) return currentSession?.title || ''
     return result.senderName || '群成员'
   }
 
@@ -296,6 +308,9 @@ function Overlays({
               删除消息
             </button>
           )}
+          <button type="button" className="session-context-item" onClick={startMultiSelectFromMenu}>
+            多选
+          </button>
         </div>
       )}
 
@@ -632,17 +647,17 @@ function Overlays({
         </div>
       )}
 
-      {showChatDetail && (
+      {showChatDetail && currentSession && (
         <div className="chat-detail-overlay" onClick={handleCloseChatDetail}>
           <div className="chat-detail-panel" onClick={(e) => e.stopPropagation()}>
             <div className="chat-detail-header"><h3>聊天详情</h3><button className="chat-detail-close" onClick={handleCloseChatDetail}>×</button></div>
             <div className="chat-detail-content">
-              {getCurrentSession().isGroup ? (
+              {currentSession.isGroup ? (
                 <div className="group-chat-detail">
                   <div className="group-info-section">
-                    {renderAvatar(getCurrentSession().avatar, 'group-avatar-large')}
+                    {renderAvatar(currentSession.avatar, 'group-avatar-large')}
                     <div className="group-name-row">
-                      <h2 className="group-name">{getCurrentSession().title}</h2>
+                      <h2 className="group-name">{currentSession.title}</h2>
                     </div>
                     <p className="group-member-count">{(groupMembers[currentChat] || []).length} 位成员</p>
                   </div>
@@ -669,7 +684,7 @@ function Overlays({
                     <div className="section-content">
                       {!isEditingGroupName ? (
                         <div className="group-detail-value">
-                          <span className="group-detail-text">{getCurrentSession().title}</span>
+                          <span className="group-detail-text">{currentSession.title}</span>
                           {canRenameCurrentGroup && (
                             <button className="edit-group-name-btn" type="button" onClick={handleStartEditGroupName}>
                               编辑
@@ -1250,6 +1265,158 @@ function Overlays({
           handleChangePasswordInput={handleChangePasswordInput}
           handleSubmitChangePassword={handleSubmitChangePassword}
         />
+      )}
+
+      {/* 转发对话框 */}
+      {showForwardDialog && (
+        <div className="modal-overlay" onClick={cancelForward}>
+          <div className="modal-content forward-dialog" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>转发消息</h3>
+              <button className="modal-close" onClick={cancelForward}>×</button>
+            </div>
+            
+            <div className="forward-dialog-body">
+              <div className="forward-search">
+                <input
+                  type="text"
+                  placeholder="搜索好友或群聊..."
+                  value={forwardTargetSearch}
+                  onChange={(e) => setForwardTargetSearch(e.target.value)}
+                />
+              </div>
+
+              <div className="forward-targets">
+                <div className="forward-section">
+                  <h4>最近会话</h4>
+                  <div className="target-list">
+                    {sessions
+                      .filter(session => {
+                        if (!forwardTargetSearch) return true
+                        return session.title.toLowerCase().includes(forwardTargetSearch.toLowerCase())
+                      })
+                      .slice(0, 10)
+                      .map(session => (
+                        <div
+                          key={session.id}
+                          className="target-item"
+                          onClick={() => {
+                            handleSendMessageToSession(session.id, selectedMessages)
+                            cancelForward()
+                          }}
+                        >
+                          <div className="target-avatar">
+                            {typeof session.avatar === 'string' && (session.avatar.startsWith('data:image') || session.avatar.startsWith('/')) ? (
+                              <div style={{ backgroundImage: `url(${session.avatar})`, backgroundSize: 'cover', backgroundPosition: 'center', width: '100%', height: '100%' }} />
+                            ) : (
+                              <span>{session.avatar || '?'}</span>
+                            )}
+                          </div>
+                          <div className="target-info">
+                            <div className="target-name">{session.title}</div>
+                            <div className="target-type">{session.isGroup ? '群聊' : '私聊'}</div>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+
+                <div className="forward-section">
+                  <h4>好友列表</h4>
+                  <div className="target-list">
+                    {myFriends
+                      .filter(friend => {
+                        if (!forwardTargetSearch) return true
+                        const name = friend.remark || friend.name
+                        return name.toLowerCase().includes(forwardTargetSearch.toLowerCase())
+                      })
+                      .map(friend => (
+                        <div
+                          key={friend.accountId || friend.id}
+                          className="target-item"
+                          onClick={() => {
+                            // 查找或创建与该好友的会话
+                            const session = sessions.find(s => !s.isGroup && s.id === friend.accountId)
+                            if (session) {
+                              handleSendMessageToSession(session.id, selectedMessages)
+                            }
+                            cancelForward()
+                          }}
+                        >
+                          <div className="target-avatar">
+                            {typeof friend.avatar === 'string' && (friend.avatar.startsWith('data:image') || friend.avatar.startsWith('/')) ? (
+                              <div style={{ backgroundImage: `url(${friend.avatar})`, backgroundSize: 'cover', backgroundPosition: 'center', width: '100%', height: '100%' }} />
+                            ) : (
+                              <span>{(friend.remark || friend.name || '?')[0]}</span>
+                            )}
+                          </div>
+                          <div className="target-info">
+                            <div className="target-name">{friend.remark || friend.name}</div>
+                            <div className="target-type">好友</div>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="forward-dialog-footer">
+              <div className="selected-count">
+                已选择 {selectedMessages.length} 条消息
+              </div>
+              <button className="cancel-btn" onClick={cancelForward}>取消</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 转发详情弹层 */}
+      {showForwardDetail && forwardDetailData && (
+        <div className="modal-overlay" onClick={handleCloseForwardDetail}>
+          <div className="modal-content forward-detail-dialog" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>{forwardDetailData.title || '聊天记录'}</h3>
+              <button className="modal-close" onClick={handleCloseForwardDetail}>×</button>
+            </div>
+            <div className="forward-detail-body">
+              {forwardDetailData.messages && forwardDetailData.messages.map((fm, fi) => (
+                <div key={fi} className="forward-detail-item">
+                  <div className="forward-detail-sender">{fm.senderName}</div>
+                  <div className="forward-detail-content">
+                    {fm.type === 'image' ? (
+                      fm.mediaUrl ? (
+                        <img className="forward-detail-image" src={fm.mediaUrl} alt="图片" />
+                      ) : (
+                        <span className="forward-detail-text">[图片]</span>
+                      )
+                    ) : fm.type === 'video' ? (
+                      <span className="forward-detail-text">[视频]</span>
+                    ) : fm.type === 'file' ? (
+                      <span className="forward-detail-text">[文件]{fm.mediaName ? `: ${fm.mediaName}` : ''}</span>
+                    ) : fm.type === 'forward' ? (
+                      <div
+                        className="forward-detail-nested-card"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          if (fm.forwardData) {
+                            handleOpenForwardDetail?.(fm.forwardData)
+                          }
+                        }}
+                        style={{ cursor: fm.forwardData ? 'pointer' : 'default' }}
+                      >
+                        <span className="forward-detail-text">[聊天记录] {fm.forwardData?.title || ''}</span>
+                      </div>
+                    ) : (
+                      <span className="forward-detail-text">{fm.text}</span>
+                    )}
+                  </div>
+                  {fm.time && <div className="forward-detail-time">{fm.time}</div>}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       )}
 
     </>
