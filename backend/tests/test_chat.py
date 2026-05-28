@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+from app import chat
 from app import models
 from app.database import get_db
 from app.main import app
@@ -431,6 +432,43 @@ def test_send_image_message_persists_inline_media_data():
     messages = read_response.json()
     assert len(messages) == 1
     assert messages[0]["mediaUrl"] == sent_message["mediaUrl"]
+
+
+def test_send_forward_message_notifies_with_object_forward_data(monkeypatch):
+    headers_alice, _ = register_and_login("forward_alice", "forward_alice@example.com")
+    headers_bob, bob_user = register_and_login("forward_bob", "forward_bob@example.com")
+
+    add_friend_res = client.post(
+        "/api/chat/friends/add",
+        json={"friend_id": bob_user["id"]},
+        headers=headers_alice,
+    )
+    conversation_id = add_friend_res.json()["conversation_id"]
+    captured_notifications = []
+
+    def capture_notification(user_ids, payload):
+        captured_notifications.append((user_ids, payload))
+
+    monkeypatch.setattr(chat, "_dispatch_notification", capture_notification)
+
+    response = client.post(
+        "/api/chat/messages/send-forward",
+        json={
+            "conversation_id": conversation_id,
+            "forward_title": "alice和bob的聊天记录",
+            "forward_messages": [
+                {"senderName": "alice", "text": "hello", "type": "text", "time": "2026年05月28日 16:00"},
+            ],
+        },
+        headers=headers_alice,
+    )
+
+    assert response.status_code == 200
+    assert response.json()["message"]["forwardData"]["title"] == "alice和bob的聊天记录"
+    assert captured_notifications
+    notified_message = captured_notifications[0][1]["message"]
+    assert isinstance(notified_message["forwardData"], dict)
+    assert notified_message["forwardData"]["messages"][0]["text"] == "hello"
 
 
 def test_reply_message_must_belong_to_same_conversation():

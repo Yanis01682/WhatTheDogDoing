@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { getForwardMessageLabel, normalizeForwardData } from '../../utils/forwardData'
 
 /**
  * 聊天主窗体组件。
@@ -103,6 +104,37 @@ function ChatMainView({
   const currentSession = getCurrentSession()
   const hasActiveConversation = Boolean(currentSession?.id)
   const currentMessages = messages[currentChat] || []
+  const renderForwardCard = (forwardData) => {
+    const normalizedForwardData = normalizeForwardData(forwardData)
+
+    if (!normalizedForwardData) {
+      return <span>[聊天记录]</span>
+    }
+
+    const previewMessages = normalizedForwardData.messages.slice(0, 4)
+    return (
+      <div
+        className="forward-card"
+        onClick={(e) => {
+          e.stopPropagation()
+          handleOpenForwardDetail?.(normalizedForwardData)
+        }}
+      >
+        <div className="forward-card-title">{normalizedForwardData.title}</div>
+        <div className="forward-card-previews">
+          {previewMessages.map((fm, fi) => (
+            <div key={fi} className="forward-preview-item">
+              <span className="forward-preview-sender">{fm.senderName}:</span>
+              <span className="forward-preview-text">{getForwardMessageLabel(fm)}</span>
+            </div>
+          ))}
+          {normalizedForwardData.messages.length > 4 && (
+            <div className="forward-preview-more">共 {normalizedForwardData.messages.length} 条消息</div>
+          )}
+        </div>
+      </div>
+    )
+  }
   
   // 调试信息
   console.log('ChatMainView render:')
@@ -330,29 +362,8 @@ function ChatMainView({
                   <div className="message-voice-wrap">
                     <audio controls preload="metadata" src={msg.mediaUrl} />
                   </div>
-                ) : msg.type === 'forward' && msg.forwardData ? (
-                  <div
-                    className="forward-card"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleOpenForwardDetail && handleOpenForwardDetail(msg.forwardData)
-                    }}
-                  >
-                    <div className="forward-card-title">{msg.forwardData.title || '聊天记录'}</div>
-                    <div className="forward-card-previews">
-                      {msg.forwardData.messages.slice(0, 4).map((fm, fi) => (
-                        <div key={fi} className="forward-preview-item">
-                          <span className="forward-preview-sender">{fm.senderName}:</span>
-                          <span className="forward-preview-text">
-                            {fm.type === 'image' ? '[图片]' : fm.type === 'video' ? '[视频]' : fm.type === 'file' ? '[文件]' : fm.type === 'forward' ? '[聊天记录]' : (fm.text || '')}
-                          </span>
-                        </div>
-                      ))}
-                      {msg.forwardData.messages.length > 4 && (
-                        <div className="forward-preview-more">... 共 {msg.forwardData.messages.length} 条消息</div>
-                      )}
-                    </div>
-                  </div>
+                ) : msg.type === 'forward' ? (
+                  renderForwardCard(msg.forwardData)
                 ) : (
                   highlightMentions(msg.text, msg.mentionedUserIds)
                 )}

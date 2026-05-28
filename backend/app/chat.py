@@ -425,6 +425,8 @@ def _serialize_message(
         payload["mediaName"] = message.media_name
     if reply_message:
         payload["replyTo"] = _serialize_reply_reference(reply_message, current_user_id, reply_sender)
+    if msg_type == "forward" and message.media_data:
+        payload["forwardData"] = json.loads(message.media_data)
     return payload
 
 
@@ -472,10 +474,6 @@ def _serialize_messages(
         )
         for message in messages
     ]
-    # Add forwardData for merged forward messages
-    for i, message in enumerate(messages):
-        if message.message_type == "forward" and message.media_data:
-            result[i]["forwardData"] = json.loads(message.media_data)
     return result
 
 
@@ -1085,10 +1083,11 @@ def send_forward_message(
     if not payload.forward_messages:
         raise HTTPException(status_code=400, detail="转发消息列表不能为空")
 
-    forward_data_json = json.dumps({
+    forward_data = {
         "title": payload.forward_title,
         "messages": payload.forward_messages,
-    }, ensure_ascii=False)
+    }
+    forward_data_json = json.dumps(forward_data, ensure_ascii=False)
 
     new_message = models.Message(
         conversation_id=payload.conversation_id,
@@ -1120,7 +1119,7 @@ def send_forward_message(
                 "senderName": current_user.nickname or current_user.username,
                 "time": _format_message_time(new_message.timestamp),
                 "timestamp": new_message.timestamp.isoformat() if new_message.timestamp else None,
-                "forwardData": forward_data_json if len(forward_data_json) < 500 else None,
+                "forwardData": forward_data,
             },
         },
     )

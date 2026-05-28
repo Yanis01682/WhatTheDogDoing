@@ -71,6 +71,12 @@ function SidebarPanel({
   onTogglePinChat,
   // 黑名单列表
   blacklist,
+  // 收藏消息列表
+  favoriteItems = [],
+  // 打开收藏的原消息
+  onOpenFavorite,
+  // 移除收藏
+  onRemoveFavorite,
   // 移出黑名单回调
   onRemoveFromBlacklist,
   // 从黑名单打开聊天回调
@@ -135,6 +141,15 @@ function SidebarPanel({
 
   const archivedGroupSessions = filteredSessions.filter(shouldArchiveGroup)
   const normalSessions = filteredSessions.filter((session) => !shouldArchiveGroup(session))
+  const sidebarSearchValue = activeTab === 'friends' ? friendSearchQuery : activeTab === 'requests' ? '' : searchQuery
+  const sidebarPlaceholder = activeTab === 'requests' ? '申请列表无需搜索' : activeTab === 'favorites' ? '搜索收藏' : '搜索'
+  const showHeaderAddButton = activeTab === 'chats' || activeTab === 'friends'
+  const favoriteSearchText = searchQuery.trim().toLowerCase()
+  const filteredFavoriteItems = favoriteItems.filter((item) => {
+    if (!favoriteSearchText) return true
+    return [item.sessionTitle, item.senderName, item.text, item.mediaName, item.previewText]
+      .some((value) => String(value || '').toLowerCase().includes(favoriteSearchText))
+  })
 
   const handleSessionContextMenu = (e, session) => {
     e.preventDefault()
@@ -176,6 +191,23 @@ function SidebarPanel({
     }
   }
 
+  const getFavoritePreview = (item) => {
+    if (item.previewText) return item.previewText
+    if (item.type === 'image') return `[图片]${item.mediaName ? ` ${item.mediaName}` : ''}`
+    if (item.type === 'video') return `[视频]${item.mediaName ? ` ${item.mediaName}` : ''}`
+    if (item.type === 'file') return `[文件]${item.mediaName ? ` ${item.mediaName}` : ''}`
+    if (item.type === 'voice') return '[语音]'
+    if (item.type === 'forward') return `[聊天记录]${item.forwardTitle ? ` ${item.forwardTitle}` : ''}`
+    return item.text || '消息'
+  }
+
+  const formatFavoriteSavedAt = (value) => {
+    if (!value) return ''
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return ''
+    return `${date.getMonth() + 1}/${date.getDate()} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+  }
+
   const renderSessionItem = (session) => {
     return (
       <li
@@ -214,9 +246,9 @@ function SidebarPanel({
           <input
             type="text"
             className="wechat-search-input"
-            placeholder={activeTab === 'requests' ? '申请列表无需搜索' : '搜索'}
+            placeholder={sidebarPlaceholder}
             autoComplete="off"
-            value={activeTab === 'friends' ? friendSearchQuery : activeTab === 'requests' ? '' : searchQuery}
+            value={sidebarSearchValue}
             onChange={(e) => {
               if (activeTab === 'friends') {
                 setFriendSearchQuery(e.target.value)
@@ -226,7 +258,7 @@ function SidebarPanel({
             }}
             disabled={activeTab === 'requests'}
           />
-          {(activeTab === 'friends' ? friendSearchQuery : activeTab === 'requests' ? '' : searchQuery) && (
+          {sidebarSearchValue && (
             <button
               className="wechat-search-clear"
               type="button"
@@ -241,6 +273,7 @@ function SidebarPanel({
             >✕</button>
           )}
         </div>
+        {showHeaderAddButton && (
         <div className="wechat-add-btn-wrapper">
           <button 
             className="wechat-add-btn" 
@@ -252,6 +285,7 @@ function SidebarPanel({
             <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
           </button>
         </div>
+        )}
       </div>
 
       {activeTab === 'chats' && (
@@ -373,6 +407,47 @@ function SidebarPanel({
             <div className="empty-friends-hint">
               <p>暂无好友</p>
               <button onClick={handleOpenAddFriend}>添加好友</button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'favorites' && (
+        <div className="favorites-container">
+          {filteredFavoriteItems.length > 0 ? (
+            <ul className="favorite-list">
+              {filteredFavoriteItems.map((item) => (
+                <li key={item.id} className="favorite-item">
+                  <button type="button" className="favorite-main" onClick={() => onOpenFavorite?.(item)}>
+                    <div className="favorite-row">
+                      <span className="favorite-title">{item.sessionTitle || '聊天'}</span>
+                      <span className="favorite-time">{item.time || formatFavoriteSavedAt(item.savedAt)}</span>
+                    </div>
+                    <p className="favorite-preview">{getFavoritePreview(item)}</p>
+                    <div className="favorite-meta">
+                      <span>{item.senderName || '未知用户'}</span>
+                      <span>{formatFavoriteSavedAt(item.savedAt)}</span>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    className="favorite-remove"
+                    aria-label="取消收藏"
+                    title="取消收藏"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onRemoveFavorite?.(item.id)
+                    }}
+                  >
+                    ×
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="empty-favorites">
+              <p>{favoriteItems.length === 0 ? '暂无收藏' : '没有匹配的收藏'}</p>
+              <span>右键消息后选择“收藏”</span>
             </div>
           )}
         </div>

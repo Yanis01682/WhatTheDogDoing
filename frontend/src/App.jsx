@@ -59,6 +59,7 @@ import LeftNav from './components/stage2/LeftNav'
 import SidebarPanel from './components/stage2/SidebarPanel'
 import ChatMainView from './components/stage2/ChatMainView'
 import Overlays from './components/stage2/Overlays'
+import { getForwardMessageLabel, normalizeForwardData } from './utils/forwardData'
 
 const EMPTY_SESSION = {
   id: null,
@@ -189,6 +190,7 @@ function App() {
   const [showChatDetail, setShowChatDetail] = useState(false) // 聊天详情模态框
   const [activeTab, setActiveTab] = useState('chats') // 当前激活的标签页：chats-会话，friends-好友
   const [blacklist, setBlacklist] = useState([]) // 黑名单列表
+  const [favoriteItems, setFavoriteItems] = useState([]) // 收藏消息列表
   const [showAddFriendModal, setShowAddFriendModal] = useState(false) // 添加好友模态框
   const [isEditingRemark, setIsEditingRemark] = useState(false) // 是否正在编辑备注
   const [tempRemark, setTempRemark] = useState('') // 临时备注
@@ -425,6 +427,7 @@ function App() {
           : session
       )
     )
+    return withMarkedReplies
   }
 
   const refreshGroupConversationMembers = async (conversationId) => {
@@ -515,20 +518,23 @@ function App() {
     )
 
     return visibleMessages.map((message) => {
-      if (!message.replyTo) {
-        return message
+      const normalizedMessage = message.type === 'forward'
+        ? { ...message, forwardData: normalizeForwardData(message.forwardData) }
+        : message
+      if (!normalizedMessage.replyTo) {
+        return normalizedMessage
       }
-      if (message.replyTo.id <= clearBeforeId || locallyDeleted.has(message.replyTo.id)) {
+      if (normalizedMessage.replyTo.id <= clearBeforeId || locallyDeleted.has(normalizedMessage.replyTo.id)) {
         return {
-          ...message,
+          ...normalizedMessage,
           replyTo: {
-            ...message.replyTo,
+            ...normalizedMessage.replyTo,
             deleted: true,
-            deletedLabel: message.replyTo.id <= clearBeforeId ? '该消息已清空' : '该消息已删除',
+            deletedLabel: normalizedMessage.replyTo.id <= clearBeforeId ? '该消息已清空' : '该消息已删除',
           },
         }
       }
-      return message
+      return normalizedMessage
     })
   }
   const markReplyToDeleted = (convId, deletedMsgId, label) => {
@@ -587,6 +593,19 @@ function App() {
       } catch (err) {
         console.warn('解析 blacklist 失败，使用默认值', err)
       }
+    }
+
+    const savedFavorites = localStorage.getItem(getScopedStorageKey('wtdd_favorite_messages'))
+    if (savedFavorites) {
+      try {
+        const parsed = JSON.parse(savedFavorites)
+        setFavoriteItems(Array.isArray(parsed) ? parsed : [])
+      } catch (err) {
+        console.warn('解析收藏消息失败，使用默认值', err)
+        setFavoriteItems([])
+      }
+    } else {
+      setFavoriteItems([])
     }
   }, [currentUserId])
 
@@ -697,6 +716,9 @@ function App() {
           if (payload.message && payload.conversationId === currentChat) {
             const msg = payload.message
             msg.sender = msg.type === 'system' ? 'system' : (msg.senderId === currentUserId ? 'me' : 'other')
+            if (msg.type === 'forward') {
+              msg.forwardData = normalizeForwardData(msg.forwardData)
+            }
             
             // 检查是否被 @
             if (msg.sender !== 'me' && msg.mentionedUserIds) {
@@ -922,6 +944,11 @@ function App() {
     if (!currentUserId) return
     localStorage.setItem(getScopedStorageKey('blacklist'), JSON.stringify(blacklist))
   }, [blacklist, currentUserId])
+
+  useEffect(() => {
+    if (!currentUserId) return
+    localStorage.setItem(`wtdd_favorite_messages:${currentUserId}`, JSON.stringify(favoriteItems))
+  }, [favoriteItems, currentUserId])
 
   // 切换黑名单状态
   const handleToggleBlacklist = (user) => {
@@ -2062,6 +2089,41 @@ function App() {
     closeContextMenu()
   }
 
+  const handleFavoriteMessage = () => {
+    if (!contextMenu?.message) return
+    const currentSession = getCurrentSession()
+    if (!currentSession?.id) return
+
+    const message = contextMenu.message
+    const normalizedMessage = message.type === 'forward'
+      ? { ...message, forwardData: normalizeForwardData(message.forwardData) }
+      : message
+    const senderName = normalizedMessage.sender === 'me'
+      ? (profileData.nickname || profileData.username || '我')
+      : (normalizedMessage.senderName || (currentSession.isGroup ? '群成员' : currentSession.title) || '对方')
+    const savedAt = new Date().toISOString()
+    const favoriteItem = {
+      id: `${currentSession.id}:${normalizedMessage.id}`,
+      sessionId: currentSession.id,
+      sessionTitle: currentSession.title || '聊天',
+      messageId: normalizedMessage.id,
+      senderName,
+      type: normalizedMessage.type || 'text',
+      text: normalizedMessage.text || '',
+      mediaUrl: normalizedMessage.mediaUrl || null,
+      mediaName: normalizedMessage.mediaName || null,
+      forwardTitle: normalizedMessage.forwardData?.title || '',
+      forwardData: normalizedMessage.forwardData || null,
+      previewText: getForwardMessageLabel(normalizedMessage) || '消息',
+      time: normalizedMessage.time || formatDisplayDateTime(normalizedMessage.timestamp) || '',
+      timestamp: normalizedMessage.timestamp || savedAt,
+      savedAt,
+    }
+
+    setFavoriteItems((prev) => [favoriteItem, ...prev.filter((item) => item.id !== favoriteItem.id)].slice(0, 500))
+    closeContextMenu()
+  }
+
   // 回复消息
   const handleReplyMessage = () => {
     if (!contextMenu) return
@@ -2130,7 +2192,7 @@ function App() {
 
   // 发送合并转发消息到指定会话
   const handleSendMessageToSession = async (targetSessionId, messagesToForward) => {
-    if (!targetSessionId || !messagesToForward || messagesToForward.length === 0) return
+    if (!targetSessionId || !messagesToForward || messagesToForward.length === 0) return false
     
     try {
       // 获取当前用户信息
@@ -2175,9 +2237,11 @@ function App() {
       exitMultiSelectMode()
       
       console.log('合并转发成功', { targetSessionId, messageCount: forwardMessages.length })
+      return true
     } catch (error) {
       console.error('合并转发失败', error)
       alert('转发失败，请重试')
+      return false
     }
   }
 
@@ -2801,12 +2865,14 @@ function App() {
       setDynamicSessions([])
       setPinnedChatIds([])
       setBlacklist([])
+      setFavoriteItems([])
       setShowUserPanel(false)
       setShowDeleteConfirm(false)
 
       try {
         localStorage.removeItem(getScopedStorageKey('archivedGroupIds'))
         localStorage.removeItem(getScopedStorageKey('blacklist'))
+        localStorage.removeItem(getScopedStorageKey('wtdd_favorite_messages'))
         localStorage.removeItem(getScopedStorageKey('wtdd_deleted_msgs'))
         localStorage.removeItem(getScopedStorageKey('wtdd_cleared_conversations'))
         // userStatus removed
@@ -3121,6 +3187,27 @@ function App() {
     }
   }
 
+  const handleOpenFavoriteItem = async (favorite) => {
+    if (!favorite?.sessionId) return
+    const allSessions = [...sessions, ...dynamicSessions]
+    if (!allSessions.some((session) => session.id === favorite.sessionId)) {
+      alert('收藏对应的会话不存在或已不可见')
+      return
+    }
+
+    await handleSwitchChat(favorite.sessionId)
+    const loadedMessages = await refreshConversationMessages(favorite.sessionId).catch(() => null)
+    if (Array.isArray(loadedMessages) && loadedMessages.some((message) => message.id === favorite.messageId)) {
+      setJumpToMessageId(favorite.messageId)
+    } else {
+      alert('原消息已在当前设备被删除或清空，已打开对应会话')
+    }
+  }
+
+  const handleRemoveFavoriteItem = (favoriteId) => {
+    setFavoriteItems((prev) => prev.filter((item) => item.id !== favoriteId))
+  }
+
   // 未登录时显示登录界面
   if (!isLoggedIn) {
     return (
@@ -3144,6 +3231,7 @@ function App() {
           setActiveTab={setActiveTab}
           pendingRequestCount={friendRequestList.length + groupInviteRequests.length}
           atMentionCount={atMentionCount}
+          favoriteCount={favoriteItems.length}
         />
 
       <main className="im-layout">
@@ -3176,6 +3264,9 @@ function App() {
           chatlistWidth={chatlistWidth}
           pinnedChatIds={pinnedChatIds}
           onTogglePinChat={handleTogglePinChat}
+          favoriteItems={favoriteItems}
+          onOpenFavorite={handleOpenFavoriteItem}
+          onRemoveFavorite={handleRemoveFavoriteItem}
           onRemoveFromBlacklist={handleRemoveFromBlacklist}
           onOpenBlacklistChat={handleOpenBlacklistChat}
           friendRequestList={friendRequestList}
@@ -3252,6 +3343,7 @@ function App() {
 
         handleRevokeMessage={handleRevokeMessage}
         handleDeleteMessage={handleDeleteMessage}
+        handleFavoriteMessage={handleFavoriteMessage}
         startMultiSelectFromMenu={startMultiSelectFromMenu}
         showForwardDialog={showForwardDialog}
         cancelForward={cancelForward}
