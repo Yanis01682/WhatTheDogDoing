@@ -53,11 +53,16 @@ import {
   updateGroupNickname,
   updateSessionMute,
   sendForwardMessage,
+  getNotes,
+  createNote,
+  updateNote,
+  deleteNote,
 } from './services/api'
 import AuthView from './components/stage2/AuthView'
 import LeftNav from './components/stage2/LeftNav'
 import SidebarPanel from './components/stage2/SidebarPanel'
 import ChatMainView from './components/stage2/ChatMainView'
+import NoteWorkspace from './components/stage2/NoteWorkspace'
 import Overlays from './components/stage2/Overlays'
 import { getForwardMessageLabel, normalizeForwardData } from './utils/forwardData'
 import { AEGIS_DEFAULT_GROUP_AVATAR, AEGIS_DEFAULT_USER_AVATAR, resolveAegisAvatar } from './utils/aegisAvatars'
@@ -192,7 +197,9 @@ function App() {
   const [activeTab, setActiveTab] = useState('chats') // 当前激活的标签页：chats-会话，friends-好友
   const [blacklist, setBlacklist] = useState([]) // 黑名单列表
   const [favoriteItems, setFavoriteItems] = useState([]) // 收藏消息列表
-  const [noteItems, setNoteItems] = useState([]) // 本机笔记列表
+  const [noteItems, setNoteItems] = useState([]) // 笔记列表
+  const [editingNoteId, setEditingNoteId] = useState(null)
+  const [noteDraft, setNoteDraft] = useState({ title: '', content: '' })
   const [showAddFriendModal, setShowAddFriendModal] = useState(false) // 添加好友模态框
   const [isEditingRemark, setIsEditingRemark] = useState(false) // 是否正在编辑备注
   const [tempRemark, setTempRemark] = useState('') // 临时备注
@@ -610,18 +617,12 @@ function App() {
       setFavoriteItems([])
     }
 
-    const savedNotes = localStorage.getItem(getScopedStorageKey('aegis_notes'))
-    if (savedNotes) {
-      try {
-        const parsed = JSON.parse(savedNotes)
-        setNoteItems(Array.isArray(parsed) ? parsed : [])
-      } catch (err) {
-        console.warn('解析笔记失败，使用默认值', err)
+    getNotes()
+      .then((notes) => setNoteItems(Array.isArray(notes) ? notes : []))
+      .catch((err) => {
+        console.warn('加载笔记失败', err)
         setNoteItems([])
-      }
-    } else {
-      setNoteItems([])
-    }
+      })
   }, [currentUserId])
 
   useEffect(() => {
@@ -964,11 +965,6 @@ function App() {
     if (!currentUserId) return
     localStorage.setItem(`wtdd_favorite_messages:${currentUserId}`, JSON.stringify(favoriteItems))
   }, [favoriteItems, currentUserId])
-
-  useEffect(() => {
-    if (!currentUserId) return
-    localStorage.setItem(getScopedStorageKey('aegis_notes'), JSON.stringify(noteItems))
-  }, [noteItems, currentUserId])
 
   // 切换黑名单状态
   const handleToggleBlacklist = (user) => {
@@ -3242,28 +3238,56 @@ function App() {
     setFavoriteItems((prev) => prev.filter((item) => item.id !== favoriteId))
   }
 
-  const handleCreateNote = (note) => {
-    const now = new Date().toISOString()
-    setNoteItems((prev) => [{
-      id: `note-${Date.now()}`,
-      title: note.title?.trim() || '无标题笔记',
-      content: note.content?.trim() || '',
-      createdAt: now,
-      updatedAt: now,
-    }, ...prev])
+  const handleStartNewNote = () => {
+    setActiveTab('notes')
+    setEditingNoteId('new')
+    setNoteDraft({ title: '', content: '' })
   }
 
-  const handleUpdateNote = (noteId, note) => {
-    setNoteItems((prev) => prev.map((item) => (
-      item.id === noteId
-        ? { ...item, title: note.title?.trim() || '无标题笔记', content: note.content?.trim() || '', updatedAt: new Date().toISOString() }
-        : item
-    )))
+  const handleSelectNote = (note) => {
+    setEditingNoteId(note.id)
+    setNoteDraft({ title: note.title || '', content: note.content || '' })
   }
 
-  const handleDeleteNote = (noteId) => {
+  const handleCancelNote = () => {
+    setEditingNoteId(null)
+    setNoteDraft({ title: '', content: '' })
+  }
+
+  const handleCreateNote = async (note) => {
+    const created = await createNote(note)
+    setNoteItems((prev) => [created, ...prev.filter((item) => item.id !== created.id)])
+    return created
+  }
+
+  const handleUpdateNote = async (noteId, note) => {
+    const updated = await updateNote(noteId, note)
+    setNoteItems((prev) => prev.map((item) => (item.id === noteId ? updated : item)))
+    return updated
+  }
+
+  const handleDeleteNote = async (noteId) => {
+    await deleteNote(noteId)
     setNoteItems((prev) => prev.filter((item) => item.id !== noteId))
+    if (editingNoteId === noteId) {
+      handleCancelNote()
+    }
   }
+
+  const handleSaveNoteDraft = async () => {
+    if (!noteDraft.title.trim() && !noteDraft.content.trim()) return
+    if (editingNoteId === 'new') {
+      const created = await handleCreateNote(noteDraft)
+      setEditingNoteId(created.id)
+      setNoteDraft({ title: created.title || '', content: created.content || '' })
+      return
+    }
+    const updated = await handleUpdateNote(editingNoteId, noteDraft)
+    setEditingNoteId(updated.id)
+    setNoteDraft({ title: updated.title || '', content: updated.content || '' })
+  }
+
+  const selectedNote = noteItems.find((note) => note.id === editingNoteId) || null
 
   // 未登录时显示登录界面
   if (!isLoggedIn) {
@@ -3322,10 +3346,11 @@ function App() {
           onTogglePinChat={handleTogglePinChat}
           favoriteItems={favoriteItems}
           noteItems={noteItems}
+          selectedNoteId={editingNoteId}
           onOpenFavorite={handleOpenFavoriteItem}
           onRemoveFavorite={handleRemoveFavoriteItem}
-          onCreateNote={handleCreateNote}
-          onUpdateNote={handleUpdateNote}
+          onStartNewNote={handleStartNewNote}
+          onSelectNote={handleSelectNote}
           onDeleteNote={handleDeleteNote}
           onRemoveFromBlacklist={handleRemoveFromBlacklist}
           onOpenBlacklistChat={handleOpenBlacklistChat}
@@ -3340,57 +3365,70 @@ function App() {
         {/* 侧边栏与聊天窗口的固定分隔线 */}
         <div className="resize-handle" />
 
-        <ChatMainView
-          getCurrentSession={getCurrentSession}
-          groupMembers={groupMembers}
-          currentChat={currentChat}
-          userAvatar={userAvatar}
-          handleOpenPeerProfile={handleOpenPeerProfile}
-          handleOpenProfile={handleOpenProfile}
-          handleOpenMemberList={handleOpenMemberList}
-          handleOpenChatDetail={handleOpenChatDetail}
-          handleOpenSearchMessage={handleOpenSearchMessage}
-          messages={messages}
-          handleMessagesClick={handleMessagesClick}
-          handleMessageContextMenu={handleMessageContextMenu}
-          jumpToMessageId={jumpToMessageId}
-          handleJumpHandled={() => setJumpToMessageId(null)}
-          handleJumpToOriginalMessage={handleJumpToOriginalMessage}
-          composerHeight={composerHeight}
-          replyToMessage={replyToMessage}
-          cancelReply={cancelReply}
-          showEmojiPicker={showEmojiPicker}
-          toggleEmojiPicker={toggleEmojiPicker}
-          messageInput={messageInput}
-          setMessageInput={handleMessageInputChange}
-          handleKeyPress={handleKeyPress}
-          handleSendMessage={handleSendMessage}
-          handleSendImage={handleSendImage}
-          handleSendVideo={handleSendVideo}
-          handleSendFile={handleSendFile}
-          handleVoiceRecord={handleVoiceRecord}
-          isRecording={isRecording}
-          isComposingResizing={isComposingResizing}
-          handleComposerResizeStart={handleComposerResizeStart}
-          onOpenLightbox={openLightbox}
-          pendingAnnouncements={pendingAnnouncements}
-          onConfirmAnnouncement={async (id) => {
-            await confirmAnnouncement(currentChat, id)
-            setPendingAnnouncements(prev => prev.filter(a => a.id !== id))
-          }}
-          showMentionPicker={showMentionPicker}
-          hideMentionPicker={hideMentionPicker}
-          handleSelectMention={handleSelectMention}
-          getFilteredMentionMembers={getFilteredMentionMembers}
-          selectedMentionIndex={selectedMentionIndex}
-          setSelectedMentionIndex={setSelectedMentionIndex}
-          isMultiSelectMode={isMultiSelectMode}
-          selectedMessages={selectedMessages}
-          toggleMessageSelection={toggleMessageSelection}
-          exitMultiSelectMode={exitMultiSelectMode}
-          startForward={startForward}
-          handleOpenForwardDetail={handleOpenForwardDetail}
-        />
+        {activeTab === 'notes' ? (
+          <NoteWorkspace
+            editingNoteId={editingNoteId}
+            noteDraft={noteDraft}
+            setNoteDraft={setNoteDraft}
+            selectedNote={selectedNote}
+            noteCount={noteItems.length}
+            onStartNewNote={handleStartNewNote}
+            onSaveNote={handleSaveNoteDraft}
+            onCancelNote={handleCancelNote}
+          />
+        ) : (
+          <ChatMainView
+            getCurrentSession={getCurrentSession}
+            groupMembers={groupMembers}
+            currentChat={currentChat}
+            userAvatar={userAvatar}
+            handleOpenPeerProfile={handleOpenPeerProfile}
+            handleOpenProfile={handleOpenProfile}
+            handleOpenMemberList={handleOpenMemberList}
+            handleOpenChatDetail={handleOpenChatDetail}
+            handleOpenSearchMessage={handleOpenSearchMessage}
+            messages={messages}
+            handleMessagesClick={handleMessagesClick}
+            handleMessageContextMenu={handleMessageContextMenu}
+            jumpToMessageId={jumpToMessageId}
+            handleJumpHandled={() => setJumpToMessageId(null)}
+            handleJumpToOriginalMessage={handleJumpToOriginalMessage}
+            composerHeight={composerHeight}
+            replyToMessage={replyToMessage}
+            cancelReply={cancelReply}
+            showEmojiPicker={showEmojiPicker}
+            toggleEmojiPicker={toggleEmojiPicker}
+            messageInput={messageInput}
+            setMessageInput={handleMessageInputChange}
+            handleKeyPress={handleKeyPress}
+            handleSendMessage={handleSendMessage}
+            handleSendImage={handleSendImage}
+            handleSendVideo={handleSendVideo}
+            handleSendFile={handleSendFile}
+            handleVoiceRecord={handleVoiceRecord}
+            isRecording={isRecording}
+            isComposingResizing={isComposingResizing}
+            handleComposerResizeStart={handleComposerResizeStart}
+            onOpenLightbox={openLightbox}
+            pendingAnnouncements={pendingAnnouncements}
+            onConfirmAnnouncement={async (id) => {
+              await confirmAnnouncement(currentChat, id)
+              setPendingAnnouncements(prev => prev.filter(a => a.id !== id))
+            }}
+            showMentionPicker={showMentionPicker}
+            hideMentionPicker={hideMentionPicker}
+            handleSelectMention={handleSelectMention}
+            getFilteredMentionMembers={getFilteredMentionMembers}
+            selectedMentionIndex={selectedMentionIndex}
+            setSelectedMentionIndex={setSelectedMentionIndex}
+            isMultiSelectMode={isMultiSelectMode}
+            selectedMessages={selectedMessages}
+            toggleMessageSelection={toggleMessageSelection}
+            exitMultiSelectMode={exitMultiSelectMode}
+            startForward={startForward}
+            handleOpenForwardDetail={handleOpenForwardDetail}
+          />
+        )}
       </main>
 
       <Overlays
