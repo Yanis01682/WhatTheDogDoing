@@ -92,7 +92,7 @@ class UserNotePayload(BaseModel):
 
 
 class MomentPostPayload(BaseModel):
-    content: str
+    content: str = ""
     image_url: Optional[str] = None
 
 
@@ -341,7 +341,7 @@ def _get_friend_ids(db: Session, user_id: int):
 
 
 def _can_view_moment(db: Session, post: models.MomentPost, user_id: int):
-    return post.user_id == user_id or post.user_id in _get_friend_ids(db, user_id)
+    return True
 
 
 def _get_visible_moment_or_404(db: Session, post_id: int, user_id: int):
@@ -368,7 +368,7 @@ def _serialize_moment(db: Session, post: models.MomentPost, current_user_id: int
     def public_user(user_id):
         user = user_map.get(user_id)
         name = (user.nickname or user.username) if user else "未知成员"
-        return {"id": user_id, "name": name, "avatar": user.avatar if user and user.avatar else "/aegis-avatar-shield.svg"}
+        return {"id": user_id, "name": name, "avatar": user.avatar if user and user.avatar else "/aegis-avatar-warden-v2.png"}
 
     return {
         "id": post.id,
@@ -451,7 +451,7 @@ def _serialize_user(user: models.User, remark: Optional[str] = None, group_name:
         "userId": user.username,
         "accountId": str(user.id),
         "name": display_name,
-        "avatar": user.avatar or '/aegis-avatar-shield.svg',
+        "avatar": user.avatar or '/aegis-avatar-warden-v2.png',
         "signature": user.bio or "",
         "email": user.email or "",
         "group": group_name or "我的好友",
@@ -661,7 +661,7 @@ def _serialize_session(db: Session, conversation: models.Conversation, current_u
         )
 
     title = conversation.name or "未命名会话"
-    avatar = '/aegis-avatar-order.svg'
+    avatar = '/aegis-avatar-group.png'
     real_name = title
 
     if not conversation.is_group:
@@ -670,7 +670,7 @@ def _serialize_session(db: Session, conversation: models.Conversation, current_u
         if peer_user:
             title = peer_user.nickname or peer_user.username
             real_name = peer_user.username
-            avatar = peer_user.avatar or '/aegis-avatar-shield.svg'
+            avatar = peer_user.avatar or '/aegis-avatar-warden-v2.png'
 
     payload = {
         "id": conversation.id,
@@ -717,10 +717,10 @@ def _serialize_group_invite_request(
         "groupName": conversation.name or f"群聊 {conversation.id}",
         "requesterId": invite_request.requester_id,
         "requesterName": requester.nickname or requester.username,
-        "requesterAvatar": requester.avatar or (requester.nickname or requester.username or "群")[:1].upper(),
+        "requesterAvatar": requester.avatar or "/aegis-avatar-warden-v2.png",
         "inviteeId": invite_request.invitee_id,
         "inviteeName": invitee.nickname or invitee.username,
-        "inviteeAvatar": invitee.avatar or (invitee.nickname or invitee.username or "群")[:1].upper(),
+        "inviteeAvatar": invitee.avatar or "/aegis-avatar-warden-v2.png",
         "status": invite_request.status,
         "createdAt": invite_request.created_at.isoformat() if invite_request.created_at else None,
     }
@@ -784,10 +784,8 @@ def read_moments(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user),
 ):
-    visible_user_ids = _get_friend_ids(db, current_user.id) | {current_user.id}
     posts = (
         db.query(models.MomentPost)
-        .filter(models.MomentPost.user_id.in_(visible_user_ids))
         .order_by(models.MomentPost.created_at.desc(), models.MomentPost.id.desc())
         .limit(50)
         .all()
@@ -802,17 +800,42 @@ def create_moment(
     current_user: models.User = Depends(auth.get_current_user),
 ):
     content = payload.content.strip()
-    if not content:
-        raise HTTPException(status_code=400, detail="Moment content cannot be empty")
+    image_url = (payload.image_url or "").strip()
+    if not content and not image_url:
+        raise HTTPException(status_code=400, detail="Moment content or image is required")
     post = models.MomentPost(
         user_id=current_user.id,
         content=content[:1000],
-        image_url=(payload.image_url or "").strip() or None,
+        image_url=image_url or None,
     )
     db.add(post)
     db.commit()
     db.refresh(post)
     return _serialize_moment(db, post, current_user.id)
+
+
+@router.post("/moments/upload-image")
+async def upload_moment_image(
+    file: UploadFile = File(...),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    allowed_image_types = {
+        "image/png",
+        "image/jpeg",
+        "image/jpg",
+        "image/gif",
+        "image/webp",
+        "image/bmp",
+    }
+    if file.content_type not in allowed_image_types:
+        raise HTTPException(status_code=400, detail="Unsupported image format")
+
+    content = await file.read()
+    if len(content) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Image size cannot exceed 5MB")
+
+    media_data = f"data:{file.content_type};base64,{base64.b64encode(content).decode('ascii')}"
+    return {"imageUrl": media_data}
 
 
 @router.post("/moments/{post_id}/like")
@@ -2465,7 +2488,7 @@ def read_group_members(
                 "name": user.username,
                 "displayName": display_name,
                 "groupNickname": member.group_nickname or "",
-                "avatar": user.avatar or display_name[:1].upper(),
+                "avatar": user.avatar or "/aegis-avatar-warden-v2.png",
                 "role": member.role or "member",
             }
         )

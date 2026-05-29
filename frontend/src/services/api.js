@@ -135,6 +135,15 @@ export async function createMoment(content, imageUrl = '') {
   return res.data
 }
 
+export async function uploadMomentImage(file) {
+  const formData = new FormData()
+  formData.append('file', file)
+  const res = await apiClient.post('/api/chat/moments/upload-image', formData, {
+    headers: { 'Content-Type': undefined },
+  })
+  return res.data
+}
+
 export async function toggleMomentLike(postId) {
   const res = await apiClient.post(`/api/chat/moments/${postId}/like`)
   return res.data

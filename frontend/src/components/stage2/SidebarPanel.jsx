@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
+import { resolveAegisAvatar } from '../../utils/aegisAvatars'
 
 function renderAvatar(av, className) {
-  if (typeof av === 'string' && (av.startsWith('data:image') || av.startsWith('/'))) {
+  const resolvedAvatar = resolveAegisAvatar(av)
+  if (typeof resolvedAvatar === 'string' && (resolvedAvatar.startsWith('data:image') || resolvedAvatar.startsWith('/'))) {
     return (
       <div
         className={className}
-        style={{ backgroundImage: `url(${av})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+        style={{ backgroundImage: `url(${resolvedAvatar})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
       />
     )
   }
