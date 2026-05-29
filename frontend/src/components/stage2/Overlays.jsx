@@ -810,7 +810,7 @@ function Overlays({
                   </div>
                   <div className="detail-section"><div className="section-title">消息免打扰</div><div className="section-content"><label className="toggle-switch-label"><input type="checkbox" className="toggle-checkbox" checked={isSessionMuted(currentChat)} onChange={() => handleToggleSessionMute(currentChat)} /><span className="toggle-slider"></span></label></div></div>
                   <div className="detail-section"><div className="section-title">置顶聊天</div><div className="section-content"><label className="toggle-switch-label"><input type="checkbox" className="toggle-checkbox" checked={isChatPinned(currentChat)} onChange={() => handleTogglePinChat(currentChat)} /><span className="toggle-slider"></span></label></div></div>
-                  <div className="detail-section"><div className="section-title">本机记录</div><div className="section-content"><button className="danger-btn" onClick={handleClearChatHistory}>清空聊天记录</button></div></div>
+                  <div className="detail-section"><div className="section-title">账号记录</div><div className="section-content"><button className="danger-btn" onClick={handleClearChatHistory}>清空聊天记录</button></div></div>
 
                   {userRole === 'owner' && (
                     <div className="detail-section"><div className="section-title">退出群聊</div><div className="section-content"><button className="danger-btn" onClick={handleDismissGroup}>解散群聊</button></div></div>
@@ -885,7 +885,7 @@ function Overlays({
                   <div className="detail-section"><div className="section-title">置顶聊天</div><div className="section-content"><label className="toggle-switch-label"><input type="checkbox" className="toggle-checkbox" checked={isChatPinned(currentChat)} onChange={() => handleTogglePinChat(currentChat)} /><span className="toggle-slider"></span></label></div></div>
                   <div className="detail-section"><div className="section-title">消息免打扰</div><div className="section-content"><label className="toggle-switch-label"><input type="checkbox" className="toggle-checkbox" checked={isSessionMuted(currentChat)} onChange={() => handleToggleSessionMute(currentChat)} /><span className="toggle-slider"></span></label></div></div>
                   <div className="detail-section"><div className="section-title">添加到黑名单</div><div className="section-content"><label className="toggle-switch-label"><input type="checkbox" className="toggle-checkbox" checked={currentSession.isGroup ? false : isUserInBlacklist(blacklistTarget.id)} onChange={() => !currentSession.isGroup && handleToggleBlacklist(blacklistTarget)} /><span className="toggle-slider"></span></label></div></div>
-                  <div className="detail-section"><div className="section-title">本机记录</div><div className="section-content"><button className="danger-btn" onClick={handleClearChatHistory}>清空聊天记录</button></div></div>
+                  <div className="detail-section"><div className="section-title">账号记录</div><div className="section-content"><button className="danger-btn" onClick={handleClearChatHistory}>清空聊天记录</button></div></div>
                   <div className="detail-section"><div className="section-content"><button className="danger-btn" onClick={() => currentPrivateFriend && handleDeleteFriend(currentPrivateFriend.id)} disabled={!currentPrivateFriend}>删除好友</button></div></div>
                 </div>
               )}

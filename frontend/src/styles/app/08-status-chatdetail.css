@@ -197,7 +197,7 @@
   right: 0;
   bottom: 0;
   left: 0;
-  background: rgba(0, 0, 0, 0.3);
+  background: rgba(255, 252, 247, 0.26);
   z-index: 1000;
   animation: fadeIn 0.2s ease;
 }
@@ -210,8 +210,9 @@
   bottom: 0;
   width: 100%;
   max-width: 380px;
-  background: #ededed;
-  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.1);
+  background: rgba(255, 252, 247, 0.9);
+  border-left: 1px solid rgba(145, 118, 72, 0.18);
+  box-shadow: -24px 0 60px rgba(72, 56, 26, 0.16);
   animation: slideInRight 0.3s ease;
   overflow-y: auto;
 }
@@ -231,8 +232,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px;
-  border-bottom: 1px solid #d9d9d9;
-  background: #ededed;
+  border-bottom: 1px solid rgba(145, 118, 72, 0.14);
+  background: rgba(255, 251, 244, 0.96);
   position: sticky;
   top: 0;
   z-index: 1;
@@ -242,7 +243,7 @@
   margin: 0;
   font-size: 1.1rem;
   font-weight: 500;
-  color: #000;
+  color: #2b241a;
 }
 
 .chat-detail-close {
@@ -251,7 +252,7 @@
   border: none;
   background: transparent;
   font-size: 1.5rem;
-  color: #666;
+  color: #7b6447;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -261,13 +262,14 @@
 }
 
 .chat-detail-close:hover {
-  background: #f0f0f0;
-  color: #333;
+  background: rgba(145, 118, 72, 0.08);
+  color: #2b241a;
 }
 
 /* 鑱婂ぉ璇︽儏鍐呭鍖?*/
 .chat-detail-content {
   padding: 0;
+  background: transparent;
 }
 
 /* 缇よ亰璇︽儏鍖哄煙 */
@@ -276,8 +278,8 @@
   flex-direction: column;
   align-items: center;
   padding: 30px 20px;
-  border-bottom: 8px solid #ededed;
-  background: #fff;
+  border-bottom: 1px solid rgba(145, 118, 72, 0.12);
+  background: rgba(255, 255, 255, 0.52);
 }
 
 .group-avatar-large {
@@ -288,7 +290,8 @@
   max-width: 64px;
   max-height: 64px;
   border-radius: 8px;
-  background-color: #0abab5;
+  background: linear-gradient(135deg, #fbf6ec, #e8d6b7);
+  border: 1px solid rgba(145, 118, 72, 0.22);
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -297,9 +300,9 @@
   justify-content: center;
   font-size: 2rem;
   font-weight: 500;
-  color: #ffffff;
+  color: #2b241a;
   margin-bottom: 12px;
-  box-shadow: none;
+  box-shadow: 0 16px 28px rgba(0, 0, 0, 0.28);
   overflow: hidden;
 }
 
@@ -328,18 +331,18 @@
   margin: 0;
   font-size: 1.2rem;
   font-weight: 500;
-  color: #000;
+  color: #f4e5c4;
 }
 
 .edit-group-name-btn,
 .save-group-name-btn,
 .cancel-group-name-btn {
   padding: 4px 12px;
-  border: 1px solid #d9d9d9;
+  border: 1px solid rgba(214, 177, 104, 0.22);
   border-radius: 4px;
-  background: #fff;
+  background: rgba(255, 255, 255, 0.03);
   font-size: 0.85rem;
-  color: #576b95;
+  color: #f1d8a8;
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -347,7 +350,7 @@
 .edit-group-name-btn:hover,
 .save-group-name-btn:hover,
 .cancel-group-name-btn:hover {
-  background: #f5f5f5;
+  background: rgba(214, 177, 104, 0.08);
 }
 
 .group-name-edit-row {
@@ -361,15 +364,15 @@
 .group-name-edit-input {
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid #d9d9d9;
+  border: 1px solid rgba(214, 177, 104, 0.22);
   border-radius: 10px;
   font-size: 0.92rem;
   outline: none;
 }
 
 .group-name-edit-input:focus {
-  border-color: #0abab5;
-  box-shadow: 0 0 0 2px rgba(7, 193, 96, 0.15);
+  border-color: #d6b168;
+  box-shadow: 0 0 0 2px rgba(214, 177, 104, 0.16);
 }
 
 .group-name-edit-actions {
@@ -386,15 +389,15 @@
 
 .save-group-name-btn:disabled:hover,
 .cancel-group-name-btn:disabled:hover {
-  border-color: #d0d0d0;
-  color: #555;
-  background: #ffffff;
+  border-color: rgba(214, 177, 104, 0.14);
+  color: #8f7b5a;
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .group-member-count {
   margin: 0;
   font-size: 0.9rem;
-  color: #666;
+  color: #c8b38a;
 }
 
 .group-detail-value {
@@ -408,7 +411,7 @@
 .group-detail-text {
   flex: 1;
   font-size: 0.95rem;
-  color: #333;
+  color: #e8d9bc;
   word-break: break-word;
 }
 
@@ -418,8 +421,8 @@
   flex-direction: column;
   align-items: center;
   padding: 30px 20px;
-  border-bottom: 8px solid #ededed;
-  background: #fff;
+  border-bottom: 1px solid rgba(214, 177, 104, 0.12);
+  background: rgba(255, 255, 255, 0.02);
 }
 
 .personal-avatar-large {
@@ -430,7 +433,8 @@
   max-width: 64px;
   max-height: 64px;
   border-radius: 6px;
-  background-color: #0abab5;
+  background: linear-gradient(135deg, #1a140f, #2e2113);
+  border: 1px solid rgba(214, 177, 104, 0.24);
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -439,7 +443,7 @@
   justify-content: center;
   font-size: 2rem;
   font-weight: 500;
-  color: #ffffff;
+  color: #f4e5c4;
   margin-bottom: 12px;
   box-shadow: none;
   transition: none;
@@ -455,7 +459,7 @@
   margin: 0 0 6px 0;
   font-size: 1.2rem;
   font-weight: 500;
-  color: #000;
+  color: #f4e5c4;
 }
 
 .personal-status {
