@@ -747,6 +747,15 @@ def test_translate_message_uses_ai_gateway(monkeypatch):
     assert response.json()["source"] == "oath received"
 
 
+def test_ai_gateway_reads_api_key_from_config_file(monkeypatch, tmp_path):
+    config_file = tmp_path / "siliconflow.env"
+    config_file.write_text("SILICONFLOW_API_KEY=config-file-key\n", encoding="utf-8")
+    monkeypatch.delenv("SILICONFLOW_API_KEY", raising=False)
+    monkeypatch.setenv("SILICONFLOW_API_KEY_FILE", str(config_file))
+
+    assert chat.ai_gateway._get_api_key() == "config-file-key"
+
+
 def test_group_bot_replies_when_mentioned(monkeypatch):
     headers_alice, _ = register_and_login("bot_alice", "bot_alice@example.com")
     headers_bob, bob_user = register_and_login("bot_bob", "bot_bob@example.com")

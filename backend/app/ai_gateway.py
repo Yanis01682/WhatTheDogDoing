@@ -8,10 +8,46 @@ SILICONFLOW_CHAT_URL = "https://api.siliconflow.cn/v1/chat/completions"
 DEFAULT_MODEL = "Qwen/Qwen2.5-7B-Instruct"
 BOT_NAME = "露恩"
 BOT_ALIASES = ("@露恩", "@Lune")
+CONFIG_FILE_CANDIDATES = (
+    "/config/SILICONFLOW_API_KEY",
+    "/config/siliconflow_api_key",
+    "/config/config",
+    "/opt/app/config/SILICONFLOW_API_KEY",
+    "/opt/app/config/siliconflow_api_key",
+    "/opt/app/config/config",
+)
+
+
+def _read_config_value(name: str) -> str:
+    configured_path = os.getenv(f"{name}_FILE", "").strip()
+    candidate_paths = [configured_path] if configured_path else []
+    if name == "SILICONFLOW_API_KEY":
+        candidate_paths.extend(CONFIG_FILE_CANDIDATES)
+
+    for path in candidate_paths:
+        if not path:
+            continue
+        try:
+            content = open(path, encoding="utf-8").read().strip()
+        except OSError:
+            continue
+        if not content:
+            continue
+        for line in content.splitlines():
+            stripped = line.strip()
+            if not stripped or stripped.startswith("#"):
+                continue
+            if "=" in stripped:
+                key, value = stripped.split("=", 1)
+                if key.strip() == name:
+                    return value.strip().strip('"').strip("'")
+            elif name == "SILICONFLOW_API_KEY":
+                return stripped
+    return ""
 
 
 def _get_api_key() -> str:
-    api_key = os.getenv("SILICONFLOW_API_KEY", "").strip()
+    api_key = os.getenv("SILICONFLOW_API_KEY", "").strip() or _read_config_value("SILICONFLOW_API_KEY")
     if not api_key:
         raise HTTPException(status_code=503, detail="SiliconFlow API key is not configured")
     return api_key
