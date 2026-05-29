@@ -25,6 +25,8 @@ function ChatMainView({
   handleOpenSearchMessage,
   // 全量消息映射（按会话 id）。
   messages,
+  messageTranslations = {},
+  translatingMessageId = null,
   // 点击消息列表时执行的处理函数（用于关闭右键菜单）。
   handleMessagesClick,
   // 消息右键菜单触发函数。
@@ -330,8 +332,12 @@ function ChatMainView({
             const member = members.find((m) => m.id === msg.senderId) || members.find((m) => m.name === msg.senderName)
             if (member) {
               peerAvatar = member.avatar || currentSession.avatar
+            } else if (msg.type === 'bot' || msg.senderName === '誓约书记') {
+              peerAvatar = '/aegis-avatar-order.svg'
             }
           }
+          const translationText = messageTranslations[msg.id]
+          const isTranslating = translatingMessageId === msg.id
 
           return (
           <div
@@ -416,6 +422,12 @@ function ChatMainView({
                 )}
                 <span className="message-time">{msg.time}</span>
               </div>
+              {(translationText || isTranslating) && (
+                <div className="message-translation">
+                  <span className="translation-label">誓约转译</span>
+                  <span className="translation-text">{isTranslating ? '转译中...' : translationText}</span>
+                </div>
+              )}
             </div>
           </div>
           )

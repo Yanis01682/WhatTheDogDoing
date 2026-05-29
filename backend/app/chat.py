@@ -11,7 +11,7 @@ from pydantic import BaseModel
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
-from app import auth, models
+from app import ai_gateway, auth, models
 from .database import get_db
 
 router = APIRouter()
@@ -41,6 +41,10 @@ class MessageSendPayload(BaseModel):
     conversation_id: int
     content: str
     reply_to_id: Optional[int] = None
+
+
+class MessageTranslatePayload(BaseModel):
+    target_language: str = "简体中文"
 
 
 class FriendRequestPayload(BaseModel):
@@ -477,7 +481,7 @@ def _serialize_message(
     reply_message: Optional[models.Message] = None,
     reply_sender: Optional[models.User] = None,
 ):
-    sender_name = (sender.nickname or sender.username) if sender else "系统"
+    sender_name = ai_gateway.BOT_NAME if message.message_type == "bot" else ((sender.nickname or sender.username) if sender else "系统")
     # 确保 message_type 有默认值
     msg_type = message.message_type if message.message_type else "text"
     if msg_type == "system":
@@ -521,6 +525,70 @@ def _serialize_message(
     if msg_type == "game" and message.media_data:
         payload["gameData"] = json.loads(message.media_data)
     return payload
+
+
+def _serialize_notification_message(message: models.Message, sender_name: str):
+    return {
+        "id": message.id,
+        "text": message.content,
+        "type": message.message_type or "text",
+        "senderId": message.sender_id,
+        "senderName": sender_name,
+        "time": _format_message_time(message.timestamp),
+        "timestamp": message.timestamp.isoformat() if message.timestamp else None,
+        "replyToId": message.reply_to_id,
+        "mentionedUserIds": message.mentioned_user_ids,
+    }
+
+
+def _get_recent_text_context(db: Session, conversation_id: int, skip_message_id: int | None = None):
+    rows = (
+        db.query(models.Message)
+        .filter(models.Message.conversation_id == conversation_id)
+        .order_by(models.Message.timestamp.desc(), models.Message.id.desc())
+        .limit(10)
+        .all()
+    )
+    sender_ids = {message.sender_id for message in rows if message.sender_id is not None}
+    users = db.query(models.User).filter(models.User.id.in_(sender_ids)).all() if sender_ids else []
+    user_map = {user.id: user for user in users}
+    context = []
+    for message in reversed(rows):
+        if skip_message_id is not None and message.id == skip_message_id:
+            continue
+        if (message.message_type or "text") not in ("text", "bot") or not message.content:
+            continue
+        if message.message_type == "bot":
+            sender = ai_gateway.BOT_NAME
+        else:
+            user = user_map.get(message.sender_id)
+            sender = (user.nickname or user.username) if user else "群成员"
+        context.append({"sender": sender, "text": message.content})
+    return context
+
+
+def _create_group_bot_reply_if_needed(db: Session, conversation_id: int, content: str, source_message_id: int | None = None):
+    conversation = db.query(models.Conversation).filter(models.Conversation.id == conversation_id).first()
+    if not conversation or not conversation.is_group or not ai_gateway.mentions_bot(content):
+        return None
+
+    prompt = ai_gateway.clean_bot_prompt(content)
+    context = _get_recent_text_context(db, conversation_id, skip_message_id=source_message_id)
+    try:
+        answer = ai_gateway.answer_group_prompt(prompt, context)
+    except HTTPException as exc:
+        answer = f"{ai_gateway.BOT_NAME}暂时无法连上星流书库：{exc.detail}"
+
+    bot_message = models.Message(
+        conversation_id=conversation_id,
+        sender_id=None,
+        message_type="bot",
+        content=answer,
+    )
+    db.add(bot_message)
+    db.commit()
+    db.refresh(bot_message)
+    return bot_message
 
 
 def _get_private_game_players(db: Session, conversation_id: int, current_user_id: int):
@@ -1164,6 +1232,29 @@ def read_messages(
     return _serialize_messages(db, messages, current_user.id, user_map)
 
 
+@router.post("/messages/{message_id}/translate")
+def translate_message(
+    message_id: int,
+    payload: MessageTranslatePayload = Body(default=MessageTranslatePayload()),
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    message = db.query(models.Message).filter(models.Message.id == message_id).first()
+    if not message:
+        raise HTTPException(status_code=404, detail="Message not found")
+    _ensure_conversation_membership(db, message.conversation_id, current_user.id)
+    if (message.message_type or "text") not in ("text", "bot") or not message.content:
+        raise HTTPException(status_code=400, detail="Only text messages can be translated")
+
+    translation = ai_gateway.translate_text(message.content, payload.target_language.strip() or "简体中文")
+    return {
+        "messageId": message.id,
+        "source": message.content,
+        "translation": translation,
+        "targetLanguage": payload.target_language.strip() or "简体中文",
+    }
+
+
 @router.post("/friends/add")
 def add_friend(
     payload: FriendAddPayload,
@@ -1370,20 +1461,21 @@ def send_message(
             "type": "conversation_updated",
             "conversationId": payload.conversation_id,
             "messageId": new_message.id,
-            "message": {
-                "id": new_message.id,
-                "text": new_message.content,
-                "type": new_message.message_type or "text",
-                "senderId": current_user.id,
-                "senderName": current_user.nickname or current_user.username,
-                "time": _format_message_time(new_message.timestamp),
-                "timestamp": new_message.timestamp.isoformat() if new_message.timestamp else None,
-                "replyToId": new_message.reply_to_id,
-                "mentionedUserIds": new_message.mentioned_user_ids,
-            },
+            "message": _serialize_notification_message(new_message, current_user.nickname or current_user.username),
         },
     )
     print(f"📤 发送通知: conversationId={payload.conversation_id}, mentionedUserIds={new_message.mentioned_user_ids}")
+    bot_message = _create_group_bot_reply_if_needed(db, payload.conversation_id, content, new_message.id)
+    if bot_message:
+        _dispatch_notification(
+            member_ids,
+            {
+                "type": "conversation_updated",
+                "conversationId": payload.conversation_id,
+                "messageId": bot_message.id,
+                "message": _serialize_notification_message(bot_message, ai_gateway.BOT_NAME),
+            },
+        )
     return {
         "status": "sent",
         "message": _serialize_message(new_message, current_user.id, current_user, reply_message, reply_sender),
@@ -2814,18 +2906,16 @@ async def websocket_endpoint(websocket: WebSocket, user_id: int, db: Session = D
                         "type": "conversation_updated",
                         "conversationId": conv_id,
                         "messageId": new_message.id,
-                        "message": {
-                            "id": new_message.id,
-                            "text": new_message.content,
-                            "type": "text",
-                            "senderId": user_id,
-                            "senderName": sender_name,
-                            "time": _format_message_time(new_message.timestamp),
-                            "timestamp": new_message.timestamp.isoformat() if new_message.timestamp else None,
-                            "replyToId": new_message.reply_to_id,
-                            "mentionedUserIds": new_message.mentioned_user_ids,
-                        },
+                        "message": _serialize_notification_message(new_message, sender_name),
                     })
+                    bot_message = _create_group_bot_reply_if_needed(db, conv_id, content, new_message.id)
+                    if bot_message:
+                        await manager.notify_users(member_ids, {
+                            "type": "conversation_updated",
+                            "conversationId": conv_id,
+                            "messageId": bot_message.id,
+                            "message": _serialize_notification_message(bot_message, ai_gateway.BOT_NAME),
+                        })
             except (json.JSONDecodeError, KeyError):
                 pass
     except WebSocketDisconnect:

@@ -83,6 +83,45 @@
   line-height: 1.4;
 }
 
+.message-translation {
+  display: grid;
+  gap: 3px;
+  max-width: min(42vw, 340px);
+  margin-top: 6px;
+  padding: 7px 9px;
+  border: 1px solid rgba(183, 131, 53, 0.24);
+  border-radius: 7px;
+  background: rgba(255, 250, 240, 0.72);
+  color: #4c3821;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.message.outgoing .message-translation {
+  background: rgba(255, 250, 240, 0.22);
+  color: #fff7df;
+}
+
+.translation-label {
+  color: #9b6a28;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.translation-text {
+  white-space: pre-wrap;
+}
+
+.night-mode .message-translation {
+  border-color: rgba(214, 170, 96, 0.32);
+  background: rgba(32, 24, 16, 0.82);
+  color: #f1dfbd;
+}
+
+.night-mode .translation-label {
+  color: #d8ad66;
+}
+
 /* 鍥炲棰勮鏍?- 鍙傝€冨井淇℃牱寮?*/
 .reply-preview {
   display: flex;

@@ -36,6 +36,7 @@ function Overlays({
   handleRevokeMessage,
   handleDeleteMessage,
   handleFavoriteMessage,
+  handleTranslateMessage,
   startMultiSelectFromMenu,
   // 转发相关
   showForwardDialog,
@@ -364,6 +365,11 @@ function Overlays({
           <button type="button" className="session-context-item" onClick={handleFavoriteMessage}>
             收藏
           </button>
+          {contextMenu.canTranslate && (
+            <button type="button" className="session-context-item" onClick={handleTranslateMessage}>
+              誓约转译
+            </button>
+          )}
           <button type="button" className="session-context-item" onClick={startMultiSelectFromMenu}>
             多选
           </button>

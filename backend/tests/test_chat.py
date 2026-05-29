@@ -719,6 +719,60 @@ def test_create_group_and_read_members():
     assert group_members.json()[1]["name"] == "nick"
 
 
+def test_translate_message_uses_ai_gateway(monkeypatch):
+    headers_alice, _ = register_and_login("translate_alice", "translate_alice@example.com")
+    headers_bob, bob_user = register_and_login("translate_bob", "translate_bob@example.com")
+    add_friend_res = client.post(
+        "/api/chat/friends/add",
+        json={"friend_id": bob_user["id"]},
+        headers=headers_alice,
+    )
+    conversation_id = add_friend_res.json()["conversation_id"]
+    send_response = client.post(
+        "/api/chat/messages/send",
+        json={"conversation_id": conversation_id, "content": "oath received"},
+        headers=headers_alice,
+    )
+    message_id = send_response.json()["message"]["id"]
+    monkeypatch.setattr(chat.ai_gateway, "translate_text", lambda text, target: "誓约已收到")
+
+    response = client.post(
+        f"/api/chat/messages/{message_id}/translate",
+        json={"target_language": "简体中文"},
+        headers=headers_bob,
+    )
+
+    assert response.status_code == 200
+    assert response.json()["translation"] == "誓约已收到"
+    assert response.json()["source"] == "oath received"
+
+
+def test_group_bot_replies_when_mentioned(monkeypatch):
+    headers_alice, _ = register_and_login("bot_alice", "bot_alice@example.com")
+    headers_bob, bob_user = register_and_login("bot_bob", "bot_bob@example.com")
+    client.post("/api/chat/friends/add", json={"friend_id": bob_user["id"]}, headers=headers_alice)
+    group_res = client.post(
+        "/api/chat/groups",
+        json={"name": "誓约厅", "member_ids": [bob_user["id"]]},
+        headers=headers_alice,
+    )
+    conversation_id = group_res.json()["conversation_id"]
+    monkeypatch.setattr(chat.ai_gateway, "answer_group_prompt", lambda prompt, context: f"记录如下：{prompt}")
+
+    send_response = client.post(
+        "/api/chat/messages/send",
+        json={"conversation_id": conversation_id, "content": "@誓约书记 今天怎么安排？"},
+        headers=headers_alice,
+    )
+    assert send_response.status_code == 200
+    messages_response = client.get(f"/api/chat/sessions/{conversation_id}/messages", headers=headers_bob)
+
+    messages = messages_response.json()
+    assert messages[-1]["type"] == "bot"
+    assert messages[-1]["senderName"] == "誓约书记"
+    assert messages[-1]["text"] == "记录如下：今天怎么安排？"
+
+
 def test_group_owner_can_rename_group():
     headers_owner, _ = register_and_login("owner_rename", "owner_rename@example.com")
     headers_member, member_user = register_and_login("member_rename", "member_rename@example.com")

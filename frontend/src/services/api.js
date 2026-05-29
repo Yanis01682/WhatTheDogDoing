@@ -390,6 +390,13 @@ export async function sendChatMessage(conversationId, content, replyToId) {
   return res.data
 }
 
+export async function translateMessage(messageId, targetLanguage = '简体中文') {
+  const res = await apiClient.post(`/api/chat/messages/${messageId}/translate`, {
+    target_language: targetLanguage,
+  })
+  return res.data
+}
+
 export async function sendForwardMessage(conversationId, forwardTitle, forwardMessages) {
   const payload = {
     conversation_id: conversationId,
