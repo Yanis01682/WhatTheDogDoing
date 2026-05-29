@@ -118,6 +118,35 @@ const formatLocalMessageTime = (date = new Date()) => {
   return `${year}年${month}月${day}日 ${hours}:${minutes}`
 }
 
+const normalizeRealtimeMessage = (message, currentUserId, announcement = null) => {
+  if (!message) return null
+
+  const msg = {
+    ...message,
+    type: message.type || 'text',
+    text: message.text ?? '',
+  }
+
+  if (msg.type === 'bot') {
+    msg.sender = 'other'
+    msg.senderName = msg.senderName || AEGIS_BOT.name
+  } else {
+    msg.sender = msg.type === 'system' ? 'system' : (msg.senderId === currentUserId ? 'me' : 'other')
+  }
+
+  if (msg.type === 'system' && announcement) {
+    msg.announcementId = announcement.id
+    msg.announcement = announcement
+    msg.text = `${announcement.publisherName || msg.senderName || '群成员'}发布了群公告：${announcement.content || msg.text || ''}`
+  }
+
+  if (msg.type === 'forward') {
+    msg.forwardData = normalizeForwardData(msg.forwardData)
+  }
+
+  return msg
+}
+
 const formatDisplayDateTime = (value) => {
   const parsed = parseMessageDate(value)
   if (!parsed) return ''
@@ -794,16 +823,7 @@ function App() {
         if (payload.type === 'conversation_updated') {
           // 如果通知携带完整消息，直接插入，避免额外请求
           if (payload.message && payload.conversationId === currentChat) {
-            const msg = payload.message
-            msg.sender = msg.type === 'system' ? 'system' : (msg.senderId === currentUserId ? 'me' : 'other')
-            if (msg.type === 'system' && payload.announcement) {
-              msg.announcementId = payload.announcement.id
-              msg.announcement = payload.announcement
-              msg.text = `${payload.announcement.publisherName || msg.senderName || '群成员'}发布了群公告：${payload.announcement.content || msg.text || ''}`
-            }
-            if (msg.type === 'forward') {
-              msg.forwardData = normalizeForwardData(msg.forwardData)
-            }
+            const msg = normalizeRealtimeMessage(payload.message, currentUserId, payload.announcement)
             
             // 检查是否被 @
             if (msg.sender !== 'me' && msg.mentionedUserIds) {
@@ -870,10 +890,14 @@ function App() {
           })
           
           // 会话列表刷新不阻塞消息渲染，传入 atMentionSessionId 确保立即显示
-          await refreshRealtimeChatData(currentChat, atMentionSessionId)
+          refreshRealtimeChatData(currentChat, atMentionSessionId).catch((err) => {
+            console.error('刷新会话列表失败', err)
+          })
           
           if (!payload.message && payload.conversationId === currentChat) {
-            refreshConversationMessages(currentChat)
+            refreshConversationMessages(currentChat).catch((err) => {
+              console.error('刷新当前会话消息失败', err)
+            })
           }
           return
         }
@@ -1149,7 +1173,7 @@ function App() {
   // 根据被点击的消息，解析对方资料（群聊/私聊）
   const resolvePeerProfileFromMessage = (msg) => {
     if (!msg || msg.sender === 'me' || msg.sender === 'system') return null
-    if (msg.type === 'bot' || msg.senderName === AEGIS_BOT.name) {
+    if (msg.type === 'bot' || msg.senderName === AEGIS_BOT.name || msg.senderId == null) {
       return {
         name: AEGIS_BOT.displayName,
         userId: AEGIS_BOT.id,
