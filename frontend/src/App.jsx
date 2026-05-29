@@ -192,6 +192,7 @@ function App() {
   const [activeTab, setActiveTab] = useState('chats') // 当前激活的标签页：chats-会话，friends-好友
   const [blacklist, setBlacklist] = useState([]) // 黑名单列表
   const [favoriteItems, setFavoriteItems] = useState([]) // 收藏消息列表
+  const [noteItems, setNoteItems] = useState([]) // 本机笔记列表
   const [showAddFriendModal, setShowAddFriendModal] = useState(false) // 添加好友模态框
   const [isEditingRemark, setIsEditingRemark] = useState(false) // 是否正在编辑备注
   const [tempRemark, setTempRemark] = useState('') // 临时备注
@@ -608,6 +609,19 @@ function App() {
     } else {
       setFavoriteItems([])
     }
+
+    const savedNotes = localStorage.getItem(getScopedStorageKey('aegis_notes'))
+    if (savedNotes) {
+      try {
+        const parsed = JSON.parse(savedNotes)
+        setNoteItems(Array.isArray(parsed) ? parsed : [])
+      } catch (err) {
+        console.warn('解析笔记失败，使用默认值', err)
+        setNoteItems([])
+      }
+    } else {
+      setNoteItems([])
+    }
   }, [currentUserId])
 
   useEffect(() => {
@@ -950,6 +964,11 @@ function App() {
     if (!currentUserId) return
     localStorage.setItem(`wtdd_favorite_messages:${currentUserId}`, JSON.stringify(favoriteItems))
   }, [favoriteItems, currentUserId])
+
+  useEffect(() => {
+    if (!currentUserId) return
+    localStorage.setItem(getScopedStorageKey('aegis_notes'), JSON.stringify(noteItems))
+  }, [noteItems, currentUserId])
 
   // 切换黑名单状态
   const handleToggleBlacklist = (user) => {
@@ -3223,6 +3242,29 @@ function App() {
     setFavoriteItems((prev) => prev.filter((item) => item.id !== favoriteId))
   }
 
+  const handleCreateNote = (note) => {
+    const now = new Date().toISOString()
+    setNoteItems((prev) => [{
+      id: `note-${Date.now()}`,
+      title: note.title?.trim() || '无标题笔记',
+      content: note.content?.trim() || '',
+      createdAt: now,
+      updatedAt: now,
+    }, ...prev])
+  }
+
+  const handleUpdateNote = (noteId, note) => {
+    setNoteItems((prev) => prev.map((item) => (
+      item.id === noteId
+        ? { ...item, title: note.title?.trim() || '无标题笔记', content: note.content?.trim() || '', updatedAt: new Date().toISOString() }
+        : item
+    )))
+  }
+
+  const handleDeleteNote = (noteId) => {
+    setNoteItems((prev) => prev.filter((item) => item.id !== noteId))
+  }
+
   // 未登录时显示登录界面
   if (!isLoggedIn) {
     return (
@@ -3279,8 +3321,12 @@ function App() {
           pinnedChatIds={pinnedChatIds}
           onTogglePinChat={handleTogglePinChat}
           favoriteItems={favoriteItems}
+          noteItems={noteItems}
           onOpenFavorite={handleOpenFavoriteItem}
           onRemoveFavorite={handleRemoveFavoriteItem}
+          onCreateNote={handleCreateNote}
+          onUpdateNote={handleUpdateNote}
+          onDeleteNote={handleDeleteNote}
           onRemoveFromBlacklist={handleRemoveFromBlacklist}
           onOpenBlacklistChat={handleOpenBlacklistChat}
           friendRequestList={friendRequestList}

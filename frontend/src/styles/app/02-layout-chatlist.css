@@ -462,6 +462,131 @@
   font-size: 0.82rem;
 }
 
+.notes-container {
+  height: calc(100% - 58px);
+  overflow-y: auto;
+  padding: 12px;
+}
+
+.notes-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  color: #6f5b3a;
+}
+
+.notes-title {
+  margin: 0 0 3px;
+  color: #2d2418;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.note-new-btn,
+.note-editor-actions button {
+  border: 1px solid #c7a46a;
+  border-radius: 6px;
+  background: #fbf7ef;
+  color: #6d4719;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.note-editor {
+  padding: 10px;
+  margin-bottom: 12px;
+  border: 1px solid #ddcaa6;
+  border-radius: 8px;
+  background: #fffaf1;
+}
+
+.note-editor input,
+.note-editor textarea {
+  width: 100%;
+  border: 1px solid #e5d6bb;
+  border-radius: 6px;
+  padding: 8px;
+  margin-bottom: 8px;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.note-editor-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.note-editor-actions .primary {
+  background: #8d5d24;
+  color: #fff;
+}
+
+.note-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.note-item {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  background: #fff;
+  border: 1px solid #eadcc3;
+}
+
+.note-main {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  padding: 10px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.note-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.note-title {
+  color: #2f2518;
+  font-weight: 700;
+}
+
+.note-time {
+  color: #9b8b71;
+  font-size: 12px;
+  flex: none;
+}
+
+.note-main p {
+  margin: 0;
+  color: #6b5d48;
+  font-size: 13px;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.note-delete {
+  align-self: flex-start;
+  margin: 8px 8px 0 0;
+  border: 0;
+  background: transparent;
+  color: #b8a789;
+  cursor: pointer;
+  font-size: 18px;
+}
+
 .group-folder {
   list-style: none;
   margin-top: 8px;

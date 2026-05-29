@@ -73,10 +73,15 @@ function SidebarPanel({
   blacklist,
   // 收藏消息列表
   favoriteItems = [],
+  // 本机笔记列表
+  noteItems = [],
   // 打开收藏的原消息
   onOpenFavorite,
   // 移除收藏
   onRemoveFavorite,
+  onCreateNote,
+  onUpdateNote,
+  onDeleteNote,
   // 移出黑名单回调
   onRemoveFromBlacklist,
   // 从黑名单打开聊天回调
@@ -97,6 +102,8 @@ function SidebarPanel({
   const [isGroupFolderOpen, setIsGroupFolderOpen] = useState(false)
   const [sessionContextMenu, setSessionContextMenu] = useState(null)
   const [headerMenu, setHeaderMenu] = useState(null)
+  const [editingNoteId, setEditingNoteId] = useState(null)
+  const [noteDraft, setNoteDraft] = useState({ title: '', content: '' })
 
   useEffect(() => {
     const closeMenu = () => {
@@ -142,13 +149,17 @@ function SidebarPanel({
   const archivedGroupSessions = filteredSessions.filter(shouldArchiveGroup)
   const normalSessions = filteredSessions.filter((session) => !shouldArchiveGroup(session))
   const sidebarSearchValue = activeTab === 'friends' ? friendSearchQuery : activeTab === 'requests' ? '' : searchQuery
-  const sidebarPlaceholder = activeTab === 'requests' ? '申请列表无需搜索' : activeTab === 'favorites' ? '搜索收藏' : '搜索'
+  const sidebarPlaceholder = activeTab === 'requests' ? '申请列表无需搜索' : activeTab === 'favorites' ? '搜索收藏' : activeTab === 'notes' ? '搜索笔记' : '搜索'
   const showHeaderAddButton = activeTab === 'chats' || activeTab === 'friends'
   const favoriteSearchText = searchQuery.trim().toLowerCase()
   const filteredFavoriteItems = favoriteItems.filter((item) => {
     if (!favoriteSearchText) return true
     return [item.sessionTitle, item.senderName, item.text, item.mediaName, item.previewText]
       .some((value) => String(value || '').toLowerCase().includes(favoriteSearchText))
+  })
+  const filteredNoteItems = noteItems.filter((item) => {
+    if (!favoriteSearchText) return true
+    return [item.title, item.content].some((value) => String(value || '').toLowerCase().includes(favoriteSearchText))
   })
 
   const handleSessionContextMenu = (e, session) => {
@@ -202,6 +213,34 @@ function SidebarPanel({
   }
 
   const formatFavoriteSavedAt = (value) => {
+    if (!value) return ''
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return ''
+    return `${date.getMonth() + 1}/${date.getDate()} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+  }
+
+  const startNewNote = () => {
+    setEditingNoteId('new')
+    setNoteDraft({ title: '', content: '' })
+  }
+
+  const startEditNote = (note) => {
+    setEditingNoteId(note.id)
+    setNoteDraft({ title: note.title || '', content: note.content || '' })
+  }
+
+  const saveNoteDraft = () => {
+    if (!noteDraft.title.trim() && !noteDraft.content.trim()) return
+    if (editingNoteId === 'new') {
+      onCreateNote?.(noteDraft)
+    } else {
+      onUpdateNote?.(editingNoteId, noteDraft)
+    }
+    setEditingNoteId(null)
+    setNoteDraft({ title: '', content: '' })
+  }
+
+  const formatNoteTime = (value) => {
     if (!value) return ''
     const date = new Date(value)
     if (Number.isNaN(date.getTime())) return ''
@@ -448,6 +487,69 @@ function SidebarPanel({
             <div className="empty-favorites">
               <p>{favoriteItems.length === 0 ? '暂无收藏' : '没有匹配的收藏'}</p>
               <span>右键消息后选择“收藏”</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'notes' && (
+        <div className="notes-container">
+          <div className="notes-toolbar">
+            <div>
+              <p className="notes-title">Aegis 笔记</p>
+              <span>{noteItems.length} 条本机记录</span>
+            </div>
+            <button type="button" className="note-new-btn" onClick={startNewNote}>新建</button>
+          </div>
+
+          {editingNoteId && (
+            <div className="note-editor">
+              <input
+                value={noteDraft.title}
+                onChange={(e) => setNoteDraft((prev) => ({ ...prev, title: e.target.value }))}
+                placeholder="标题"
+                maxLength={40}
+                autoFocus
+              />
+              <textarea
+                value={noteDraft.content}
+                onChange={(e) => setNoteDraft((prev) => ({ ...prev, content: e.target.value }))}
+                placeholder="写下灵感、待办或课堂验收要点"
+                rows="5"
+              />
+              <div className="note-editor-actions">
+                <button type="button" onClick={() => setEditingNoteId(null)}>取消</button>
+                <button type="button" className="primary" onClick={saveNoteDraft}>保存</button>
+              </div>
+            </div>
+          )}
+
+          {filteredNoteItems.length > 0 ? (
+            <ul className="note-list">
+              {filteredNoteItems.map((note) => (
+                <li key={note.id} className="note-item">
+                  <button type="button" className="note-main" onClick={() => startEditNote(note)}>
+                    <div className="note-row">
+                      <span className="note-title">{note.title || '无标题笔记'}</span>
+                      <span className="note-time">{formatNoteTime(note.updatedAt || note.createdAt)}</span>
+                    </div>
+                    <p>{note.content || '空白笔记'}</p>
+                  </button>
+                  <button
+                    type="button"
+                    className="note-delete"
+                    aria-label="删除笔记"
+                    onClick={() => onDeleteNote?.(note.id)}
+                  >
+                    ×
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="empty-favorites">
+              <p>{noteItems.length === 0 ? '暂无笔记' : '没有匹配的笔记'}</p>
+              <span>记录群公告草稿、会议纪要或待办</span>
             </div>
           )}
         </div>
