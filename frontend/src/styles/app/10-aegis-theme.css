@@ -538,6 +538,37 @@
   cursor: pointer;
 }
 
+.game-launch-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 32px;
+  padding: 0 12px 0 8px;
+  border: 1px solid rgba(145, 118, 72, 0.22);
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(178, 135, 69, 0.14), rgba(215, 181, 106, 0.22));
+  color: #6f4f25;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.game-launch-btn:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
+.game-launch-icon {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #b28745, #d7b56a);
+  color: #fffaf0;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
 .game-card {
   display: flex;
   align-items: center;

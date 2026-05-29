@@ -115,7 +115,7 @@ function ChatMainView({
         handleOpenTicTacToeGame?.(msg.gameData?.gameId)
       }}
     >
-      <span className="game-card-icon">#</span>
+      <span className="game-card-icon">井</span>
       <span>
         <strong>井字棋邀请</strong>
         <small>{msg.sender === 'me' ? '等待好友应战' : '点击查看棋局'}</small>
@@ -456,7 +456,10 @@ function ChatMainView({
           <button className="toolbar-btn" type="button" aria-label="发送文件" onClick={() => fileInputRef.current?.click()}>📄</button>
           <button className={`toolbar-btn ${isRecording ? 'active' : ''}`} type="button" aria-label="语音" onClick={handleVoiceRecord}>{isRecording ? '⏹️' : '🎤'}</button>
           <button className={`toolbar-btn ${showEmojiPicker ? 'active' : ''}`} type="button" aria-label="表情" onClick={toggleEmojiPicker}>😊</button>
-          <button className="toolbar-btn" type="button" aria-label="发起井字棋" onClick={handleStartTicTacToe} disabled={!hasActiveConversation || currentSession?.isGroup}>#</button>
+          <button className="game-launch-btn" type="button" aria-label="发起井字棋对弈" onClick={handleStartTicTacToe} disabled={!hasActiveConversation || currentSession?.isGroup}>
+            <span className="game-launch-icon">井</span>
+            <span>对弈</span>
+          </button>
           {hasActiveTicTacToeGame && (
             <button className="toolbar-text-btn" type="button" onClick={() => handleOpenTicTacToeGame?.()}>
               返回棋局
