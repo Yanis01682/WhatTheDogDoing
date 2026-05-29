@@ -30,9 +30,9 @@ function AuthView({
             <div className="register-header">
               <div className="brand-logo">
                 <span className="brand-dot"></span>
-                <h1>WhatTheDogDoing</h1>
+                <h1>Aegis</h1>
               </div>
-              <p className="register-subtitle">创建新账号</p>
+              <p className="register-subtitle">加入守誓通讯</p>
             </div>
 
             <form className="register-form" onSubmit={onRegister}>
@@ -163,9 +163,9 @@ function AuthView({
           <div className="login-header">
             <div className="brand-logo">
               <span className="brand-dot"></span>
-              <h1>WhatTheDogDoing</h1>
+              <h1>Aegis</h1>
             </div>
-            <p className="login-subtitle">即时通讯工具</p>
+            <p className="login-subtitle">Order Messenger</p>
           </div>
 
           <form className="login-form" onSubmit={onLogin}>

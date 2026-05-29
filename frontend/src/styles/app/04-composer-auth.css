@@ -177,8 +177,8 @@
 .brand-logo .brand-dot {
   width: 16px;
   height: 16px;
-  background: linear-gradient(135deg, #0abab5, #099e9a);
-  box-shadow: 0 2px 8px rgba(0, 191, 165, 0.4);
+  background: linear-gradient(135deg, #f3d18b, #8d5d24);
+  box-shadow: 0 0 0 3px rgba(141, 93, 36, 0.14);
 }
 
 .brand-logo h1 {

@@ -60,11 +60,12 @@ import SidebarPanel from './components/stage2/SidebarPanel'
 import ChatMainView from './components/stage2/ChatMainView'
 import Overlays from './components/stage2/Overlays'
 import { getForwardMessageLabel, normalizeForwardData } from './utils/forwardData'
+import { AEGIS_DEFAULT_GROUP_AVATAR, AEGIS_DEFAULT_USER_AVATAR, resolveAegisAvatar } from './utils/aegisAvatars'
 
 const EMPTY_SESSION = {
   id: null,
   title: '暂无会话',
-  avatar: '聊',
+  avatar: AEGIS_DEFAULT_GROUP_AVATAR,
   lastMessage: '去添加一个真实好友开始聊天吧',
   time: '',
   badge: 0,
@@ -173,7 +174,7 @@ function App() {
   const [showForwardDialog, setShowForwardDialog] = useState(false) // 转发对话框
   const [showForwardDetail, setShowForwardDetail] = useState(false) // 转发详情弹层
   const [forwardDetailData, setForwardDetailData] = useState(null) // 转发详情数据
-  const [userAvatar, setUserAvatar] = useState('我') // 用户头像（支持图片或文字）
+  const [userAvatar, setUserAvatar] = useState(AEGIS_DEFAULT_USER_AVATAR) // 用户头像（支持图片或文字）
   const [showProfileModal, setShowProfileModal] = useState(false) // 个人信息模态框
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false) // 修改密码模态框
   const [changePasswordForm, setChangePasswordForm] = useState({ oldPassword: '', newPassword: '', confirmPassword: '' }) // 修改密码表单
@@ -278,8 +279,7 @@ function App() {
     // (status removed)
     try {
       const profile = await getProfile()
-      const resolvedAvatar =
-        profile.avatar || '/default-avatar.png'
+      const resolvedAvatar = resolveAegisAvatar(profile.avatar)
       setProfileData({
         id: user.id ?? null,
         username: user.username || '',
@@ -299,7 +299,7 @@ function App() {
         nickname: prev.nickname || '',
         email: user.email ?? prev.email ?? '',
       }))
-      setUserAvatar('/default-avatar.png')
+      setUserAvatar(AEGIS_DEFAULT_USER_AVATAR)
     }
   }
 
@@ -339,10 +339,11 @@ function App() {
         if (friend && friend.remark) {
           nextSession = { ...session, title: friend.remark }
         }
-        // 如果会话头像是空字符串或单字符，使用默认头像
-        if (!nextSession.avatar || nextSession.avatar.length === 1) {
-          nextSession = { ...nextSession, avatar: '/default-avatar.png' }
+        if (!nextSession.avatar || nextSession.avatar.length === 1 || nextSession.avatar === '/default-avatar.png') {
+          nextSession = { ...nextSession, avatar: AEGIS_DEFAULT_USER_AVATAR }
         }
+      } else if (!nextSession.avatar || nextSession.avatar.length === 1) {
+        nextSession = { ...nextSession, avatar: AEGIS_DEFAULT_GROUP_AVATAR }
       }
       
       // 先调用 applyLocalSessionPreview
@@ -1919,7 +1920,7 @@ function App() {
         const user = await getCurrentUser()
         if (user) {
           // 先重置展示态，避免上一个账号的头像短暂闪现
-          setUserAvatar('/default-avatar.png')
+          setUserAvatar(AEGIS_DEFAULT_USER_AVATAR)
           await syncProfileFromUser(user)
           setIsLoggedIn(true)
           await refreshRealtimeChatData()
@@ -2514,6 +2515,20 @@ function App() {
       ...prev,
       [field]: value
     }))
+  }
+
+  const handleSelectPresetAvatar = async (avatarValue) => {
+    try {
+      await updateProfile({ avatar: avatarValue })
+      setUserAvatar(avatarValue)
+      setProfileData(prev => ({ ...prev, avatar: avatarValue }))
+      await refreshRealtimeChatData(currentChat)
+      if (currentChat && getCurrentSession().isGroup) {
+        await refreshGroupConversationMembers(currentChat)
+      }
+    } catch (err) {
+      alert(err.response?.data?.detail || '头像更新失败，请重试')
+    }
   }
 
   // 更换头像
@@ -3392,6 +3407,7 @@ function App() {
         isEditingProfile={isEditingProfile}
         handleEditProfile={handleEditProfile}
         handleProfileChange={handleProfileChange}
+        handleSelectPresetAvatar={handleSelectPresetAvatar}
         handleCancelProfile={handleCancelProfile}
         handleSaveProfile={handleSaveProfile}
         handleChangeAvatar={handleChangeAvatar}

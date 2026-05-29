@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="WhatTheDogDoing API")
+app = FastAPI(title="Aegis API")
 
 # backend/app/main.py
 
@@ -39,7 +39,7 @@ app.add_middleware(
 
 @app.get("/")
 def read_root():
-    return {"Hello": "WhatTheDogDoing"}
+    return {"Hello": "Aegis"}
 
 @app.get("/health")
 def health():

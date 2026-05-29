@@ -360,7 +360,7 @@ def _serialize_user(user: models.User, remark: Optional[str] = None, group_name:
         "userId": user.username,
         "accountId": str(user.id),
         "name": display_name,
-        "avatar": user.avatar or '/default-avatar.png',
+        "avatar": user.avatar or '/aegis-avatar-shield.svg',
         "signature": user.bio or "",
         "email": user.email or "",
         "group": group_name or "我的好友",
@@ -504,7 +504,7 @@ def _serialize_session(db: Session, conversation: models.Conversation, current_u
         )
 
     title = conversation.name or "未命名会话"
-    avatar = title[:1] if title else "会"
+    avatar = '/aegis-avatar-order.svg'
     real_name = title
 
     if not conversation.is_group:
@@ -513,7 +513,7 @@ def _serialize_session(db: Session, conversation: models.Conversation, current_u
         if peer_user:
             title = peer_user.nickname or peer_user.username
             real_name = peer_user.username
-            avatar = peer_user.avatar or '/default-avatar.png'
+            avatar = peer_user.avatar or '/aegis-avatar-shield.svg'
 
     payload = {
         "id": conversation.id,

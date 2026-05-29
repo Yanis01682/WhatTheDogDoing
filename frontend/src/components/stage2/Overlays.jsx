@@ -5,6 +5,7 @@
  */
 import { useState } from 'react'
 import { getForwardMessageLabel, normalizeForwardData } from '../../utils/forwardData'
+import { AEGIS_AVATAR_PRESETS } from '../../utils/aegisAvatars'
 
 /**
  * Render an avatar: if the value is a base64 data URL, display it as an
@@ -86,6 +87,7 @@ function Overlays({
   isEditingProfile,
   handleEditProfile,
   handleProfileChange,
+  handleSelectPresetAvatar,
   handleCancelProfile,
   handleSaveProfile,
   handleChangeAvatar,
@@ -478,10 +480,10 @@ function Overlays({
             <div className="profile-modal-body">
               <div className="profile-view">
                 <div className="profile-info-list">
-                  <div className="profile-info-item"><span className="info-label">项目名称</span><span className="info-value">我的刀盾 / WhatTheDogDoing</span></div>
-                  <div className="profile-info-item"><span className="info-label">项目介绍</span><span className="info-value">这是由课程小组共同设计与开发的即时通讯系统，我们围绕真实聊天、好友管理、群聊协作和消息体验，持续打磨一个更完整、更稳定的聊天产品原型。</span></div>
+                  <div className="profile-info-item"><span className="info-label">项目名称</span><span className="info-value">Aegis</span></div>
+                  <div className="profile-info-item"><span className="info-label">项目介绍</span><span className="info-value">Aegis 是一套带有骑士团世界观的即时通讯课程作品，围绕真实聊天、好友管理、群聊协作和消息体验，持续打磨一个更完整、更稳定的聊天产品原型。</span></div>
                   <div className="profile-info-item"><span className="info-label">开发成员</span><span className="info-value">zzy、zj、mwq、wjq</span></div>
-                  <div className="profile-info-item"><span className="info-label">团队说明</span><span className="info-value">我们以协作开发的方式完成前后端联调、界面交互、消息能力和系统完善，希望把“我的刀盾”做成一个兼顾功能完整性与使用体验的课程作品。</span></div>
+                  <div className="profile-info-item"><span className="info-label">团队说明</span><span className="info-value">我们以协作开发的方式完成前后端联调、界面交互、消息能力和系统完善，希望把 Aegis 做成一个兼顾功能完整性与使用体验的课程作品。</span></div>
                 </div>
                 <button className="edit-profile-btn" onClick={() => setShowAboutModal(false)}>我知道了</button>
               </div>
@@ -523,6 +525,20 @@ function Overlays({
                       onChange={handleChangeAvatar} 
                       style={{ display: 'none' }} 
                     />
+                  </div>
+
+                  <div className="avatar-preset-row">
+                    {AEGIS_AVATAR_PRESETS.map((preset) => (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        className={`avatar-preset ${profileData.avatar === preset.value ? 'active' : ''}`}
+                        title={preset.label}
+                        onClick={() => handleSelectPresetAvatar?.(preset.value)}
+                      >
+                        <img src={preset.value} alt={preset.label} />
+                      </button>
+                    ))}
                   </div>
 
                   <div className="profile-info-list">
@@ -663,7 +679,7 @@ function Overlays({
                 {renderAvatar(peerProfile.avatar, 'peer-profile-avatar')}
               </div>
               <h3 className="peer-profile-name">{peerProfile.name}</h3>
-              <p className="peer-profile-id">刀盾号：{peerProfile.wechatId || peerProfile.name}</p>
+              <p className="peer-profile-id">Aegis ID：{peerProfile.wechatId || peerProfile.name}</p>
 
               <div className="peer-profile-info-list">
 
@@ -887,7 +903,7 @@ function Overlays({
             </div>
             <div className="add-friend-modal-body">
               <div className="friend-search-section">
-                <input type="text" className="friend-search-input" placeholder="搜索用户名、昵称或刀盾号" value={friendSearchQuery} onChange={handleSearchFriend} autoFocus />
+                <input type="text" className="friend-search-input" placeholder="搜索用户名、昵称或 Aegis ID" value={friendSearchQuery} onChange={handleSearchFriend} autoFocus />
               </div>
               {friendSearchQuery && (
                 <div className="friend-search-results">
@@ -899,7 +915,7 @@ function Overlays({
                           <div className="result-avatar">{renderAvatar(user.avatar, 'result-avatar-img')}</div>
                           <div className="result-info">
                             <p className="result-name">{user.name}</p>
-                            <p className="result-subtitle">刀盾号：{user.userId}</p>
+                            <p className="result-subtitle">Aegis ID：{user.userId}</p>
                           </div>
                           <button
                             className="send-request-btn"
@@ -994,7 +1010,7 @@ function Overlays({
               )}
 
               {!friendSearchQuery && friendRequestList.length === 0 && (
-                <div className="add-friend-hint"><p>在上方搜索框中输入用户的刀盾号、昵称或手机号</p></div>
+                <div className="add-friend-hint"><p>在上方搜索框中输入用户的 Aegis ID、昵称或手机号</p></div>
               )}
             </div>
           </div>

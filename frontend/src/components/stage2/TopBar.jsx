@@ -23,10 +23,10 @@ function TopBar({
   return (
     <header className="im-topbar">
       <div className="brand">
-        <span className="brand-dot" aria-hidden="true"></span>
+        <span className="brand-mark" aria-hidden="true">A</span>
         <div>
-          <p className="brand-title">WhatTheDogDoing</p>
-          <p className="brand-sub">IM Workspace</p>
+          <p className="brand-title">Aegis</p>
+          <p className="brand-sub">Order Messenger</p>
         </div>
       </div>
       <div className="topbar-actions">

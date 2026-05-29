@@ -86,7 +86,7 @@ export function UserAgreementModal({ isOpen, onClose, onReadComplete }) {
     <LegalModal isOpen={isOpen} onClose={onClose} title="用户协议" onReadComplete={onReadComplete}>
       <div className="legal-content">
         <h3>1. 协议的范围</h3>
-        <p>本协议是您与 WhatTheDogDoing（以下简称"本平台"）之间关于使用本平台即时通讯服务所订立的协议。您在使用本平台服务前，请仔细阅读并充分理解本协议的全部内容。</p>
+        <p>本协议是您与 Aegis（以下简称"本平台"）之间关于使用本平台即时通讯服务所订立的协议。您在使用本平台服务前，请仔细阅读并充分理解本协议的全部内容。</p>
 
         <h3>2. 服务说明</h3>
         <p>本平台提供即时通讯服务，包括但不限于文字聊天、文件传输、群组交流等功能。本平台有权根据业务发展和运营需要，对服务内容进行调整或更新。</p>
@@ -193,7 +193,7 @@ export function PrivacyPolicyModal({ isOpen, onClose, onReadComplete }) {
         <h3>9. 联系我们</h3>
         <p>如果您对本隐私政策有任何疑问、意见或建议，请通过以下方式联系我们：</p>
         <ul>
-          <li>邮箱：privacy@whatthedogdoing.com</li>
+          <li>邮箱：privacy@aegis.local</li>
           <li>反馈渠道：应用内的"意见反馈"功能</li>
         </ul>
         <p>我们将在收到您的反馈后尽快回复。</p>

@@ -10,7 +10,7 @@ def test_read_root():
     """测试根路径是否返回正确"""
     response = client.get("/")
     assert response.status_code == 200
-    assert response.json() == {"Hello": "WhatTheDogDoing"}
+    assert response.json() == {"Hello": "Aegis"}
 
 
 def test_health_endpoint():
