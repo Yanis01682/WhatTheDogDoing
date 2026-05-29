@@ -86,6 +86,11 @@ class ConversationMutePayload(BaseModel):
     muted: bool
 
 
+class UserNotePayload(BaseModel):
+    title: str
+    content: str
+
+
 class ConnectionManager:
     _loop: asyncio.AbstractEventLoop | None = None
 
@@ -297,6 +302,16 @@ def _get_conversation_membership_or_403(db: Session, conversation_id: int, user_
 
 def _ensure_group_membership(db: Session, conversation_id: int, user_id: int):
     return _get_conversation_membership_or_403(db, conversation_id, user_id, ERR_NOT_MEMBER_GROUP)
+
+
+def _serialize_user_note(note: models.UserNote):
+    return {
+        "id": note.id,
+        "title": note.title,
+        "content": note.content,
+        "createdAt": note.created_at.isoformat() if note.created_at else None,
+        "updatedAt": note.updated_at.isoformat() if note.updated_at else None,
+    }
 
 
 def _ensure_conversation_membership(db: Session, conversation_id: int, user_id: int):
@@ -813,6 +828,76 @@ def update_session_mute(
         "conversation_id": conversation_id,
         "isMuted": membership.mute_notifications,
     }
+
+
+@router.get("/notes")
+def read_user_notes(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    notes = (
+        db.query(models.UserNote)
+        .filter(models.UserNote.user_id == current_user.id)
+        .order_by(models.UserNote.updated_at.desc(), models.UserNote.id.desc())
+        .all()
+    )
+    return [_serialize_user_note(note) for note in notes]
+
+
+@router.post("/notes")
+def create_user_note(
+    payload: UserNotePayload,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    note = models.UserNote(
+        user_id=current_user.id,
+        title=payload.title.strip() or "无标题笔记",
+        content=payload.content.strip(),
+    )
+    db.add(note)
+    db.commit()
+    db.refresh(note)
+    return _serialize_user_note(note)
+
+
+@router.put("/notes/{note_id}")
+def update_user_note(
+    note_id: int,
+    payload: UserNotePayload,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    note = (
+        db.query(models.UserNote)
+        .filter(models.UserNote.id == note_id, models.UserNote.user_id == current_user.id)
+        .first()
+    )
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
+    note.title = payload.title.strip() or "无标题笔记"
+    note.content = payload.content.strip()
+    db.commit()
+    db.refresh(note)
+    return _serialize_user_note(note)
+
+
+@router.delete("/notes/{note_id}")
+def delete_user_note(
+    note_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    note = (
+        db.query(models.UserNote)
+        .filter(models.UserNote.id == note_id, models.UserNote.user_id == current_user.id)
+        .first()
+    )
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
+    db.delete(note)
+    db.commit()
+    return {"message": "Note deleted successfully"}
 
 
 @router.get("/sessions/{conversation_id}/messages")

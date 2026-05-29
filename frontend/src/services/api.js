@@ -197,6 +197,26 @@ export async function updateSessionMute(conversationId, muted) {
   return res.data
 }
 
+export async function getNotes() {
+  const res = await apiClient.get('/api/chat/notes')
+  return res.data
+}
+
+export async function createNote(payload) {
+  const res = await apiClient.post('/api/chat/notes', payload)
+  return res.data
+}
+
+export async function updateNote(noteId, payload) {
+  const res = await apiClient.put(`/api/chat/notes/${noteId}`, payload)
+  return res.data
+}
+
+export async function deleteNote(noteId) {
+  const res = await apiClient.delete(`/api/chat/notes/${noteId}`)
+  return res.data
+}
+
 export async function createGroup(name, memberIds) {
   const res = await apiClient.post('/api/chat/groups', {
     name,

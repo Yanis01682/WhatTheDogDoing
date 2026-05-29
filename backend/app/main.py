@@ -223,6 +223,25 @@ def initialize_database():
                         )
                     """))
                     connection.commit()
+
+            try:
+                with engine.connect() as connection:
+                    connection.execute(text("SELECT title FROM user_notes LIMIT 1"))
+            except Exception:
+                logger.info("Migrated: creating user_notes table manually")
+                with engine.connect() as connection:
+                    connection.execute(text("""
+                        CREATE TABLE user_notes (
+                            id INTEGER PRIMARY KEY AUTO_INCREMENT,
+                            user_id INTEGER NOT NULL,
+                            title VARCHAR(120) NOT NULL,
+                            content TEXT NOT NULL,
+                            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                        )
+                    """))
+                    connection.commit()
             logger.info("Database initialized successfully on attempt %s", attempt)
             return
         except SQLAlchemyError as exc:
