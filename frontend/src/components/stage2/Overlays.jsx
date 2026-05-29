@@ -5,18 +5,19 @@
  */
 import { useState } from 'react'
 import { getForwardMessageLabel, normalizeForwardData } from '../../utils/forwardData'
-import { AEGIS_AVATAR_PRESETS } from '../../utils/aegisAvatars'
+import { AEGIS_AVATAR_PRESETS, resolveAegisAvatar } from '../../utils/aegisAvatars'
 
 /**
  * Render an avatar: if the value is a base64 data URL, display it as an
  * image background; otherwise render the text initial inside a span.
  */
 function renderAvatar(av, className) {
-  if (typeof av === 'string' && (av.startsWith('data:image') || av.startsWith('/'))) {
+  const resolvedAvatar = resolveAegisAvatar(av)
+  if (typeof resolvedAvatar === 'string' && (resolvedAvatar.startsWith('data:image') || resolvedAvatar.startsWith('/'))) {
     return (
       <div
         className={className}
-        style={{ backgroundImage: `url(${av})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+        style={{ backgroundImage: `url(${resolvedAvatar})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
       />
     )
   }

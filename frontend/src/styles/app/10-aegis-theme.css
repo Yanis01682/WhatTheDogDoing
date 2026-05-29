@@ -470,6 +470,12 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  animation: none !important;
+}
+
+.profile-modal-overlay,
+.peer-profile-overlay {
+  animation: none !important;
 }
 
 .profile-modal-body {
@@ -524,17 +530,21 @@
 }
 
 .member-list-overlay {
-  background: rgba(34, 30, 24, 0.46) !important;
+  padding: 18px !important;
+  background: rgba(34, 30, 24, 0.38) !important;
+  animation: none !important;
 }
 
 .member-list-modal {
-  width: min(760px, calc(100vw - 56px)) !important;
-  max-height: min(760px, calc(100vh - 56px)) !important;
+  width: min(690px, calc(100vw - 42px)) !important;
+  max-height: min(820px, calc(100vh - 42px)) !important;
   border: 1px solid rgba(145, 118, 72, 0.2) !important;
-  border-radius: 28px !important;
+  border-radius: 30px !important;
   background:
-    linear-gradient(180deg, rgba(255, 253, 248, 0.96), rgba(239, 232, 218, 0.94)) !important;
-  box-shadow: 0 28px 76px rgba(46, 35, 18, 0.28) !important;
+    linear-gradient(180deg, rgba(255, 253, 248, 0.9), rgba(239, 232, 218, 0.88)),
+    url('/aegis-bg-v2.png') center / cover no-repeat !important;
+  box-shadow: 0 24px 62px rgba(46, 35, 18, 0.22) !important;
+  animation: none !important;
 }
 
 .member-list-header {
@@ -543,14 +553,42 @@
 }
 
 .member-list-body {
+  padding: 22px 24px 26px !important;
   background: transparent !important;
 }
 
-.member-list-section,
-.member-list-modal .member-item {
+.member-list-section {
+  margin-bottom: 18px !important;
+  padding: 10px 0 0 !important;
   border: 0 !important;
-  background: rgba(255, 255, 255, 0.54) !important;
-  border-radius: 16px !important;
+  background: transparent !important;
+}
+
+.member-list-section h4 {
+  margin: 0 0 10px !important;
+  color: #6f5a39 !important;
+}
+
+.member-list-modal .member-item {
+  margin-bottom: 10px !important;
+  padding: 14px 16px !important;
+  border: 0 !important;
+  border-radius: 18px !important;
+  background: rgba(255, 253, 248, 0.66) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.58) !important;
+}
+
+.member-list-modal .member-avatar {
+  background: linear-gradient(135deg, #b28745, #d7b56a) !important;
+  background-size: cover !important;
+  background-position: center !important;
+}
+
+.member-list-modal .action-button-group {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .composer {
@@ -829,6 +867,7 @@
   max-height: none;
   border-radius: 28px;
   overflow: hidden;
+  animation: none !important;
 }
 
 .night-mode .im-shell {
@@ -1269,7 +1308,7 @@
 
 .moment-composer-tools {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
   gap: 10px;
   align-items: center;
   margin-top: 12px;
@@ -1286,6 +1325,21 @@
   color: var(--aegis-text);
 }
 
+.moment-image-preview {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.moment-image-preview img {
+  width: 58px;
+  height: 58px;
+  border-radius: 12px;
+  object-fit: cover;
+  border: 1px solid rgba(145, 118, 72, 0.16);
+}
+
 .moment-composer-tools span {
   color: var(--aegis-muted);
   font-size: 0.82rem;
@@ -1297,6 +1351,26 @@
   padding: 0 16px;
   background: linear-gradient(135deg, var(--aegis-brass), var(--aegis-brass-soft));
   color: #fffaf0;
+}
+
+.moment-composer-tools .moment-image-pick {
+  background: rgba(255, 253, 248, 0.76);
+  color: var(--aegis-brass);
+}
+
+.moment-avatar-button {
+  width: 46px;
+  height: 46px;
+  padding: 0;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.moment-avatar-button:disabled {
+  cursor: default;
 }
 
 .moment-composer-tools button:disabled,

@@ -84,7 +84,7 @@ def test_friend_request_flow_creates_private_chat_after_accept():
     assert bob_friends.json()[0]["name"] == "iris"
 
 
-def test_moments_feed_like_comment_and_friend_visibility():
+def test_moments_feed_like_comment_and_public_visibility():
     headers_alice, _ = register_and_login("moment_alice", "moment_alice@example.com")
     headers_bob, bob_user = register_and_login("moment_bob", "moment_bob@example.com")
     headers_cara, _ = register_and_login("moment_cara", "moment_cara@example.com")
@@ -99,11 +99,12 @@ def test_moments_feed_like_comment_and_friend_visibility():
 
     create_res = client.post(
         "/api/chat/moments",
-        json={"content": "今天在城墙上巡夜。"},
+        json={"content": "今天在城墙上巡夜。", "image_url": "data:image/png;base64,AA=="},
         headers=headers_alice,
     )
     assert create_res.status_code == 200
     post_id = create_res.json()["id"]
+    assert create_res.json()["imageUrl"] == "data:image/png;base64,AA=="
 
     bob_feed = client.get("/api/chat/moments", headers=headers_bob)
     assert bob_feed.status_code == 200
@@ -124,9 +125,23 @@ def test_moments_feed_like_comment_and_friend_visibility():
 
     cara_feed = client.get("/api/chat/moments", headers=headers_cara)
     assert cara_feed.status_code == 200
-    assert all(item["id"] != post_id for item in cara_feed.json())
+    assert cara_feed.json()[0]["id"] == post_id
     denied = client.post(f"/api/chat/moments/{post_id}/like", headers=headers_cara)
-    assert denied.status_code == 404
+    assert denied.status_code == 200
+    assert denied.json()["likedByMe"] is True
+
+
+def test_moment_image_upload_returns_data_url():
+    headers_alice, _ = register_and_login("moment_upload_alice", "moment_upload_alice@example.com")
+
+    upload_res = client.post(
+        "/api/chat/moments/upload-image",
+        files={"file": ("echo.png", b"\x89PNG\r\n\x1a\n", "image/png")},
+        headers=headers_alice,
+    )
+
+    assert upload_res.status_code == 200
+    assert upload_res.json()["imageUrl"].startswith("data:image/png;base64,")
 
 
 def test_reject_friend_request_removes_pending_item():

@@ -59,6 +59,7 @@ import {
   deleteNote,
   getMoments,
   createMoment,
+  uploadMomentImage,
   toggleMomentLike,
   createMomentComment,
   getActiveTicTacToeGame,
@@ -375,10 +376,8 @@ function App() {
         if (friend && friend.remark) {
           nextSession = { ...session, title: friend.remark }
         }
-        if (!nextSession.avatar || nextSession.avatar.length === 1 || nextSession.avatar === '/default-avatar.png') {
-          nextSession = { ...nextSession, avatar: AEGIS_DEFAULT_USER_AVATAR }
-        }
-      } else if (!nextSession.avatar || nextSession.avatar.length === 1) {
+        nextSession = { ...nextSession, avatar: resolveAegisAvatar(nextSession.avatar) }
+      } else if (!nextSession.avatar || nextSession.avatar.length === 1 || nextSession.avatar === '/aegis-avatar-order.svg') {
         nextSession = { ...nextSession, avatar: AEGIS_DEFAULT_GROUP_AVATAR }
       }
       
@@ -3424,6 +3423,29 @@ function App() {
     setMomentDraft('')
   }
 
+  const handleUploadMomentImage = async (file) => {
+    return uploadMomentImage(file)
+  }
+
+  const isMomentAuthorFriend = (author) => {
+    return isAlreadyFriend(String(author?.id || ''), author?.name)
+  }
+
+  const handleAddMomentAuthorAsFriend = async (author) => {
+    if (!author?.id || author.id === currentUserId) return
+    if (isMomentAuthorFriend(author)) {
+      alert('该用户已经是你的好友')
+      return
+    }
+    try {
+      await sendFriendRequest(Number(author.id))
+      await refreshFriendRequests()
+      alert(`好友申请已发送给 ${author.name}，等待对方确认`)
+    } catch (err) {
+      alert(err.response?.data?.detail || '发送好友申请失败')
+    }
+  }
+
   const handleToggleMomentLike = async (postId) => {
     replaceMoment(await toggleMomentLike(postId))
   }
@@ -3543,6 +3565,9 @@ function App() {
             onCreate={handleCreateMoment}
             onToggleLike={handleToggleMomentLike}
             onComment={handleCreateMomentComment}
+            onUploadImage={handleUploadMomentImage}
+            onAddAuthorAsFriend={handleAddMomentAuthorAsFriend}
+            isAuthorFriend={isMomentAuthorFriend}
           />
         ) : (
           <ChatMainView

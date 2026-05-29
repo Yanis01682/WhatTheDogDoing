@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { getForwardMessageLabel, normalizeForwardData } from '../../utils/forwardData'
+import { resolveAegisAvatar } from '../../utils/aegisAvatars'
 
 /**
  * 聊天主窗体组件。
@@ -255,14 +256,15 @@ function ChatMainView({
   })
 
   const renderMessageAvatar = (avatarValue, onClick) => {
-    if (typeof avatarValue === 'string' && (avatarValue.startsWith('data:image') || avatarValue.startsWith('/'))) {
+    const resolvedAvatar = resolveAegisAvatar(avatarValue)
+    if (typeof resolvedAvatar === 'string' && (resolvedAvatar.startsWith('data:image') || resolvedAvatar.startsWith('/'))) {
       return (
         <div className="message-avatar-wrapper">
           <div
             className="message-avatar"
             onClick={onClick}
             style={{
-              backgroundImage: `url(${avatarValue})`,
+              backgroundImage: `url(${resolvedAvatar})`,
               backgroundSize: 'cover',
               backgroundPosition: 'center',
               cursor: onClick ? 'pointer' : 'default'
@@ -456,9 +458,11 @@ function ChatMainView({
           <button className="toolbar-btn" type="button" aria-label="发送文件" onClick={() => fileInputRef.current?.click()}>📄</button>
           <button className={`toolbar-btn ${isRecording ? 'active' : ''}`} type="button" aria-label="语音" onClick={handleVoiceRecord}>{isRecording ? '⏹️' : '🎤'}</button>
           <button className={`toolbar-btn ${showEmojiPicker ? 'active' : ''}`} type="button" aria-label="表情" onClick={toggleEmojiPicker}>😊</button>
-          <button className="game-launch-btn" type="button" aria-label="发起对弈" onClick={handleStartTicTacToe} disabled={!hasActiveConversation || currentSession?.isGroup}>
-            <span>对弈</span>
-          </button>
+          {!currentSession?.isGroup && (
+            <button className="game-launch-btn" type="button" aria-label="发起对弈" onClick={handleStartTicTacToe} disabled={!hasActiveConversation}>
+              <span>对弈</span>
+            </button>
+          )}
           {hasActiveTicTacToeGame && (
             <button className="toolbar-text-btn" type="button" onClick={() => handleOpenTicTacToeGame?.()}>
               返回棋局
@@ -511,13 +515,9 @@ function ChatMainView({
                 <div
                   className="mention-picker-avatar"
                   style={{
-                    backgroundImage: (member.avatar && member.avatar.length > 1 && member.avatar !== '/default-avatar.png') ? `url(${member.avatar})` : 'none',
+                    backgroundImage: `url(${resolveAegisAvatar(member.avatar)})`,
                   }}
                 >
-                  {(() => {
-                    const name = member.displayName || member.groupNickname || member.name || '?'
-                    return name[0] ? name[0].toUpperCase() : '?'
-                  })()}
                 </div>
                 <div className="mention-picker-info">
                   <div className="mention-picker-name">

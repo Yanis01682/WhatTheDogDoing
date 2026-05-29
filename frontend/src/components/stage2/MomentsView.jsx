@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 function MomentAvatar({ avatar, name, className = '' }) {
   const label = (name || 'A').slice(0, 1).toUpperCase()
@@ -28,8 +28,13 @@ function MomentsView({
   onCreate,
   onToggleLike,
   onComment,
+  onUploadImage,
+  onAddAuthorAsFriend,
+  isAuthorFriend,
 }) {
   const [imageUrl, setImageUrl] = useState('')
+  const [isUploadingImage, setIsUploadingImage] = useState(false)
+  const fileInputRef = useRef(null)
 
   useEffect(() => {
     onRefresh()
@@ -38,6 +43,19 @@ function MomentsView({
   const submitPost = async () => {
     await onCreate(draft, imageUrl)
     setImageUrl('')
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  const handlePickImage = async (event) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    setIsUploadingImage(true)
+    try {
+      const uploaded = await onUploadImage(file)
+      setImageUrl(uploaded.imageUrl || '')
+    } finally {
+      setIsUploadingImage(false)
+    }
   }
 
   const updateComment = (postId, value) => {
@@ -62,18 +80,25 @@ function MomentsView({
           <textarea
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
-            placeholder="写下这一刻的誓约、巡夜见闻或想让好友看见的话"
+            placeholder="写下这一刻的誓约、巡夜见闻或想让所有访客看见的话"
             maxLength={1000}
           />
         </div>
         <div className="moment-composer-tools">
-          <input
-            value={imageUrl}
-            onChange={(event) => setImageUrl(event.target.value)}
-            placeholder="可选：图片链接"
-          />
+          <button type="button" className="moment-image-pick" onClick={() => fileInputRef.current?.click()} disabled={isUploadingImage}>
+            {isUploadingImage ? '上传中' : '照片'}
+          </button>
+          <input ref={fileInputRef} type="file" accept="image/*" className="hidden-file-input" onChange={handlePickImage} />
+          {imageUrl ? (
+            <div className="moment-image-preview">
+              <img src={imageUrl} alt="" />
+              <button type="button" onClick={() => setImageUrl('')}>移除</button>
+            </div>
+          ) : (
+            <span>可选上传照片</span>
+          )}
           <span>{draft.trim().length}/1000</span>
-          <button type="button" onClick={submitPost} disabled={!draft.trim()}>
+          <button type="button" onClick={submitPost} disabled={!draft.trim() && !imageUrl}>
             发布
           </button>
         </div>
@@ -89,7 +114,15 @@ function MomentsView({
             const commentText = commentDrafts[post.id] || ''
             return (
               <article key={post.id} className="moment-post">
-                <MomentAvatar avatar={post.author.avatar} name={post.author.name} />
+                <button
+                  type="button"
+                  className="moment-avatar-button"
+                  onClick={() => onAddAuthorAsFriend?.(post.author)}
+                  disabled={!post.author?.id || post.author.id === currentUser?.id || isAuthorFriend?.(post.author)}
+                  title={post.author?.id === currentUser?.id ? '这是你自己' : isAuthorFriend?.(post.author) ? '已是好友' : '添加好友'}
+                >
+                  <MomentAvatar avatar={post.author.avatar} name={post.author.name} />
+                </button>
                 <div className="moment-post-body">
                   <div className="moment-post-head">
                     <strong>{post.author.name}</strong>
