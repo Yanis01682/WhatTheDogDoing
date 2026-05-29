@@ -3246,7 +3246,6 @@ function App() {
           setActiveTab={setActiveTab}
           pendingRequestCount={friendRequestList.length + groupInviteRequests.length}
           atMentionCount={atMentionCount}
-          favoriteCount={favoriteItems.length}
         />
 
       <main className="im-layout">

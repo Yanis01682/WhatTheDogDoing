@@ -10,7 +10,6 @@ function LeftNav({
   setActiveTab,
   pendingRequestCount = 0,
   atMentionCount = 0, // @ 提醒计数
-  favoriteCount = 0,
 }) {
   return (
     <nav className="left-nav">
@@ -51,20 +50,15 @@ function LeftNav({
           </svg>
         </button>
 
-        <div style={{ position: 'relative', width: '100%' }}>
-          <button
-            className={`nav-tab-btn ${activeTab === 'favorites' ? 'active' : ''}`}
-            onClick={() => setActiveTab('favorites')}
-            aria-label="收藏"
-          >
-            <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
-              <path d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
-            </svg>
-          </button>
-          {favoriteCount > 0 && (
-            <span className="nav-tab-badge">{favoriteCount > 99 ? '99+' : favoriteCount}</span>
-          )}
-        </div>
+        <button
+          className={`nav-tab-btn ${activeTab === 'favorites' ? 'active' : ''}`}
+          onClick={() => setActiveTab('favorites')}
+          aria-label="收藏"
+        >
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+            <path d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+          </svg>
+        </button>
 
         <div style={{ position: 'relative', width: '100%' }}>
           <button 

@@ -498,7 +498,7 @@ def _serialize_session(db: Session, conversation: models.Conversation, current_u
             .filter(
                 models.Message.conversation_id == conversation.id,
                 models.Message.id > (current_membership.read_index or 0),
-                models.Message.sender_id != current_user.id,
+                or_(models.Message.sender_id.is_(None), models.Message.sender_id != current_user.id),
             )
             .count()
         )
@@ -1612,7 +1612,7 @@ def create_group_announcement(
 
     # 系统消息：发布群公告
     publisher_name = current_user.nickname or current_user.username
-    sys_text = f'"{publisher_name}"发布了新公告'
+    sys_text = f'"{publisher_name}"发布了新公告：{content}'
     sys_msg = models.Message(conversation_id=conversation_id, sender_id=None, message_type="system", content=sys_text)
     db.add(sys_msg)
 

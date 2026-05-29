@@ -286,6 +286,16 @@ def test_owner_can_publish_and_read_group_announcements():
     assert history_res.json()[0]["content"] == "First announcement"
     assert history_res.json()[0]["publisherName"] == owner["username"]
 
+    sessions_res = client.get("/api/chat/sessions", headers=h_member)
+    assert any(
+        item["id"] == gid and item["badge"] > 0 and "First announcement" in item["lastMessage"]
+        for item in sessions_res.json()
+    )
+
+    messages_res = client.get(f"/api/chat/sessions/{gid}/messages", headers=h_member)
+    assert messages_res.status_code == 200
+    assert messages_res.json()[-1]["text"] == f'"{owner["username"]}"发布了新公告：First announcement'
+
 
 def test_member_invite_request_can_be_approved_by_owner():
     h_owner, owner, h_member, member, gid = make_group_with_two_users("invite_req")
