@@ -89,8 +89,9 @@
    浣嶇疆锛氬乏渚ц竟鏍忥紝鏄剧ず鎵€鏈夎亰澶╀細璇濆垪琛?
    ======================================== */
 .chatlist-panel {
-  border-right: 1px solid #e5e5e5;
-  background: #fafafa !important;
+  border-right: 1px solid rgba(145, 118, 72, 0.22);
+  background: rgba(252, 249, 243, 0.72) !important;
+  backdrop-filter: blur(18px);
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
@@ -102,8 +103,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 16px;
-  border-bottom: 1px solid #f0f0f0;
-  background: #ffffff;
+  border-bottom: 1px solid rgba(145, 118, 72, 0.14);
+  background: rgba(255, 252, 247, 0.84);
 }
 
 .panel-header h2 {
@@ -139,15 +140,15 @@
 }
 
 .icon-btn.active {
-  background-color: rgba(0, 191, 165, 0.15);
-  color: #0abab5;
+  background-color: rgba(164, 124, 60, 0.14);
+  color: #8e6a2f;
   transform: scale(1.05);
 }
 
 .wechat-panel-header {
   padding: 12px 14px;
-  background: #f7f7f7;
-  border-bottom: 1px solid #e1e1e1;
+  background: rgba(247, 242, 232, 0.82);
+  border-bottom: 1px solid rgba(145, 118, 72, 0.16);
   display: flex;
   align-items: center;
   gap: 10px;
@@ -157,7 +158,7 @@
   flex: 1;
   display: flex;
   align-items: center;
-  background: #e2e2e2;
+  background: rgba(255, 255, 255, 0.78);
   border-radius: 4px;
   padding: 4px 8px;
 }
@@ -195,7 +196,7 @@
 }
 
 .wechat-add-btn {
-  background: #e2e2e2;
+  background: rgba(255, 255, 255, 0.78);
   border: none;
   border-radius: 4px;
   width: 26px;
@@ -208,7 +209,7 @@
 }
 
 .wechat-add-btn:hover {
-  background: #d1d1d1;
+  background: rgba(232, 221, 200, 0.92);
 }
 
 .wechat-header-menu {
@@ -473,22 +474,22 @@
   align-items: center;
   justify-content: space-between;
   margin-bottom: 12px;
-  color: #6f5b3a;
+  color: #6d5b44;
 }
 
 .notes-title {
   margin: 0 0 3px;
-  color: #2d2418;
+  color: #2a2218;
   font-size: 15px;
   font-weight: 700;
 }
 
 .note-new-btn,
 .note-editor-actions button {
-  border: 1px solid #c7a46a;
+  border: 1px solid rgba(145, 118, 72, 0.36);
   border-radius: 6px;
-  background: #fbf7ef;
-  color: #6d4719;
+  background: rgba(255, 250, 242, 0.92);
+  color: #6b5130;
   padding: 6px 12px;
   cursor: pointer;
 }
@@ -496,15 +497,15 @@
 .note-editor {
   padding: 10px;
   margin-bottom: 12px;
-  border: 1px solid #ddcaa6;
+  border: 1px solid rgba(145, 118, 72, 0.22);
   border-radius: 8px;
-  background: #fffaf1;
+  background: rgba(255, 253, 248, 0.82);
 }
 
 .note-editor input,
 .note-editor textarea {
   width: 100%;
-  border: 1px solid #e5d6bb;
+  border: 1px solid rgba(145, 118, 72, 0.18);
   border-radius: 6px;
   padding: 8px;
   margin-bottom: 8px;
@@ -519,8 +520,8 @@
 }
 
 .note-editor-actions .primary {
-  background: #8d5d24;
-  color: #fff;
+  background: linear-gradient(135deg, #8f6a35, #caa86a);
+  color: #fffaf0;
 }
 
 .note-list {
@@ -534,8 +535,13 @@
   gap: 6px;
   margin-bottom: 8px;
   border-radius: 8px;
-  background: #fff;
-  border: 1px solid #eadcc3;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(145, 118, 72, 0.16);
+}
+
+.note-item.active {
+  background: rgba(244, 232, 205, 0.78);
+  border-color: rgba(143, 106, 53, 0.36);
 }
 
 .note-main {
