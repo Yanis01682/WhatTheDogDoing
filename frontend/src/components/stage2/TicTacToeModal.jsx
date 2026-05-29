@@ -21,6 +21,7 @@ function TicTacToeModal({
   onAccept,
   onMove,
   onResign,
+  onInviteAgain,
 }) {
   if (!visible || !game) return null
 
@@ -70,9 +71,11 @@ function TicTacToeModal({
         <div className="ttt-footer">
           {game.status === 'pending' && !canAccept && <span>邀请已发出，对方同意后开局。</span>}
           {game.status === 'active' && <span>你执 {currentMark}，{canMove ? '选择一格落子。' : '请等对方行动。'}</span>}
-          {isTerminal && <span>这局已经结束，可以关闭窗口回到聊天。</span>}
+          {isTerminal && <span>这局已经结束，可以退出，也可以再邀请对方一局。</span>}
           <div className="ttt-actions">
             {canAccept && <button type="button" className="ttt-primary" onClick={() => onAccept(game.id)}>接受对局</button>}
+            {isTerminal && <button type="button" className="ttt-primary" onClick={onInviteAgain}>再邀请</button>}
+            {isTerminal && <button type="button" className="ttt-secondary" onClick={onClose}>退出</button>}
             {!isTerminal && <button type="button" className="ttt-danger" onClick={() => onResign(game.id)}>{game.status === 'pending' ? '取消' : '退出棋局'}</button>}
           </div>
         </div>

@@ -296,6 +296,10 @@ function App() {
     }
   }
 
+  const isTerminalTicTacToeGame = (game) => {
+    return ['x_win', 'o_win', 'draw', 'cancelled'].includes(game?.status)
+  }
+
   const syncProfileFromUser = async (user) => {
     if (!user) return
     setCurrentUserId(user.id ?? null)
@@ -669,7 +673,11 @@ function App() {
 
     getActiveTicTacToeGame(currentChat)
       .then((game) => setTicTacToeGame(normalizeTicTacToeGame(game)))
-      .catch(() => setTicTacToeGame(null))
+      .catch(() => {
+        setTicTacToeGame((prev) => (
+          prev?.conversationId === currentChat && isTerminalTicTacToeGame(prev) ? prev : null
+        ))
+      })
   }, [currentChat, currentUserId, isLoggedIn, sessions]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -3758,6 +3766,7 @@ function App() {
         onAccept={handleAcceptTicTacToe}
         onMove={handleTicTacToeMove}
         onResign={handleResignTicTacToe}
+        onInviteAgain={handleStartTicTacToe}
       />
     </div>
   )

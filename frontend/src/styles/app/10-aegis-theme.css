@@ -277,6 +277,60 @@
   color: #7b6f5e !important;
 }
 
+.friend-search-input {
+  border-color: rgba(145, 118, 72, 0.18) !important;
+  background: rgba(255, 253, 248, 0.74) !important;
+  color: var(--aegis-text) !important;
+}
+
+.friend-search-input:focus {
+  border-color: rgba(143, 106, 53, 0.42) !important;
+  box-shadow: 0 0 0 3px rgba(143, 106, 53, 0.1) !important;
+}
+
+.friend-search-results .search-result-item,
+.friend-requests-section .request-item {
+  border-color: rgba(145, 118, 72, 0.14) !important;
+  background: rgba(255, 253, 248, 0.62) !important;
+}
+
+.friend-search-results .search-result-item:hover {
+  border-color: rgba(143, 106, 53, 0.34) !important;
+  background: rgba(232, 217, 190, 0.28) !important;
+}
+
+.send-request-btn,
+.accept-btn {
+  background: linear-gradient(135deg, var(--aegis-brass), var(--aegis-brass-soft)) !important;
+  color: #fffaf0 !important;
+  box-shadow: 0 10px 22px rgba(143, 106, 53, 0.18) !important;
+}
+
+.send-request-btn:hover,
+.accept-btn:hover {
+  box-shadow: 0 12px 26px rgba(143, 106, 53, 0.24) !important;
+}
+
+.send-request-btn:disabled,
+.accept-btn:disabled {
+  background: rgba(194, 178, 149, 0.42) !important;
+  color: #7c6d58 !important;
+  box-shadow: none !important;
+  cursor: default !important;
+  transform: none !important;
+}
+
+.reject-btn {
+  border-color: rgba(145, 118, 72, 0.2) !important;
+  background: rgba(255, 253, 248, 0.74) !important;
+  color: var(--aegis-muted) !important;
+}
+
+.reject-btn:hover {
+  border-color: rgba(143, 106, 53, 0.34) !important;
+  background: rgba(232, 217, 190, 0.28) !important;
+}
+
 .header-context-menu {
   position: absolute !important;
   top: 54px !important;
@@ -735,6 +789,7 @@
 }
 
 .ttt-primary,
+.ttt-secondary,
 .ttt-danger {
   min-height: 40px;
   padding: 0 14px;
@@ -746,6 +801,12 @@
 .ttt-primary {
   background: linear-gradient(135deg, #b28745, #d7b56a);
   color: #fffaf0;
+}
+
+.ttt-secondary {
+  border: 1px solid rgba(145, 118, 72, 0.2);
+  background: rgba(255, 253, 248, 0.78);
+  color: var(--aegis-muted);
 }
 
 .ttt-danger {
