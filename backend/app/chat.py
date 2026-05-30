@@ -190,6 +190,66 @@ def _dispatch_notification(user_ids: list[int] | set[int], payload: dict):
     else:
         loop.run_until_complete(manager.notify_users(user_ids, payload))
 
+
+def _get_upload_dir() -> str:
+    return os.path.join(os.path.dirname(__file__), "..", "uploads")
+
+
+def _get_reply_context(db: Session, conversation_id: int, reply_to_id: Optional[int]):
+    reply_message = _get_reply_message_or_400(db, conversation_id, reply_to_id)
+    reply_sender = None
+    if reply_message and reply_message.sender_id is not None:
+        reply_sender = db.query(models.User).filter(models.User.id == reply_message.sender_id).first()
+    return reply_message, reply_sender
+
+
+def _finalize_uploaded_message(
+    db: Session,
+    conversation_id: int,
+    current_user: models.User,
+    reply_to_id: Optional[int],
+    *,
+    message_type: str,
+    content: str,
+    media_url: Optional[str] = None,
+    media_data: Optional[str] = None,
+    media_name: Optional[str] = None,
+):
+    _ensure_conversation_membership(db, conversation_id, current_user.id)
+    reply_message, reply_sender = _get_reply_context(db, conversation_id, reply_to_id)
+    new_message = models.Message(
+        conversation_id=conversation_id,
+        sender_id=current_user.id,
+        reply_to_id=reply_to_id,
+        message_type=message_type,
+        content=content,
+        media_url=media_url,
+        media_data=media_data,
+        media_name=media_name,
+    )
+    db.add(new_message)
+    db.commit()
+    db.refresh(new_message)
+    member_ids = [
+        item.user_id
+        for item in db.query(models.ConversationMember.user_id)
+        .filter(models.ConversationMember.conversation_id == conversation_id)
+        .all()
+    ]
+    _dispatch_notification(
+        member_ids,
+        {
+            "type": "conversation_updated",
+            "conversationId": conversation_id,
+            "messageId": new_message.id,
+        },
+    )
+    return {
+        "status": "sent",
+        "message": _serialize_message(new_message, current_user.id, current_user, reply_message, reply_sender),
+    }
+
+
 def _get_private_conversation_between(db: Session, user_a_id: int, user_b_id: int):
     conversations = (
         db.query(models.Conversation)
@@ -1452,8 +1512,6 @@ def send_message(
 
     # 解析 @ 用户
     cleaned_content, mentioned_user_ids = _parse_mentioned_users(content, payload.conversation_id, db)
-    print(f"🔍 解析 @ 用户: content='{content}', cleaned='{cleaned_content}', mentioned_ids={mentioned_user_ids}")
-    print(f"🔍 解析 @ 用户: content='{content}', cleaned='{cleaned_content}', mentioned_ids={mentioned_user_ids}")
 
     new_message = models.Message(
         conversation_id=payload.conversation_id,
@@ -1740,48 +1798,17 @@ async def send_image_message(
     if len(content) > MAX_FILE_SIZE:
         raise HTTPException(status_code=400, detail="图片大小不能超过 5MB")
     
-    # 验证是否为会话成员
-    _ensure_conversation_membership(db, conversation_id, current_user.id)
-    
-    # 获取回复消息（如果有）
-    reply_message = _get_reply_message_or_400(db, conversation_id, reply_to_id)
-    reply_sender = None
-    if reply_message and reply_message.sender_id is not None:
-        reply_sender = db.query(models.User).filter(models.User.id == reply_message.sender_id).first()
-    
-    # 创建图片消息
     media_data = f"data:{file.content_type};base64,{base64.b64encode(content).decode('ascii')}"
-    new_message = models.Message(
-        conversation_id=conversation_id,
-        sender_id=current_user.id,
-        reply_to_id=reply_to_id,
+    return _finalize_uploaded_message(
+        db,
+        conversation_id,
+        current_user,
+        reply_to_id,
         message_type="image",
         content="[图片]",
         media_data=media_data,
         media_name=file.filename,
     )
-    db.add(new_message)
-    db.commit()
-    db.refresh(new_message)
-    member_ids = [
-        item.user_id
-        for item in db.query(models.ConversationMember.user_id)
-        .filter(models.ConversationMember.conversation_id == conversation_id)
-        .all()
-    ]
-    _dispatch_notification(
-        member_ids,
-        {
-            "type": "conversation_updated",
-            "conversationId": conversation_id,
-            "messageId": new_message.id,
-        },
-    )
-    
-    return {
-        "status": "sent",
-        "message": _serialize_message(new_message, current_user.id, current_user, reply_message, reply_sender),
-    }
 
 
 @router.post("/messages/send-video")
@@ -1824,61 +1851,25 @@ async def send_video_message(
     if len(content) > MAX_FILE_SIZE:
         raise HTTPException(status_code=400, detail="视频大小不能超过 50MB")
     
-    # 验证是否为会话成员
-    _ensure_conversation_membership(db, conversation_id, current_user.id)
-    
-    # 生成唯一的文件名
     ext = ALLOWED_VIDEO_TYPES[file.content_type]
     unique_filename = f"{uuid.uuid4().hex}.{ext}"
-    
-    # 确保上传目录存在
-    upload_dir = os.path.join(os.path.dirname(__file__), '..', 'uploads')
+    _ensure_conversation_membership(db, conversation_id, current_user.id)
+    upload_dir = _get_upload_dir()
     os.makedirs(upload_dir, exist_ok=True)
-    
-    # 保存文件
     file_path = os.path.join(upload_dir, unique_filename)
-    with open(file_path, 'wb') as f:
+    with open(file_path, "wb") as f:
         f.write(content)
-    
-    # 获取回复消息（如果有）
-    reply_message = _get_reply_message_or_400(db, conversation_id, reply_to_id)
-    reply_sender = None
-    if reply_message and reply_message.sender_id is not None:
-        reply_sender = db.query(models.User).filter(models.User.id == reply_message.sender_id).first()
-    
-    # 创建视频消息
-    media_url = f"/uploads/{unique_filename}"
-    new_message = models.Message(
-        conversation_id=conversation_id,
-        sender_id=current_user.id,
-        reply_to_id=reply_to_id,
+
+    return _finalize_uploaded_message(
+        db,
+        conversation_id,
+        current_user,
+        reply_to_id,
         message_type="video",
         content="[视频]",
-        media_url=media_url,
+        media_url=f"/uploads/{unique_filename}",
         media_name=file.filename,
     )
-    db.add(new_message)
-    db.commit()
-    db.refresh(new_message)
-    member_ids = [
-        item.user_id
-        for item in db.query(models.ConversationMember.user_id)
-        .filter(models.ConversationMember.conversation_id == conversation_id)
-        .all()
-    ]
-    _dispatch_notification(
-        member_ids,
-        {
-            "type": "conversation_updated",
-            "conversationId": conversation_id,
-            "messageId": new_message.id,
-        },
-    )
-    
-    return {
-        "status": "sent",
-        "message": _serialize_message(new_message, current_user.id, current_user, reply_message, reply_sender),
-    }
 
 
 @router.post("/messages/send-file")
@@ -1895,45 +1886,25 @@ async def send_file_message(
     if len(content) > MAX_FILE_SIZE:
         raise HTTPException(status_code=400, detail="文件大小不能超过 20MB")
 
-    _ensure_conversation_membership(db, conversation_id, current_user.id)
-
     ext = os.path.splitext(file.filename or "file")[1] or ".bin"
     unique_filename = f"{uuid.uuid4().hex}{ext}"
-    upload_dir = os.path.join(os.path.dirname(__file__), '..', 'uploads')
+    _ensure_conversation_membership(db, conversation_id, current_user.id)
+    upload_dir = _get_upload_dir()
     os.makedirs(upload_dir, exist_ok=True)
     file_path = os.path.join(upload_dir, unique_filename)
     with open(file_path, 'wb') as f:
         f.write(content)
 
-    reply_message = _get_reply_message_or_400(db, conversation_id, reply_to_id)
-    reply_sender = None
-    if reply_message and reply_message.sender_id is not None:
-        reply_sender = db.query(models.User).filter(models.User.id == reply_message.sender_id).first()
-
-    new_message = models.Message(
-        conversation_id=conversation_id,
-        sender_id=current_user.id,
-        reply_to_id=reply_to_id,
+    return _finalize_uploaded_message(
+        db,
+        conversation_id,
+        current_user,
+        reply_to_id,
         message_type="file",
         content="[文件]",
         media_url=f"/uploads/{unique_filename}",
         media_name=file.filename,
     )
-    db.add(new_message)
-    db.commit()
-    db.refresh(new_message)
-    member_ids = [
-        item.user_id
-        for item in db.query(models.ConversationMember.user_id)
-        .filter(models.ConversationMember.conversation_id == conversation_id)
-        .all()
-    ]
-    _dispatch_notification(member_ids, {"type": "conversation_updated", "conversationId": conversation_id, "messageId": new_message.id})
-
-    return {
-        "status": "sent",
-        "message": _serialize_message(new_message, current_user.id, current_user, reply_message, reply_sender),
-    }
 
 
 @router.post("/messages/send-voice")
@@ -1955,45 +1926,25 @@ async def send_voice_message(
     if len(content) > MAX_FILE_SIZE:
         raise HTTPException(status_code=400, detail="语音大小不能超过 2MB")
 
-    _ensure_conversation_membership(db, conversation_id, current_user.id)
-
     ext = content_type_base.split('/')[-1].replace('mpeg', 'mp3')
     unique_filename = f"{uuid.uuid4().hex}.{ext}"
-    upload_dir = os.path.join(os.path.dirname(__file__), '..', 'uploads')
+    _ensure_conversation_membership(db, conversation_id, current_user.id)
+    upload_dir = _get_upload_dir()
     os.makedirs(upload_dir, exist_ok=True)
     file_path = os.path.join(upload_dir, unique_filename)
     with open(file_path, 'wb') as f:
         f.write(content)
 
-    reply_message = _get_reply_message_or_400(db, conversation_id, reply_to_id)
-    reply_sender = None
-    if reply_message and reply_message.sender_id is not None:
-        reply_sender = db.query(models.User).filter(models.User.id == reply_message.sender_id).first()
-
-    new_message = models.Message(
-        conversation_id=conversation_id,
-        sender_id=current_user.id,
-        reply_to_id=reply_to_id,
+    return _finalize_uploaded_message(
+        db,
+        conversation_id,
+        current_user,
+        reply_to_id,
         message_type="voice",
         content="[语音]",
         media_url=f"/uploads/{unique_filename}",
         media_name=file.filename,
     )
-    db.add(new_message)
-    db.commit()
-    db.refresh(new_message)
-    member_ids = [
-        item.user_id
-        for item in db.query(models.ConversationMember.user_id)
-        .filter(models.ConversationMember.conversation_id == conversation_id)
-        .all()
-    ]
-    _dispatch_notification(member_ids, {"type": "conversation_updated", "conversationId": conversation_id, "messageId": new_message.id})
-
-    return {
-        "status": "sent",
-        "message": _serialize_message(new_message, current_user.id, current_user, reply_message, reply_sender),
-    }
 
 
 @router.delete("/messages/{message_id}")

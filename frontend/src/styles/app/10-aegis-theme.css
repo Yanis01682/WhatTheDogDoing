@@ -1029,6 +1029,15 @@
   border-color: rgba(211, 183, 125, 0.1);
 }
 
+.night-mode .message.outgoing .bubble {
+  background: linear-gradient(135deg, #8f6a35 0%, #caa86a 100%) !important;
+  color: #fffaf0 !important;
+}
+
+.night-mode .message.outgoing .bubble::after {
+  border-left-color: #8f6a35 !important;
+}
+
 .night-mode .profile-modal,
 .night-mode .peer-profile-modal,
 .night-mode .ttt-modal {

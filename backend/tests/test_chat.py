@@ -593,6 +593,115 @@ def test_send_image_message_persists_inline_media_data():
     assert messages[0]["mediaUrl"] == sent_message["mediaUrl"]
 
 
+def test_send_video_message_persists_uploaded_file(tmp_path, monkeypatch):
+    headers_alice, _ = register_and_login("video_alice", "video_alice@example.com")
+    headers_bob, bob_user = register_and_login("video_bob", "video_bob@example.com")
+
+    add_friend_res = client.post(
+        "/api/chat/friends/add",
+        json={"friend_id": bob_user["id"]},
+        headers=headers_alice,
+    )
+    conversation_id = add_friend_res.json()["conversation_id"]
+    monkeypatch.setattr(chat, "_get_upload_dir", lambda: str(tmp_path))
+    monkeypatch.setattr(chat.uuid, "uuid4", lambda: type("FakeUUID", (), {"hex": "video-fixed"})())
+
+    response = client.post(
+        "/api/chat/messages/send-video",
+        params={"conversation_id": conversation_id},
+        files={"file": ("clip.mp4", io.BytesIO(b"video-bytes"), "video/mp4")},
+        headers=headers_alice,
+    )
+
+    assert response.status_code == 200
+    sent_message = response.json()["message"]
+    assert sent_message["type"] == "video"
+    assert sent_message["mediaName"] == "clip.mp4"
+    assert sent_message["mediaUrl"] == "/uploads/video-fixed.mp4"
+    assert (tmp_path / "video-fixed.mp4").exists()
+
+
+def test_send_file_message_persists_uploaded_file(tmp_path, monkeypatch):
+    headers_alice, _ = register_and_login("file_alice", "file_alice@example.com")
+    headers_bob, bob_user = register_and_login("file_bob", "file_bob@example.com")
+
+    add_friend_res = client.post(
+        "/api/chat/friends/add",
+        json={"friend_id": bob_user["id"]},
+        headers=headers_alice,
+    )
+    conversation_id = add_friend_res.json()["conversation_id"]
+    monkeypatch.setattr(chat, "_get_upload_dir", lambda: str(tmp_path))
+    monkeypatch.setattr(chat.uuid, "uuid4", lambda: type("FakeUUID", (), {"hex": "file-fixed"})())
+
+    response = client.post(
+        "/api/chat/messages/send-file",
+        params={"conversation_id": conversation_id},
+        files={"file": ("notes.txt", io.BytesIO(b"file-bytes"), "text/plain")},
+        headers=headers_alice,
+    )
+
+    assert response.status_code == 200
+    sent_message = response.json()["message"]
+    assert sent_message["type"] == "file"
+    assert sent_message["mediaName"] == "notes.txt"
+    assert sent_message["mediaUrl"] == "/uploads/file-fixed.txt"
+    assert (tmp_path / "file-fixed.txt").exists()
+
+
+def test_send_file_message_rejects_non_member_before_file_write(tmp_path, monkeypatch):
+    headers_alice, _ = register_and_login("file_guard_alice", "file_guard_alice@example.com")
+    headers_bob, bob_user = register_and_login("file_guard_bob", "file_guard_bob@example.com")
+    headers_charlie, _ = register_and_login("file_guard_charlie", "file_guard_charlie@example.com")
+
+    add_friend_res = client.post(
+        "/api/chat/friends/add",
+        json={"friend_id": bob_user["id"]},
+        headers=headers_alice,
+    )
+    conversation_id = add_friend_res.json()["conversation_id"]
+    monkeypatch.setattr(chat, "_get_upload_dir", lambda: str(tmp_path))
+    monkeypatch.setattr(chat.uuid, "uuid4", lambda: type("FakeUUID", (), {"hex": "blocked-file"})())
+
+    response = client.post(
+        "/api/chat/messages/send-file",
+        params={"conversation_id": conversation_id},
+        files={"file": ("blocked.txt", io.BytesIO(b"file-bytes"), "text/plain")},
+        headers=headers_charlie,
+    )
+
+    assert response.status_code == 403
+    assert not (tmp_path / "blocked-file.txt").exists()
+
+
+def test_send_voice_message_persists_uploaded_file(tmp_path, monkeypatch):
+    headers_alice, _ = register_and_login("voice_alice", "voice_alice@example.com")
+    headers_bob, bob_user = register_and_login("voice_bob", "voice_bob@example.com")
+
+    add_friend_res = client.post(
+        "/api/chat/friends/add",
+        json={"friend_id": bob_user["id"]},
+        headers=headers_alice,
+    )
+    conversation_id = add_friend_res.json()["conversation_id"]
+    monkeypatch.setattr(chat, "_get_upload_dir", lambda: str(tmp_path))
+    monkeypatch.setattr(chat.uuid, "uuid4", lambda: type("FakeUUID", (), {"hex": "voice-fixed"})())
+
+    response = client.post(
+        "/api/chat/messages/send-voice",
+        params={"conversation_id": conversation_id},
+        files={"file": ("note.ogg", io.BytesIO(b"voice-bytes"), "audio/ogg")},
+        headers=headers_alice,
+    )
+
+    assert response.status_code == 200
+    sent_message = response.json()["message"]
+    assert sent_message["type"] == "voice"
+    assert sent_message["mediaName"] == "note.ogg"
+    assert sent_message["mediaUrl"] == "/uploads/voice-fixed.ogg"
+    assert (tmp_path / "voice-fixed.ogg").exists()
+
+
 def test_send_forward_message_notifies_with_object_forward_data(monkeypatch):
     headers_alice, _ = register_and_login("forward_alice", "forward_alice@example.com")
     headers_bob, bob_user = register_and_login("forward_bob", "forward_bob@example.com")
