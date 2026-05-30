@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { MoreOutlined, SearchOutlined } from '@ant-design/icons'
+import { MoreOutlined, NotificationOutlined, SearchOutlined } from '@ant-design/icons'
 import { getForwardMessageLabel, normalizeForwardData } from '../../utils/forwardData'
 import { resolveAegisAvatar } from '../../utils/aegisAvatars'
 
@@ -512,7 +512,7 @@ function ChatMainView({
       {pendingAnnouncements.length > 0 && (
         <div className="announcement-overlay">
           <div className="announcement-popup">
-            <h3>📢 群公告</h3>
+            <h3><NotificationOutlined /> 群公告</h3>
             <div className="announcement-content">{pendingAnnouncements[0].content}</div>
             <button className="announcement-confirm-btn" onClick={() => onConfirmAnnouncement(pendingAnnouncements[0].id)}>我已知晓</button>
           </div>

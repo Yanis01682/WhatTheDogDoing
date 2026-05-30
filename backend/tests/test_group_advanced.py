@@ -272,6 +272,18 @@ def test_nickname_appears_in_member_list():
     assert member_data["displayName"] == "Visible Nick"
 
 
+def test_member_list_returns_real_profile_avatar():
+    h_owner, owner, h_member, member, gid = make_group_with_two_users("avatar_list")
+    avatar = "data:image/png;base64,avatarpayload"
+    profile_res = client.put("/auth/profile", json={"avatar": avatar}, headers=h_member)
+    assert profile_res.status_code == 200
+
+    members = client.get(f"/api/chat/groups/{gid}/members", headers=h_owner)
+    assert members.status_code == 200
+    member_data = next(m for m in members.json() if m["id"] == member["id"])
+    assert member_data["avatar"] == avatar
+
+
 def test_owner_can_publish_and_read_group_announcements():
     h_owner, owner, h_member, member, gid = make_group_with_two_users("announce")
     create_res = client.post(
@@ -295,6 +307,39 @@ def test_owner_can_publish_and_read_group_announcements():
     messages_res = client.get(f"/api/chat/sessions/{gid}/messages", headers=h_member)
     assert messages_res.status_code == 200
     assert messages_res.json()[-1]["text"] == f'"{owner["username"]}"发布了新公告：First announcement'
+
+
+def test_group_member_can_list_and_confirm_unread_announcements_once():
+    h_owner, owner, h_member, member, gid = make_group_with_two_users("announcement_confirm")
+    create_res = client.post(
+        f"/api/chat/groups/{gid}/announcements",
+        json={"content": "Please read this"},
+        headers=h_owner,
+    )
+    assert create_res.status_code == 200
+    announcement_id = create_res.json()["announcement"]["id"]
+
+    unconfirmed_res = client.get(f"/api/chat/groups/{gid}/announcements/unconfirmed", headers=h_member)
+    assert unconfirmed_res.status_code == 200
+    assert unconfirmed_res.json()[0]["id"] == announcement_id
+    assert unconfirmed_res.json()[0]["publisherName"] == owner["username"]
+
+    confirm_res = client.post(
+        f"/api/chat/groups/{gid}/announcements/{announcement_id}/confirm",
+        headers=h_member,
+    )
+    assert confirm_res.status_code == 200
+    assert confirm_res.json()["message"] == "Confirmed"
+
+    second_confirm_res = client.post(
+        f"/api/chat/groups/{gid}/announcements/{announcement_id}/confirm",
+        headers=h_member,
+    )
+    assert second_confirm_res.status_code == 200
+
+    empty_res = client.get(f"/api/chat/groups/{gid}/announcements/unconfirmed", headers=h_member)
+    assert empty_res.status_code == 200
+    assert empty_res.json() == []
 
 
 def test_member_invite_request_can_be_approved_by_owner():

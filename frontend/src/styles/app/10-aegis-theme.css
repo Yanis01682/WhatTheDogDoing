@@ -2453,6 +2453,203 @@
   color: rgba(241, 227, 198, 0.56) !important;
 }
 
+.announcement-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background:
+    radial-gradient(circle at 50% 24%, rgba(216, 183, 109, 0.16), transparent 34%),
+    rgba(35, 29, 20, 0.42) !important;
+  backdrop-filter: blur(6px);
+}
+
+.announcement-popup {
+  width: min(420px, calc(100vw - 52px)) !important;
+  max-height: min(62vh, 520px);
+  padding: 26px 28px 24px !important;
+  border: 1px solid rgba(145, 118, 72, 0.2) !important;
+  border-radius: 18px !important;
+  background:
+    linear-gradient(180deg, rgba(255, 253, 248, 0.98), rgba(242, 233, 216, 0.97)) !important;
+  box-shadow:
+    0 28px 74px rgba(46, 35, 18, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.82) !important;
+}
+
+.announcement-popup h3 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 14px !important;
+  color: var(--aegis-text) !important;
+  font-size: 1.08rem !important;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.announcement-popup h3 .anticon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: rgba(181, 138, 63, 0.14);
+  color: var(--aegis-brass);
+}
+
+.announcement-content {
+  padding: 16px 18px;
+  border: 1px solid rgba(145, 118, 72, 0.14);
+  border-radius: 14px;
+  background: rgba(255, 252, 246, 0.7);
+  color: var(--aegis-text) !important;
+  line-height: 1.65;
+}
+
+.announcement-confirm-btn {
+  min-width: 150px;
+  min-height: 44px;
+  border: 0 !important;
+  border-radius: 12px !important;
+  background: linear-gradient(135deg, var(--aegis-brass), var(--aegis-brass-soft)) !important;
+  color: #fffaf0 !important;
+  font-weight: 800;
+  box-shadow: 0 12px 26px rgba(143, 106, 53, 0.2) !important;
+}
+
+.announcement-confirm-btn:hover {
+  background: linear-gradient(135deg, #7b5727, #bd9655) !important;
+  box-shadow: 0 16px 30px rgba(143, 106, 53, 0.26) !important;
+  transform: translateY(-1px);
+}
+
+.member-list-modal .member-avatar,
+.member-avatar-small-inner,
+.friend-avatar-small,
+.target-avatar {
+  overflow: hidden;
+  background-color: rgba(181, 138, 63, 0.16) !important;
+  background-size: cover !important;
+  background-position: center !important;
+}
+
+.edit-announcement-btn:hover,
+.night-mode .edit-announcement-btn:hover,
+.search-result-item.active,
+.night-mode .search-result-item.active,
+.request-tab.active,
+.friend-tab.active,
+.group-folder.active,
+.create-group-modal input:focus,
+.add-friend-modal input:focus,
+.announcement-edit-form textarea:focus,
+.night-mode .announcement-edit-form textarea:focus {
+  border-color: rgba(143, 106, 53, 0.42) !important;
+  color: var(--aegis-brass) !important;
+  background: rgba(181, 138, 63, 0.12) !important;
+  box-shadow: 0 0 0 3px rgba(143, 106, 53, 0.12) !important;
+}
+
+.save-announcement-btn,
+.send-invite-btn,
+.send-friend-request-btn,
+.approve-btn,
+.invite-action-btn,
+.confirm-forward-btn {
+  background: linear-gradient(135deg, var(--aegis-brass), var(--aegis-brass-soft)) !important;
+  color: #fffaf0 !important;
+  box-shadow: 0 10px 22px rgba(143, 106, 53, 0.18) !important;
+}
+
+.cancel-announcement-btn,
+.cancel-forward-btn {
+  border-color: rgba(145, 118, 72, 0.2) !important;
+  background: rgba(255, 253, 248, 0.74) !important;
+  color: var(--aegis-muted) !important;
+}
+
+.night-mode .announcement-overlay {
+  background:
+    radial-gradient(circle at 50% 24%, rgba(216, 183, 109, 0.14), transparent 34%),
+    rgba(10, 9, 7, 0.62) !important;
+}
+
+.night-mode .announcement-popup {
+  border-color: rgba(211, 183, 125, 0.22) !important;
+  background:
+    linear-gradient(180deg, rgba(39, 34, 26, 0.98), rgba(18, 16, 13, 0.98)) !important;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.45) !important;
+}
+
+.night-mode .announcement-popup h3 {
+  color: #f6ead0 !important;
+}
+
+.night-mode .announcement-popup h3 .anticon {
+  background: rgba(216, 183, 109, 0.14);
+  color: #d9b46c;
+}
+
+.night-mode .announcement-content {
+  border-color: rgba(211, 183, 125, 0.14);
+  background: rgba(255, 246, 224, 0.06);
+  color: #f6ead0 !important;
+}
+
+.night-mode .cancel-announcement-btn,
+.night-mode .cancel-forward-btn {
+  border-color: rgba(211, 183, 125, 0.16) !important;
+  background: rgba(255, 246, 224, 0.07) !important;
+  color: rgba(241, 227, 198, 0.74) !important;
+}
+
+.moon-icon,
+.qq-status-dot.invisible,
+.friend-status-dot.invisible,
+.member-role.owner,
+.member-role.admin {
+  background: var(--aegis-brass) !important;
+}
+
+.moon-icon-invisible,
+.status-icon-invisible,
+.qq-status-icon.invisible {
+  color: var(--aegis-brass) !important;
+  fill: var(--aegis-brass) !important;
+}
+
+.empty-friends-hint button,
+.send-request-btn,
+.send-friend-request-btn,
+.send-invite-btn,
+.approve-btn,
+.invite-action-btn {
+  border: 0 !important;
+  background: linear-gradient(135deg, var(--aegis-brass), var(--aegis-brass-soft)) !important;
+  color: #fffaf0 !important;
+  box-shadow: 0 10px 22px rgba(143, 106, 53, 0.18) !important;
+}
+
+.empty-friends-hint button:hover,
+.send-request-btn:hover,
+.send-friend-request-btn:hover,
+.send-invite-btn:hover,
+.approve-btn:hover,
+.invite-action-btn:hover {
+  box-shadow: 0 14px 28px rgba(143, 106, 53, 0.24) !important;
+}
+
+.friend-status-dot.online,
+.qq-status-dot.online,
+.qq-status-icon.online {
+  background: #6f8d73 !important;
+  color: #6f8d73 !important;
+}
+
 @media (max-width: 640px) {
   .search-message-modal {
     width: min(94vw, 600px) !important;
