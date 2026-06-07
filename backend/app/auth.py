@@ -8,12 +8,13 @@ import bcrypt
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 import re
+import os
 
 from . import models
 from .database import get_db
 from enum import Enum
 
-SECRET_KEY = "whatthedogdoing-secret-key"
+SECRET_KEY = os.getenv("SECRET_KEY", "dev-only-change-me")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 10080
 

@@ -1,19 +1,11 @@
 FROM mysql:8.0
 
-# 既然 UI 不让填，咱们直接写在 Dockerfile 里！
-# 这里的 123456 就是你给数据库设置的 root 密码，你可以随便改
-ENV MYSQL_ROOT_PASSWORD=123456
+ENV MYSQL_ROOT_PASSWORD=change-me
 
-# 顺手把数据库也自动建好，省得连进去敲 SQL 了
 ENV MYSQL_DATABASE=whatthedogdoing
 
-# 声明数据目录，便于平台或运行时挂载持久卷
 VOLUME /var/lib/mysql
 
-# 暴露 MySQL 默认端口
 EXPOSE 3306
 
-# SECoder may mount config files with world-writable permissions, which MySQL
-# ignores. Pass the AIO compatibility flag via startup args so it always takes
-# effect even when mounted config files are skipped.
 CMD ["mysqld", "--innodb-use-native-aio=0"]

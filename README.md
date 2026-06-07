@@ -74,6 +74,15 @@ npm run dev
 
 如需使用 MySQL，可通过环境变量配置数据库连接；如需使用 AI 转译或群聊机器人能力，请在本机或部署环境中配置对应服务参数。仓库中不包含真实密钥。
 
+常用环境变量：
+
+```text
+DATABASE_URL=sqlite:///./whatthedogdoing.db
+SECRET_KEY=replace-with-a-random-secret
+VITE_BACKEND_TARGET=http://localhost:8000
+SILICONFLOW_API_KEY=optional-ai-service-key
+```
+
 ## 测试与质量保障
 
 推荐在提交前运行：
