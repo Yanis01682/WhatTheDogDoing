@@ -18,17 +18,31 @@ This project won **First Prize in the Excellent Course Project Evaluation**.
 
 ## Screenshots
 
-| Chat Overview | Group Detail |
-| --- | --- |
-| <img src="docs/screenshots/overview.png" alt="Aegis chat overview" width="420"> | <img src="docs/screenshots/group-detail.png" alt="Aegis group detail and member management" width="300"> |
+### Full-Page Views
 
-| Tic-Tac-Toe in Chat | Echo Yard |
-| --- | --- |
-| <img src="docs/screenshots/tic-tac-toe-game.png" alt="Aegis tic-tac-toe game" width="260"> | <img src="docs/screenshots/echo-yard.png" alt="Aegis echo yard" width="420"> |
+**Chat Overview**
 
-| Personal Notes | Profile Settings |
-| --- | --- |
-| <img src="docs/screenshots/notes.png" alt="Aegis personal notes" width="420"> | <img src="docs/screenshots/profile-settings.png" alt="Aegis profile settings" width="260"> |
+<p align="center">
+  <img src="docs/screenshots/overview.png" alt="Aegis chat overview" width="860">
+</p>
+
+**Echo Yard**
+
+<p align="center">
+  <img src="docs/screenshots/echo-yard.png" alt="Aegis echo yard" width="860">
+</p>
+
+**Personal Notes**
+
+<p align="center">
+  <img src="docs/screenshots/notes.png" alt="Aegis personal notes" width="860">
+</p>
+
+### Focused Views
+
+| Group Detail | Tic-Tac-Toe in Chat | Profile Settings |
+| --- | --- | --- |
+| <img src="docs/screenshots/group-detail.png" alt="Aegis group detail and member management" height="360"> | <img src="docs/screenshots/tic-tac-toe-game.png" alt="Aegis tic-tac-toe game" height="360"> | <img src="docs/screenshots/profile-settings.png" alt="Aegis profile settings" height="360"> |
 
 ## Features
 
